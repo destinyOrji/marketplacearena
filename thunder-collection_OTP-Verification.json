@@ -1,0 +1,125 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "OTP Verification",
+  "dateExported": "2024-01-15T10:30:00.000Z",
+  "version": "1.1",
+  "folders": [],
+  "requests": [
+    {
+      "id": "get-hospital-otp",
+      "name": "Get Hospital OTP",
+      "url": "http://localhost:3001/api/v1/debug/get-otp/admin@citygeneral.com",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2024-01-15T10:30:00.000Z",
+      "modified": "2024-01-15T10:30:00.000Z",
+      "headers": [],
+      "body": {
+        "type": "json",
+        "raw": "",
+        "form": []
+      },
+      "tests": []
+    },
+    {
+      "id": "get-ambulance-otp",
+      "name": "Get Ambulance OTP",
+      "url": "http://localhost:3001/api/v1/debug/get-otp/dispatch@emergencyresponse.com",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2024-01-15T10:30:00.000Z",
+      "modified": "2024-01-15T10:30:00.000Z",
+      "headers": [],
+      "body": {
+        "type": "json",
+        "raw": "",
+        "form": []
+      },
+      "tests": []
+    },
+    {
+      "id": "verify-hospital-otp",
+      "name": "Verify Hospital OTP",
+      "url": "http://localhost:3001/api/v1/auth/verify-otp",
+      "method": "POST",
+      "sortNum": 30000,
+      "created": "2024-01-15T10:30:00.000Z",
+      "modified": "2024-01-15T10:30:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@citygeneral.com\",\n  \"otpCode\": \"123456\"\n}",
+        "form": []
+      },
+      "tests": []
+    },
+    {
+      "id": "verify-ambulance-otp",
+      "name": "Verify Ambulance OTP",
+      "url": "http://localhost:3001/api/v1/auth/verify-otp",
+      "method": "POST",
+      "sortNum": 40000,
+      "created": "2024-01-15T10:30:00.000Z",
+      "modified": "2024-01-15T10:30:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"dispatch@emergencyresponse.com\",\n  \"otpCode\": \"123456\"\n}",
+        "form": []
+      },
+      "tests": []
+    },
+    {
+      "id": "login-hospital",
+      "name": "Login Hospital",
+      "url": "http://localhost:3001/api/v1/auth/login",
+      "method": "POST",
+      "sortNum": 50000,
+      "created": "2024-01-15T10:30:00.000Z",
+      "modified": "2024-01-15T10:30:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@citygeneral.com\",\n  \"password\": \"Hospital@123\"\n}",
+        "form": []
+      },
+      "tests": []
+    },
+    {
+      "id": "login-ambulance",
+      "name": "Login Ambulance",
+      "url": "http://localhost:3001/api/v1/auth/login",
+      "method": "POST",
+      "sortNum": 60000,
+      "created": "2024-01-15T10:30:00.000Z",
+      "modified": "2024-01-15T10:30:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"dispatch@emergencyresponse.com\",\n  \"password\": \"Emergency@123\"\n}",
+        "form": []
+      },
+      "tests": []
+    }
+  ]
+}

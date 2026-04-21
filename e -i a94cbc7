@@ -1,0 +1,5 @@
+[33md7aa27e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix: Remove hardcoded secrets from ecosystem.config.js - Use environment variables instead of hardcoded credentials
+[33m8b3a262[m feat: Standardize registration flows, simplify URLs, add forgot password feature
+[33m5d130bd[m Add env variables directly to PM2 config
+[33ma94cbc7[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix PM2 env file loading
+[33mdaa770e[m Remove sensitive env files

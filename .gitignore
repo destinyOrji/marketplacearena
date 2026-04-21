@@ -1,0 +1,109 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables (IMPORTANT - Don't push passwords!)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+backend-nodejs/.env
+backend-nodejs/.env.production
+frontend/.env
+frontend/.env.production
+
+# Production build files
+frontend/build/
+frontend/dist/
+backend-nodejs/build/
+backend-nodejs/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+backend-nodejs/logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Uploads (user uploaded files)
+uploads/
+backend-nodejs/uploads/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# PM2
+.pm2/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Misc
+.cache/
+.parcel-cache/
+
+# Documentation files (guides created during development)
+*.md
+!README.md
+DEPLOYMENT_GUIDE.md
+NAMECHEAP_COMPLETE_DEPLOYMENT_GUIDE.md
+CPANEL_VPS_DEPLOYMENT_GUIDE.md
+COMPLETE_BEGINNER_VPS_GUIDE.md
+MONGODB_ATLAS_SETUP.md
+TWILIO_SETUP_GUIDE.md
+QUICK_DEPLOYMENT_CHECKLIST.md
+EMAIL_TO_PHONE_OTP_MIGRATION_COMPLETE.md
+OTP_TESTING_GUIDE.md
+PHONE_OTP_VERIFICATION_GUIDE.md
+API_FIXES_SUMMARY.md
+QUICK_START_TESTING.md
+SERVICES_AND_APPOINTMENTS_INTEGRATION.md
+FINAL_FIXES.md
+TROUBLESHOOTING_DATABASE_SAVE.md
+PROFESSIONAL_COMPLETE_TESTING.md
+COMPREHENSIVE_API_AUDIT.md
+COMPLETE_FIXES_SUMMARY.md
+COMPLETE_API_IMPLEMENTATION_SUMMARY.md
+REGISTRATION_FLOWS_COMPLETE.md
+REGISTRATION_COMPLETE_SUMMARY.md
+IMAGE_UPLOAD_DEBUG_GUIDE.md
+frontend/src/dashboards/API_INTEGRATION_SUMMARY.md
+
+# Kiro IDE files
+.kiro/
+
+# VPS / Deployment files (keep on server only)
+ecosystem.config.js
+deploy.sh
+vps-setup.sh
+deploy-all.sh
+deploy-frontend.sh
+fix-ssl.sh
+install-security.sh
+update-urls.sh
+nginx.conf
