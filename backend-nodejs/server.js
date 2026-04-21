@@ -11,6 +11,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy (required when behind Nginx)
+app.set('trust proxy', 1);
+
 // Security Middleware
 // Helmet helps secure Express apps by setting various HTTP headers
 app.use(helmet({
