@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheck as CheckIcon } from 'react-icons/fa';
+import { FaCheck as CheckIconBase } from 'react-icons/fa';
+const CheckIcon = ({ className, size }: { className?: string; size?: number }) => <CheckIconBase className={className} size={size} />;
 import api from '../services/api';
 
 interface SubscriptionPlan {
