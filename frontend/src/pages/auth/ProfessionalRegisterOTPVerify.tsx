@@ -1,116 +1,53 @@
-/**
- * Professional Registration - OTP Verification
- */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import OTPVerification from '../../components/OTPVerification';
+import { useAuth } from '../../dashboards/patient/contexts/AuthContext';
 
 const ProfessionalRegisterOTPVerify: React.FC = () => {
   const navigate = useNavigate();
-  const [otp, setOtp] = useState('');
+  const { register } = useAuth();
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resending, setResending] = useState(false);
 
-  const handleVerify = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-
-    if (otp.length !== 6) {
-      setError('Please enter a valid 6-digit OTP');
+  useEffect(() => {
+    const storedData = localStorage.getItem('professionalRegisterData');
+    if (!storedData) {
+      navigate('/register/professional');
       return;
     }
+    const data = JSON.parse(storedData);
+    setPhoneNumber(data.phone);
+  }, [navigate]);
 
+  const handleOTPVerified = async () => {
     setLoading(true);
-
+    setError('');
     try {
-      // Get stored data
       const storedData = localStorage.getItem('professionalRegisterData');
-      if (!storedData) {
-        throw new Error('Registration data not found. Please start again.');
-      }
-
+      if (!storedData) throw new Error('Registration data not found');
       const formData = JSON.parse(storedData);
 
-      // Verify OTP
-      const verifyResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/api/auth/verify-phone-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: formData.phone, otp })
+      await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: 'professional',
+        phone: formData.phone,
+        phoneVerified: true,
+        professionalType: formData.professionalType,
+        licenseNumber: formData.licenseNumber,
+        specialization: formData.specialization,
+        yearsOfExperience: parseInt(formData.yearsOfExperience) || 0
       });
 
-      const verifyData = await verifyResponse.json();
-
-      if (!verifyResponse.ok) {
-        throw new Error(verifyData.message || 'Invalid OTP');
-      }
-
-      // Register professional
-      const registerResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          role: 'professional',
-          phone: formData.phone,
-          phoneVerified: true,
-          professionalType: formData.professionalType,
-          licenseNumber: formData.licenseNumber,
-          specialization: formData.specialization,
-          yearsOfExperience: parseInt(formData.yearsOfExperience) || 0
-        })
-      });
-
-      const registerData = await registerResponse.json();
-
-      if (!registerResponse.ok) {
-        throw new Error(registerData.message || 'Registration failed');
-      }
-
-      // Clear stored data
       localStorage.removeItem('professionalRegisterData');
-
-      // Show success and redirect to login
-      alert('Registration successful! Please login to continue.');
       navigate('/login');
     } catch (err: any) {
-      setError(err.message || 'Verification failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    setResending(true);
-    setError('');
-
-    try {
-      const storedData = localStorage.getItem('professionalRegisterData');
-      if (!storedData) {
-        throw new Error('Registration data not found');
-      }
-
-      const formData = JSON.parse(storedData);
-
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/otp/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: formData.phone })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to resend OTP');
-      }
-
-      alert('OTP sent successfully!');
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend OTP');
-    } finally {
-      setResending(false);
     }
   };
 
@@ -123,55 +60,22 @@ const ProfessionalRegisterOTPVerify: React.FC = () => {
           <p className="text-gray-600">Enter the 6-digit code sent to your phone</p>
         </div>
 
-        <form onSubmit={handleVerify} className="bg-white rounded-lg shadow-lg p-8 space-y-6">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">{error}</div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">OTP Code</label>
-            <input
-              type="text"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="000000"
-              className="w-full px-4 py-3 text-center text-2xl tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-              maxLength={6}
-              required
-            />
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Completing registration...</p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading || otp.length !== 6}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg disabled:bg-gray-400 transition"
-          >
-            {loading ? 'Verifying...' : 'Verify & Complete Registration'}
-          </button>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={handleResendOTP}
-              disabled={resending}
-              className="text-sm text-green-600 hover:text-green-700 font-medium disabled:text-gray-400"
-            >
-              {resending ? 'Sending...' : 'Resend OTP'}
-            </button>
-          </div>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/register/professional')}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              ← Back to registration
-            </button>
-          </div>
-        </form>
+        ) : (
+          <OTPVerification
+            phoneNumber={phoneNumber}
+            onVerified={handleOTPVerified}
+            onCancel={() => navigate('/register/professional')}
+          />
+        )}
       </div>
     </div>
   );
