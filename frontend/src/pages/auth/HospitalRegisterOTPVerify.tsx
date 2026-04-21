@@ -32,7 +32,7 @@ const HospitalRegisterOTPVerify: React.FC = () => {
       const formData = JSON.parse(storedData);
 
       // Verify OTP
-      const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/verify-phone-otp`, {
+      const verifyResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/api/auth/verify-phone-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: formData.phone, otp })
@@ -45,7 +45,7 @@ const HospitalRegisterOTPVerify: React.FC = () => {
       }
 
       // Register hospital
-      const registerResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+      const registerResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -96,7 +96,7 @@ const HospitalRegisterOTPVerify: React.FC = () => {
 
       const formData = JSON.parse(storedData);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/send-otp`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1'}/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: formData.phone })
