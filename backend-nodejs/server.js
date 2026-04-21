@@ -80,6 +80,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/api/v1/auth', authLimiter, require('./routes/auth'));
+app.use('/api/v1/otp', authLimiter, require('./routes/auth')); // alias for frontend compatibility
 app.use('/api/v1/users', require('./routes/users'));
 app.use('/api/v1/professionals', require('./routes/professionals'));
 app.use('/api/v1/gym-physio', require('./routes/gymphysio'));
