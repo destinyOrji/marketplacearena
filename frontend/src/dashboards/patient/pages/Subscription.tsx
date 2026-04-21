@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheck as CheckIconBase } from 'react-icons/fa';
 import api from '../services/api';
-
-const CheckIcon = ({ className, size }: { className?: string; size?: number }) => <CheckIconBase className={className} size={size} />;
 
 interface SubscriptionPlan {
   id: string;
@@ -236,7 +233,9 @@ const Subscription: React.FC = () => {
               <ul className="mt-8 space-y-4">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-start">
-                    <CheckIcon className="text-green-500 mr-3 flex-shrink-0 mt-0.5" size={20} />
+                    <svg className="w-5 h-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                     <span className="text-gray-700">{feature}</span>
                   </li>
                 ))}
