@@ -42,7 +42,7 @@ const Login: React.FC = () => {
 
     try {
       // Make direct API call instead of using role-specific AuthContext
-      const API_URL = import.meta.env.VITE_API_URL || 'https://healthmarketarena.com/api/v1';
+      const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {

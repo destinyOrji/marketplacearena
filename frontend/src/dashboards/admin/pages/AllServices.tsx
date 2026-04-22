@@ -85,7 +85,7 @@ const AllServices: React.FC = () => {
         <div className="flex items-center space-x-3">
           {service.images && service.images.length > 0 ? (
             <img
-              src={`${process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'http://localhost:3001'}${service.images[0]}`}
+              src={`${process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'https://healthmarketarena.com'}${service.images[0]}`}
               alt={service.title}
               className="w-12 h-12 rounded-lg object-cover"
               onError={(e) => {

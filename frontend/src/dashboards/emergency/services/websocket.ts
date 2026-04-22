@@ -2,7 +2,7 @@
 
 import { io, Socket } from 'socket.io-client';
 
-const WS_URL = process.env.REACT_APP_WS_URL || 'ws://localhost:3001';
+const WS_URL = process.env.REACT_APP_WS_URL || 'wss://healthmarketarena.com';
 
 class WebSocketService {
   private socket: Socket | null = null;

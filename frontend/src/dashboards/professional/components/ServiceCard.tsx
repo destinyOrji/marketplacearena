@@ -24,7 +24,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onEdit, onDelete, on
     // If already a full URL, return as is
     if (imagePath.startsWith('http')) return imagePath;
     // Otherwise, prepend the backend URL
-    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'http://localhost:3001';
+    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api/v1', '') || 'https://healthmarketarena.com';
     return `${backendUrl}${imagePath}`;
   };
 

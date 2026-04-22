@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserIcon, PhoneIcon, EnvelopeIcon } from '../../components/Icons';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
 
 // Simple Lock Icon component
 const LockIcon = ({ className }: { className?: string }) => (

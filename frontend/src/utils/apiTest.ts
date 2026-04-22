@@ -3,7 +3,7 @@
  * Use this to test if frontend can connect to backend
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
 
 export const testApiConnection = async () => {
   try {

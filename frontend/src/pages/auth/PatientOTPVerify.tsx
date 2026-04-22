@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import OTPVerification from '../../components/OTPVerification';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
 
 const PatientOTPVerify: React.FC = () => {
   const navigate = useNavigate();

@@ -70,7 +70,7 @@ const HospitalRegister: React.FC = () => {
 
     try {
       // Send OTP to phone
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'}/otp/send`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1'}/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: formData.phone })
