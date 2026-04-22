@@ -23,7 +23,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
   // Timer for resend button
   useEffect(() => {

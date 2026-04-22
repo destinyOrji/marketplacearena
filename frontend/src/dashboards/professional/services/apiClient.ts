@@ -3,7 +3,7 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { parseApiError } from '../utils/errorHandling';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 /**
  * Create and configure axios instance

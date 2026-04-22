@@ -79,22 +79,22 @@ mongoose.connect(process.env.MONGODB_URI, {
 });
 
 // Routes
-app.use('/api/v1/auth', authLimiter, require('./routes/auth'));
-app.use('/api/v1/otp', authLimiter, require('./routes/auth')); // alias for frontend compatibility
-app.use('/api/v1/users', require('./routes/users'));
-app.use('/api/v1/professionals', require('./routes/professionals'));
-app.use('/api/v1/gym-physio', require('./routes/gymphysio'));
-app.use('/api/v1/hospitals', require('./routes/hospitals'));
-app.use('/api/v1/appointments', require('./routes/appointments'));
-app.use('/api/v1/ambulance', require('./routes/ambulance'));
-app.use('/api/v1/admin', require('./routes/admin'));
-app.use('/api/v1/jobs', require('./routes/jobs'));
-app.use('/api/v1/client', require('./routes/client'));
-app.use('/api/v1/subscriptions', require('./routes/subscriptions'));
+app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/otp', authLimiter, require('./routes/auth')); // alias for frontend compatibility
+app.use('/api/users', require('./routes/users'));
+app.use('/api/professionals', require('./routes/professionals'));
+app.use('/api/gym-physio', require('./routes/gymphysio'));
+app.use('/api/hospitals', require('./routes/hospitals'));
+app.use('/api/appointments', require('./routes/appointments'));
+app.use('/api/ambulance', require('./routes/ambulance'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/jobs', require('./routes/jobs'));
+app.use('/api/client', require('./routes/client'));
+app.use('/api/subscriptions', require('./routes/subscriptions'));
 
 // Debug routes (only in development)
 if (process.env.NODE_ENV !== 'production') {
-    app.use('/api/v1/debug', require('./routes/debug'));
+    app.use('/api/debug', require('./routes/debug'));
 }
 
 // Health check endpoint

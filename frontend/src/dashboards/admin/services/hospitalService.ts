@@ -15,7 +15,7 @@ import {
   PaginationMeta
 } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
 
 interface PaginatedResponse<T> {
   statuscode: number;

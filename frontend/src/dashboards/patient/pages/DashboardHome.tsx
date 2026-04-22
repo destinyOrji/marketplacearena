@@ -44,7 +44,7 @@ const DashboardHome: React.FC = () => {
 
       // Fetch subscription status
       const token = localStorage.getItem('authToken');
-      const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
+      const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
       const subResponse = await fetch(`${API_URL}/subscriptions/status`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });

@@ -3,7 +3,7 @@
 import axios from 'axios';
 import type { GymPhysioProfile, Service, Appointment, Schedule, DashboardStats } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 // Create axios instance with default config
 const apiClient = axios.create({

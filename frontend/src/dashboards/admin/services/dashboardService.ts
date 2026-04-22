@@ -13,7 +13,7 @@ import {
   RecentActivity
 } from '../types/dashboard';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
 
 interface ApiResponse<T> {
   statuscode: number;
