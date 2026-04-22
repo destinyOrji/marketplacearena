@@ -82,6 +82,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 app.use('/api/auth', authLimiter, require('./routes/auth'));
 app.use('/api/otp', authLimiter, require('./routes/auth')); // alias for frontend compatibility
 app.use('/api/users', require('./routes/users'));
+app.use('/api/users/notifications', require('./routes/notifications')); // notifications endpoint
 app.use('/api/professionals', require('./routes/professionals'));
 app.use('/api/gym-physio', require('./routes/gymphysio'));
 app.use('/api/hospitals', require('./routes/hospitals'));
