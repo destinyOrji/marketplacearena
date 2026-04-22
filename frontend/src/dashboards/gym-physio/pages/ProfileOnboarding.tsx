@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { FiSave, FiCamera, FiLock } from 'react-icons/fi';
-import { getProfile, updateProfile, uploadPhoto } from '../services/api';
-import apiClient from '../services/api';
+import { FiSave } from 'react-icons/fi';
+import { getProfile, updateProfile, uploadPhoto, changePassword } from '../services/api';
 
 const ProfileOnboarding: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isVerified, setIsVerified] = useState(false);
 
   const [form, setForm] = useState({
     businessName: '', businessType: '', specialization: '',
@@ -18,8 +18,6 @@ const ProfileOnboarding: React.FC = () => {
   const [passwords, setPasswords] = useState({
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
-
-  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => { loadProfile(); }, []);
 
@@ -34,25 +32,25 @@ const ProfileOnboarding: React.FC = () => {
         licenseNumber: d.licenseNumber || '',
         yearsInBusiness: d.yearsInBusiness || 0,
         phone: d.phone || '',
-        bio: d.bio || '',
+        bio: (d as any).bio || '',
         city: d.city || '',
         state: d.state || '',
-        address: d.address || '',
+        address: (d as any).address || '',
         membershipFee: d.membershipFee || 0,
       });
       setIsVerified(d.isVerified || false);
-    } catch (e) {
+    } catch {
       toast.error('Failed to load profile');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateProfile(form);
+      await updateProfile(form as any);
       toast.success('Profile updated successfully');
     } catch (e: any) {
       toast.error(e.message || 'Failed to update profile');
@@ -61,7 +59,7 @@ const ProfileOnboarding: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (passwords.newPassword !== passwords.confirmPassword) {
       toast.error('Passwords do not match');
@@ -69,7 +67,7 @@ const ProfileOnboarding: React.FC = () => {
     }
     setSaving(true);
     try {
-      await (apiClient as any).changePassword(passwords.currentPassword, passwords.newPassword);
+      await changePassword(passwords.currentPassword, passwords.newPassword);
       toast.success('Password changed successfully');
       setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (e: any) {
@@ -108,8 +106,8 @@ const ProfileOnboarding: React.FC = () => {
           <div className="w-20 h-20 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-2xl font-bold">
             {form.businessName?.[0] || 'G'}
           </div>
-          <label className="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full p-1 cursor-pointer hover:bg-orange-700">
-            <FiCamera size={12} />
+          <label className="absolute bottom-0 right-0 bg-orange-600 text-white rounded-full p-1 cursor-pointer hover:bg-orange-700 text-xs">
+            📷
             <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </label>
         </div>
@@ -160,7 +158,8 @@ const ProfileOnboarding: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Years in Business</label>
-                  <input type="number" min="0" className={inputClass} value={form.yearsInBusiness} onChange={e => setForm(p => ({ ...p, yearsInBusiness: parseInt(e.target.value) || 0 }))} />
+                  <input type="number" min="0" className={inputClass} value={form.yearsInBusiness}
+                    onChange={e => setForm(p => ({ ...p, yearsInBusiness: parseInt(e.target.value) || 0 }))} />
                 </div>
                 <div>
                   <label className={labelClass}>Phone</label>
@@ -168,7 +167,8 @@ const ProfileOnboarding: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Membership Fee (₦)</label>
-                  <input type="number" min="0" className={inputClass} value={form.membershipFee} onChange={e => setForm(p => ({ ...p, membershipFee: parseFloat(e.target.value) || 0 }))} />
+                  <input type="number" min="0" className={inputClass} value={form.membershipFee}
+                    onChange={e => setForm(p => ({ ...p, membershipFee: parseFloat(e.target.value) || 0 }))} />
                 </div>
                 <div>
                   <label className={labelClass}>City</label>
@@ -184,13 +184,14 @@ const ProfileOnboarding: React.FC = () => {
                 </div>
                 <div className="md:col-span-2">
                   <label className={labelClass}>Bio / Description</label>
-                  <textarea rows={4} className={inputClass} value={form.bio} onChange={e => setForm(p => ({ ...p, bio: e.target.value }))} />
+                  <textarea rows={4} className={inputClass} value={form.bio}
+                    onChange={e => setForm(p => ({ ...p, bio: e.target.value }))} />
                 </div>
               </div>
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                  <FiSave className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -216,7 +217,7 @@ const ProfileOnboarding: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50">
-                  <FiLock size={16} /> {saving ? 'Saving...' : 'Change Password'}
+                  🔒 {saving ? 'Saving...' : 'Change Password'}
                 </button>
               </div>
             </form>

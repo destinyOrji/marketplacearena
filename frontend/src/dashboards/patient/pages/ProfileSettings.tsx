@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { patientApi } from '../services/api';
 import { showSuccessToast, showErrorToast } from '../utils/toast';
-import { FiUser, FiPhone, FiMail, FiCalendar, FiMapPin, FiLock, FiSave, FiCamera } from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
 
 const ProfileSettings: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -24,25 +24,25 @@ const ProfileSettings: React.FC = () => {
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  useEffect(() => { loadProfile(); }, []);
 
   const loadProfile = async () => {
     setLoading(true);
     try {
       const res = await patientApi.getProfile();
-      const d = res.data?.data || res.data;
+      const d = (res as any).data?.data || (res as any).data || res;
       setForm({
         firstName: d.firstName || '',
         lastName: d.lastName || '',
         email: d.email || '',
         phone: d.phone || '',
-        dateOfBirth: d.dateOfBirth ? d.dateOfBirth.split('T')[0] : '',
+        dateOfBirth: d.dateOfBirth
+          ? (typeof d.dateOfBirth === 'string' ? d.dateOfBirth.split('T')[0] : new Date(d.dateOfBirth).toISOString().split('T')[0])
+          : '',
         gender: d.gender || '',
-        address: d.address?.street || d.address || '',
-        city: d.address?.city || d.city || '',
-        state: d.address?.state || d.state || '',
+        address: (typeof d.address === 'object' ? d.address?.street : d.address) || '',
+        city: (typeof d.address === 'object' ? d.address?.city : '') || d.city || '',
+        state: (typeof d.address === 'object' ? d.address?.state : '') || d.state || '',
         bloodGroup: d.bloodGroup || '',
         maritalStatus: d.maritalStatus || '',
       });
@@ -52,14 +52,14 @@ const ProfileSettings: React.FC = () => {
         relationship: d.emergencyContact?.relationship || '',
         email: d.emergencyContact?.email || '',
       });
-    } catch (e) {
+    } catch {
       showErrorToast('Failed to load profile');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -68,14 +68,14 @@ const ProfileSettings: React.FC = () => {
         lastName: form.lastName,
         phone: form.phone,
         dateOfBirth: form.dateOfBirth,
-        gender: form.gender,
-        address: { street: form.address, city: form.city, state: form.state },
-        bloodGroup: form.bloodGroup,
-        maritalStatus: form.maritalStatus,
-        emergencyContact: emergency,
+        gender: form.gender as any,
+        address: { street: form.address, city: form.city, state: form.state } as any,
+        bloodGroup: form.bloodGroup as any,
+        maritalStatus: form.maritalStatus as any,
+        emergencyContact: emergency as any,
       } as any);
       showSuccessToast('Profile updated successfully');
-      if (updateUser) updateUser({ ...user, firstName: form.firstName, lastName: form.lastName } as any);
+      if (updateUser) updateUser({ ...user, ...form } as any);
     } catch (e: any) {
       showErrorToast(e.message || 'Failed to update profile');
     } finally {
@@ -83,7 +83,7 @@ const ProfileSettings: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (passwords.newPassword !== passwords.confirmPassword) {
       showErrorToast('Passwords do not match');
@@ -132,8 +132,8 @@ const ProfileSettings: React.FC = () => {
           <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-2xl font-bold">
             {form.firstName?.[0]}{form.lastName?.[0]}
           </div>
-          <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700">
-            <FiCamera size={12} />
+          <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 text-xs">
+            📷
             <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </label>
         </div>
@@ -156,7 +156,6 @@ const ProfileSettings: React.FC = () => {
         </div>
 
         <div className="p-6">
-          {/* Profile Tab */}
           {activeTab === 'profile' && (
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -170,7 +169,7 @@ const ProfileSettings: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Email</label>
-                  <input className={inputClass} value={form.email} disabled />
+                  <input className={`${inputClass} bg-gray-50`} value={form.email} disabled />
                 </div>
                 <div>
                   <label className={labelClass}>Phone</label>
@@ -207,7 +206,7 @@ const ProfileSettings: React.FC = () => {
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className={labelClass}>Address</label>
+                  <label className={labelClass}>Street Address</label>
                   <input className={inputClass} value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="Street address" />
                 </div>
                 <div>
@@ -222,13 +221,12 @@ const ProfileSettings: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                  <FiSave className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
           )}
 
-          {/* Emergency Contact Tab */}
           {activeTab === 'emergency' && (
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <p className="text-sm text-gray-500 mb-4">This person will be contacted in case of emergency.</p>
@@ -253,13 +251,12 @@ const ProfileSettings: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                  <FiSave className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
           )}
 
-          {/* Password Tab */}
           {activeTab === 'password' && (
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
               <div>
@@ -280,7 +277,7 @@ const ProfileSettings: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiLock size={16} /> {saving ? 'Saving...' : 'Change Password'}
+                  🔒 {saving ? 'Saving...' : 'Change Password'}
                 </button>
               </div>
             </form>
