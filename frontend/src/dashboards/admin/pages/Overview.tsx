@@ -1,62 +1,37 @@
-/**
- * Admin Overview Page
- * Main dashboard page with analytics and statistics
- */
 import React, { useEffect, useState } from 'react';
 import {
-  FiUsers,
-  FiUserCheck,
-  FiActivity,
-  FiTruck,
-  FiCalendar,
-  FiCheckCircle,
-  FiDollarSign,
-  FiAlertCircle
+  FiUsers, FiUserCheck, FiActivity, FiTruck,
+  FiCalendar, FiCheckCircle, FiAlertCircle
 } from 'react-icons/fi';
 import { useAdminAuth } from '../contexts/AdminAuthContext';
 import { dashboardService } from '../services/dashboardService';
 import {
-  StatsCard,
-  RecentActivities,
-  RegistrationTrendsChart,
-  AppointmentStatsChart,
-  EmergencyBookingsChart,
-  RevenueDistributionChart
+  StatsCard, RecentActivities, RegistrationTrendsChart,
+  AppointmentStatsChart, EmergencyBookingsChart, RevenueDistributionChart
 } from '../components';
-import {
-  DashboardStats,
-  RegistrationTrend,
-  AppointmentStats,
-  EmergencyStats,
-  RevenueDistribution,
-  RecentActivity
-} from '../types/dashboard';
 
 const Overview: React.FC = () => {
   const { admin } = useAdminAuth();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [registrationTrends, setRegistrationTrends] = useState<RegistrationTrend[]>([]);
-  const [appointmentStats, setAppointmentStats] = useState<AppointmentStats[]>([]);
-  const [emergencyStats, setEmergencyStats] = useState<EmergencyStats[]>([]);
-  const [revenueDistribution, setRevenueDistribution] = useState<RevenueDistribution[]>([]);
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [registrationTrends, setRegistrationTrends] = useState<any[]>([]);
+  const [appointmentStats, setAppointmentStats] = useState<any[]>([]);
+  const [emergencyStats, setEmergencyStats] = useState<any[]>([]);
+  const [revenueDistribution, setRevenueDistribution] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Get admin name from localStorage
+  const adminProfile = (() => {
+    try { return JSON.parse(localStorage.getItem('admin_profile') || '{}'); } catch { return {}; }
+  })();
+  const adminName = adminProfile.firstName || adminProfile.email?.split('@')[0] || admin?.email?.split('@')[0] || 'Admin';
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
-
-      // Fetch all dashboard data in parallel
-      const [
-        statsData,
-        trendsData,
-        appointmentsData,
-        emergencyData,
-        revenueData,
-        activitiesData
-      ] = await Promise.all([
+      const [statsData, trendsData, appointmentsData, emergencyData, revenueData, activitiesData] = await Promise.all([
         dashboardService.getStats(),
         dashboardService.getRegistrationTrends(),
         dashboardService.getAppointmentStats(),
@@ -64,7 +39,6 @@ const Overview: React.FC = () => {
         dashboardService.getRevenueDistribution(),
         dashboardService.getRecentActivities()
       ]);
-
       setStats(statsData);
       setRegistrationTrends(trendsData);
       setAppointmentStats(appointmentsData);
@@ -79,106 +53,59 @@ const Overview: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  useEffect(() => { fetchDashboardData(); }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <FiAlertCircle className="h-5 w-5 text-red-600 mr-2" />
-          <p className="text-red-800">{error}</p>
-        </div>
-        <button
-          onClick={fetchDashboardData}
-          className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-        >
-          Retry
-        </button>
+  if (error) return (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="flex items-center">
+        <FiAlertCircle className="h-5 w-5 text-red-600 mr-2" />
+        <p className="text-red-800">{error}</p>
       </div>
-    );
-  }
+      <button onClick={fetchDashboardData} className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+        Retry
+      </button>
+    </div>
+  );
+
+  // Normalize stats - backend returns camelCase
+  const s = stats || {};
+  const totalHospitals = s.totalHospitals ?? s.total_hospitals ?? 0;
+  const totalProfessionals = s.totalProfessionals ?? s.total_professionals ?? 0;
+  const totalPatients = s.totalPatients ?? s.total_patients ?? 0;
+  const totalAmbulances = s.totalAmbulances ?? s.total_ambulances ?? 0;
+  const totalAppointments = s.appointments?.total ?? s.active_appointments ?? 0;
+  const todayAppointments = s.appointments?.today ?? 0;
+  const pendingVerifications = s.pendingVerifications?.total ?? s.pending_verifications ?? 0;
+  const recentRegistrations = s.recentRegistrations ?? 0;
 
   return (
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {admin?.email?.split('@')[0] || 'Admin'}
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Welcome back, {adminName} 👋</h1>
         <p className="text-gray-600 mt-1">Here's what's happening with your platform today.</p>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Row 1 - User Counts */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <StatsCard
-          title="Total Hospitals"
-          value={stats?.total_hospitals || 0}
-          icon={FiActivity}
-          iconBgColor="bg-purple-100"
-          iconColor="text-purple-600"
-        />
-        <StatsCard
-          title="Total Professionals"
-          value={stats?.total_professionals || 0}
-          icon={FiUserCheck}
-          iconBgColor="bg-blue-100"
-          iconColor="text-blue-600"
-        />
-        <StatsCard
-          title="Total Patients"
-          value={stats?.total_patients || 0}
-          icon={FiUsers}
-          iconBgColor="bg-green-100"
-          iconColor="text-green-600"
-        />
-        <StatsCard
-          title="Total Ambulances"
-          value={stats?.total_ambulances || 0}
-          icon={FiTruck}
-          iconBgColor="bg-orange-100"
-          iconColor="text-orange-600"
-        />
+        <StatsCard title="Total Patients" value={totalPatients} icon={FiUsers} iconBgColor="bg-green-100" iconColor="text-green-600" />
+        <StatsCard title="Total Professionals" value={totalProfessionals} icon={FiUserCheck} iconBgColor="bg-blue-100" iconColor="text-blue-600" />
+        <StatsCard title="Total Hospitals" value={totalHospitals} icon={FiActivity} iconBgColor="bg-purple-100" iconColor="text-purple-600" />
+        <StatsCard title="Total Ambulances" value={totalAmbulances} icon={FiTruck} iconBgColor="bg-orange-100" iconColor="text-orange-600" />
       </div>
 
+      {/* Row 2 - Activity Counts */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <StatsCard
-          title="Active Appointments"
-          value={stats?.active_appointments || 0}
-          icon={FiCalendar}
-          iconBgColor="bg-indigo-100"
-          iconColor="text-indigo-600"
-        />
-        <StatsCard
-          title="Pending Verifications"
-          value={stats?.pending_verifications || 0}
-          icon={FiCheckCircle}
-          iconBgColor="bg-yellow-100"
-          iconColor="text-yellow-600"
-        />
-        <StatsCard
-          title="Total Revenue"
-          value={`$${(stats?.total_revenue || 0).toLocaleString()}`}
-          icon={FiDollarSign}
-          iconBgColor="bg-green-100"
-          iconColor="text-green-600"
-        />
-        <StatsCard
-          title="Emergency Bookings"
-          value={stats?.emergency_bookings || 0}
-          icon={FiTruck}
-          iconBgColor="bg-red-100"
-          iconColor="text-red-600"
-        />
+        <StatsCard title="Total Appointments" value={totalAppointments} icon={FiCalendar} iconBgColor="bg-indigo-100" iconColor="text-indigo-600" />
+        <StatsCard title="Today's Appointments" value={todayAppointments} icon={FiCalendar} iconBgColor="bg-cyan-100" iconColor="text-cyan-600" />
+        <StatsCard title="Pending Verifications" value={pendingVerifications} icon={FiCheckCircle} iconBgColor="bg-yellow-100" iconColor="text-yellow-600" />
+        <StatsCard title="New This Month" value={recentRegistrations} icon={FiUsers} iconBgColor="bg-pink-100" iconColor="text-pink-600" />
       </div>
 
       {/* Charts Row 1 */}
@@ -194,11 +121,7 @@ const Overview: React.FC = () => {
       </div>
 
       {/* Recent Activities */}
-      <RecentActivities
-        activities={recentActivities}
-        onRefresh={fetchDashboardData}
-        isLoading={loading}
-      />
+      <RecentActivities activities={recentActivities} onRefresh={fetchDashboardData} isLoading={loading} />
     </div>
   );
 };

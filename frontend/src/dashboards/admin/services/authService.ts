@@ -1,21 +1,19 @@
-/**
- * Admin Authentication Service
- * Handles all authentication-related API calls
- */
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
 
+export interface AdminProfile {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  permissions: Record<string, any>;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;
-}
-
-export interface AdminProfile {
-  id: number;
-  email: string;
-  role: string;
-  permissions: Record<string, any>;
 }
 
 export interface LoginResponse {
@@ -29,143 +27,86 @@ export interface LoginResponse {
   };
 }
 
-export interface LogoutResponse {
-  statuscode: number;
-  status: string;
-  message: string;
-}
-
 class AuthService {
   private readonly baseURL = `${API_BASE_URL}/admin/auth`;
 
-  /**
-   * Login admin user
-   */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      const response = await axios.post<LoginResponse>(
-        `${this.baseURL}/login`,
-        credentials
-      );
-      
+      const response = await axios.post<LoginResponse>(`${this.baseURL}/login`, credentials);
       if (response.data.statuscode === 0) {
-        // Store tokens
-        this.setAccessToken(response.data.data.access);
-        this.setRefreshToken(response.data.data.refresh);
-        this.setAdminProfile(response.data.data.admin);
+        // Store using shared keys so all services can access it
+        localStorage.setItem('authToken', response.data.data.access);
+        localStorage.setItem('admin_access_token', response.data.data.access);
+        localStorage.setItem('admin_refresh_token', response.data.data.refresh);
+        localStorage.setItem('admin_profile', JSON.stringify(response.data.data.admin));
+        // Also store as user for compatibility
+        localStorage.setItem('user', JSON.stringify({
+          ...response.data.data.admin,
+          role: response.data.data.admin.role || 'admin'
+        }));
       }
-      
       return response.data;
     } catch (error: any) {
-      if (error.response?.data) {
-        throw error.response.data;
-      }
-      throw {
-        statuscode: 1,
-        status: 'error',
-        message: error.message || 'Login failed'
-      };
+      if (error.response?.data) throw error.response.data;
+      throw { statuscode: 1, status: 'error', message: error.message || 'Login failed' };
     }
   }
 
-  /**
-   * Logout admin user
-   */
   async logout(): Promise<void> {
     try {
-      const refreshToken = this.getRefreshToken();
-      
-      if (refreshToken) {
-        await axios.post<LogoutResponse>(
-          `${this.baseURL}/logout`,
-          { refresh: refreshToken }
-        );
+      const token = this.getAccessToken();
+      if (token) {
+        await axios.post(`${this.baseURL}/logout`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       }
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear tokens regardless of API call success
       this.clearTokens();
     }
   }
 
-  /**
-   * Refresh access token
-   */
   async refreshToken(): Promise<string | null> {
     try {
       const refreshToken = this.getRefreshToken();
-      
-      if (!refreshToken) {
-        return null;
-      }
-
+      if (!refreshToken) return null;
       const response = await axios.post<{ statuscode: number; data: { access: string; refresh: string } }>(
-        `${API_BASE_URL}/admin/auth/refresh`,
-        { refresh: refreshToken }
+        `${this.baseURL}/refresh`, { refresh: refreshToken }
       );
-
       if (response.data.statuscode === 0) {
         const { access, refresh } = response.data.data;
-        this.setAccessToken(access);
-        this.setRefreshToken(refresh); // store rotated refresh token
+        localStorage.setItem('authToken', access);
+        localStorage.setItem('admin_access_token', access);
+        localStorage.setItem('admin_refresh_token', refresh);
         return access;
       }
-
       return null;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
+    } catch {
       this.clearTokens();
       return null;
     }
   }
 
-  /**
-   * Check if user is authenticated
-   */
   isAuthenticated(): boolean {
     const token = this.getAccessToken();
     if (!token) return false;
-
     try {
-      // Check if token is expired
       const payload = JSON.parse(atob(token.split('.')[1]));
-      const expiryTime = payload.exp * 1000; // Convert to milliseconds
-      return Date.now() < expiryTime;
+      return Date.now() < payload.exp * 1000;
     } catch {
       return false;
     }
   }
 
-  /**
-   * Get current admin profile
-   */
   getAdminProfile(): AdminProfile | null {
-    const profileStr = localStorage.getItem('admin_profile');
-    if (!profileStr) return null;
-    
-    try {
-      return JSON.parse(profileStr);
-    } catch {
-      return null;
-    }
-  }
-
-  // Token management methods
-  private setAccessToken(token: string): void {
-    localStorage.setItem('admin_access_token', token);
-  }
-
-  private setRefreshToken(token: string): void {
-    localStorage.setItem('admin_refresh_token', token);
-  }
-
-  private setAdminProfile(profile: AdminProfile): void {
-    localStorage.setItem('admin_profile', JSON.stringify(profile));
+    const str = localStorage.getItem('admin_profile');
+    if (!str) return null;
+    try { return JSON.parse(str); } catch { return null; }
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('admin_access_token');
+    return localStorage.getItem('admin_access_token') || localStorage.getItem('authToken');
   }
 
   private getRefreshToken(): string | null {
@@ -176,45 +117,33 @@ class AuthService {
     localStorage.removeItem('admin_access_token');
     localStorage.removeItem('admin_refresh_token');
     localStorage.removeItem('admin_profile');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
   }
 
-  /**
-   * Setup axios interceptor for automatic token refresh
-   */
   setupInterceptors(): void {
-    // Request interceptor to add token
-    axios.interceptors.request.use(
-      (config) => {
-        const token = this.getAccessToken();
-        if (token && config.url?.includes('/admin/')) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
+    axios.interceptors.request.use((config) => {
+      const token = this.getAccessToken();
+      if (token && config.url?.includes('/admin/')) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
 
-    // Response interceptor to handle token expiry
     axios.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
-
-        // If error is 401 and we haven't retried yet
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && originalRequest.url?.includes('/admin/')) {
           originalRequest._retry = true;
-
           const newToken = await this.refreshToken();
-          
           if (newToken) {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return axios(originalRequest);
           } else {
-            // Redirect to login if refresh fails
             window.location.href = '/admin/login';
           }
         }
-
         return Promise.reject(error);
       }
     );

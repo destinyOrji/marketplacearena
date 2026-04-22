@@ -4,71 +4,64 @@ const Hospital = require('../../models/Hospital');
 const Ambulance = require('../../models/Ambulance');
 const Client = require('../../models/Client');
 const Appointment = require('../../models/Appointment');
+const GymPhysio = require('../../models/GymPhysio');
 
 // Get dashboard statistics
 exports.getStats = async (req, res) => {
     try {
-        // Get counts for different user types
-        const totalUsers = await User.countDocuments();
-        const totalPatients = await User.countDocuments({ role: 'client' });
-        const totalProfessionals = await User.countDocuments({ role: 'professional' });
-        const totalHospitals = await User.countDocuments({ role: 'hospital' });
-        const totalAmbulances = await User.countDocuments({ role: 'ambulance' });
-        
-        // Get verification stats
-        const pendingProfessionals = await Professional.countDocuments({ isVerified: false });
-        const pendingHospitals = await Hospital.countDocuments({ isVerified: false });
-        const pendingAmbulances = await Ambulance.countDocuments({ isVerified: false });
-        
-        // Get appointment stats
-        const totalAppointments = await Appointment.countDocuments();
-        const todayAppointments = await Appointment.countDocuments({
-            scheduledDate: {
-                $gte: new Date(new Date().setHours(0, 0, 0, 0)),
-                $lt: new Date(new Date().setHours(23, 59, 59, 999))
-            }
-        });
-        
-        // Get recent registrations (last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const recentRegistrations = await User.countDocuments({
-            createdAt: { $gte: thirtyDaysAgo }
-        });
-
-        const stats = {
-            totalUsers,
-            totalPatients,
-            totalProfessionals,
-            totalHospitals,
-            totalAmbulances,
-            pendingVerifications: {
-                professionals: pendingProfessionals,
-                hospitals: pendingHospitals,
-                ambulances: pendingAmbulances,
-                total: pendingProfessionals + pendingHospitals + pendingAmbulances
-            },
-            appointments: {
-                total: totalAppointments,
-                today: todayAppointments
-            },
-            recentRegistrations
-        };
+        const [
+            totalUsers, totalPatients, totalProfessionals,
+            totalHospitals, totalAmbulances, totalGymPhysio,
+            pendingProfessionals, pendingHospitals, pendingAmbulances, pendingGymPhysio,
+            totalAppointments, todayAppointments, recentRegistrations
+        ] = await Promise.all([
+            User.countDocuments(),
+            User.countDocuments({ role: 'client' }),
+            User.countDocuments({ role: 'professional' }),
+            User.countDocuments({ role: 'hospital' }),
+            User.countDocuments({ role: 'ambulance' }),
+            User.countDocuments({ role: 'gym-physio' }),
+            Professional.countDocuments({ isVerified: false }),
+            Hospital.countDocuments({ isVerified: false }),
+            Ambulance.countDocuments({ isVerified: false }),
+            GymPhysio.countDocuments({ isVerified: false }),
+            Appointment.countDocuments(),
+            Appointment.countDocuments({
+                scheduledDate: {
+                    $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                    $lt: new Date(new Date().setHours(23, 59, 59, 999))
+                }
+            }),
+            User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } })
+        ]);
 
         res.json({
             statuscode: 0,
             status: 'success',
-            data: stats
+            data: {
+                totalUsers,
+                totalPatients,
+                totalProfessionals,
+                totalHospitals,
+                totalAmbulances,
+                totalGymPhysio,
+                pendingVerifications: {
+                    professionals: pendingProfessionals,
+                    hospitals: pendingHospitals,
+                    ambulances: pendingAmbulances,
+                    gymPhysio: pendingGymPhysio,
+                    total: pendingProfessionals + pendingHospitals + pendingAmbulances + pendingGymPhysio
+                },
+                appointments: {
+                    total: totalAppointments,
+                    today: todayAppointments
+                },
+                recentRegistrations
+            }
         });
-
     } catch (error) {
         console.error('Get dashboard stats error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to get dashboard stats',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: 'Failed to get dashboard stats', error: error.message });
     }
 };
 

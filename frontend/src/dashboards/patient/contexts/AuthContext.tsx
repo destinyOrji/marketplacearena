@@ -31,13 +31,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const token = localStorage.getItem('authToken');
     const userStr = localStorage.getItem('user');
 
-    console.log('🔍 AuthContext Debug - Token from localStorage:', token);
-    console.log('🔍 AuthContext Debug - User from localStorage:', userStr);
-
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
-        console.log('🔍 AuthContext Debug - Parsed user:', user);
         setAuthState({
           isAuthenticated: true,
           user,
@@ -45,21 +41,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           loading: false,
           error: null,
         });
-        console.log('🔍 AuthContext Debug - Authentication state set to true');
       } catch (error) {
-        console.log('🔍 AuthContext Debug - Error parsing user data:', error);
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        setAuthState({
-          isAuthenticated: false,
-          user: null,
-          token: null,
-          loading: false,
-          error: null,
-        });
+        setAuthState({ isAuthenticated: false, user: null, token: null, loading: false, error: null });
       }
     } else {
-      console.log('🔍 AuthContext Debug - No token or user found, setting loading to false');
       setAuthState((prev) => ({ ...prev, loading: false }));
     }
   }, []);
