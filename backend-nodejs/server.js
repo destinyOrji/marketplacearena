@@ -80,7 +80,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/api/auth', authLimiter, require('./routes/auth'));
-app.use('/api/otp', authLimiter, require('./routes/auth')); // alias for frontend compatibility
+app.use('/api/otp', authLimiter, require('./routes/auth')); // OTP alias for frontend
 app.use('/api/users', require('./routes/users'));
 app.use('/api/users/notifications', require('./routes/notifications')); // notifications endpoint
 app.use('/api/professionals', require('./routes/professionals'));
