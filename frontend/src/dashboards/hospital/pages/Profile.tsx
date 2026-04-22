@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { FiSave, FiUpload, FiLock, FiCamera } from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
 import { useHospital } from '../contexts/HospitalContext';
 import { hospitalApi } from '../services/api';
 
@@ -11,22 +11,11 @@ const Profile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
-    hospitalName: '',
-    hospitalType: '',
-    registrationNumber: '',
-    totalBeds: 0,
-    availableBeds: 0,
-    icuBeds: 0,
-    emergencyServices: false,
-    description: '',
-    phone: '',
-    email: '',
-    website: '',
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
+    hospitalName: '', hospitalType: '', registrationNumber: '',
+    totalBeds: 0, availableBeds: 0, icuBeds: 0,
+    emergencyServices: false, description: '',
+    phone: '', email: '', website: '',
+    street: '', city: '', state: '', country: '', zipCode: '',
   });
 
   const [passwords, setPasswords] = useState({
@@ -35,28 +24,29 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     if (hospital) {
+      const h = hospital as any;
       setForm({
-        hospitalName: hospital.hospitalName || '',
-        hospitalType: hospital.hospitalType || '',
-        registrationNumber: hospital.registrationNumber || '',
-        totalBeds: hospital.totalBeds || 0,
-        availableBeds: hospital.availableBeds || 0,
-        icuBeds: hospital.icuBeds || 0,
-        emergencyServices: hospital.emergencyServices || false,
-        description: (hospital as any).description || '',
-        phone: hospital.phone || '',
-        email: hospital.email || '',
-        website: hospital.website || '',
-        street: hospital.address?.street || '',
-        city: hospital.address?.city || '',
-        state: hospital.address?.state || '',
-        country: hospital.address?.country || '',
-        zipCode: hospital.address?.zipCode || '',
+        hospitalName: h.hospitalName || h.hospital_name || '',
+        hospitalType: h.hospitalType || h.facility_type || '',
+        registrationNumber: h.registrationNumber || h.registration_number || '',
+        totalBeds: h.totalBeds || h.number_of_beds || 0,
+        availableBeds: h.availableBeds || 0,
+        icuBeds: h.icuBeds || 0,
+        emergencyServices: h.emergencyServices || false,
+        description: h.description || '',
+        phone: h.phone || '',
+        email: h.email || '',
+        website: h.website || '',
+        street: (typeof h.address === 'object' ? h.address?.street : '') || h.address || '',
+        city: (typeof h.address === 'object' ? h.address?.city : '') || h.city || '',
+        state: (typeof h.address === 'object' ? h.address?.state : '') || h.state || '',
+        country: (typeof h.address === 'object' ? h.address?.country : '') || h.country || '',
+        zipCode: (typeof h.address === 'object' ? h.address?.zipCode : '') || '',
       });
     }
   }, [hospital]);
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -70,13 +60,7 @@ const Profile: React.FC = () => {
         phone: form.phone,
         email: form.email,
         website: form.website,
-        address: {
-          street: form.street,
-          city: form.city,
-          state: form.state,
-          country: form.country,
-          zipCode: form.zipCode,
-        },
+        address: { street: form.street, city: form.city, state: form.state, country: form.country, zipCode: form.zipCode },
       } as any);
       toast.success('Profile updated successfully');
     } catch (error: any) {
@@ -86,12 +70,9 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleChangePassword = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
+    if (passwords.newPassword !== passwords.confirmPassword) { toast.error('Passwords do not match'); return; }
     setSaving(true);
     try {
       await hospitalApi.changePassword(passwords.currentPassword, passwords.newPassword);
@@ -112,23 +93,29 @@ const Profile: React.FC = () => {
       await hospitalApi.uploadImage(file, 'logo');
       toast.success('Logo uploaded successfully');
       window.location.reload();
-    } catch (error: any) {
+    } catch {
       toast.error('Failed to upload logo');
     } finally {
       setUploading(false);
     }
   };
 
-  if (loading || !hospital) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
+  if (loading || !hospital) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    </div>
+  );
 
   const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
   const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+  const saveBtn = (
+    <div className="flex justify-end pt-4">
+      <button type="submit" disabled={saving}
+        className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+        <FiSave className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
+      </button>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -142,16 +129,16 @@ const Profile: React.FC = () => {
               {form.hospitalName?.[0] || 'H'}
             </div>
           )}
-          <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700">
-            <FiCamera size={12} />
+          <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 text-xs">
+            📷
             <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
           </label>
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{form.hospitalName || 'Hospital Profile'}</h1>
           <p className="text-gray-500 text-sm capitalize">{form.hospitalType}</p>
-          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${hospital.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-            {hospital.isVerified ? '✓ Verified' : 'Pending Verification'}
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${(hospital as any).isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+            {(hospital as any).isVerified ? '✓ Verified' : 'Pending Verification'}
           </span>
         </div>
       </div>
@@ -168,7 +155,6 @@ const Profile: React.FC = () => {
         </div>
 
         <div className="p-6">
-          {/* Basic Info */}
           {activeTab === 'basic' && (
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -178,7 +164,7 @@ const Profile: React.FC = () => {
                 </div>
                 <div>
                   <label className={labelClass}>Registration Number</label>
-                  <input className={inputClass} value={form.registrationNumber} disabled />
+                  <input className={`${inputClass} bg-gray-50`} value={form.registrationNumber} disabled />
                 </div>
                 <div>
                   <label className={labelClass}>Hospital Type</label>
@@ -205,16 +191,10 @@ const Profile: React.FC = () => {
                     placeholder="Tell patients about your hospital..." />
                 </div>
               </div>
-              <div className="flex justify-end pt-4">
-                <button type="submit" disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+              {saveBtn}
             </form>
           )}
 
-          {/* Contact */}
           {activeTab === 'contact' && (
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -251,16 +231,10 @@ const Profile: React.FC = () => {
                   <input className={inputClass} value={form.zipCode} onChange={e => setForm(p => ({ ...p, zipCode: e.target.value }))} />
                 </div>
               </div>
-              <div className="flex justify-end pt-4">
-                <button type="submit" disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+              {saveBtn}
             </form>
           )}
 
-          {/* Facilities & Beds */}
           {activeTab === 'facilities' && (
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -280,16 +254,10 @@ const Profile: React.FC = () => {
                     onChange={e => setForm(p => ({ ...p, icuBeds: parseInt(e.target.value) || 0 }))} />
                 </div>
               </div>
-              <div className="flex justify-end pt-4">
-                <button type="submit" disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+              {saveBtn}
             </form>
           )}
 
-          {/* Password */}
           {activeTab === 'password' && (
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
               <div>
@@ -310,7 +278,7 @@ const Profile: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <FiLock size={16} /> {saving ? 'Saving...' : 'Change Password'}
+                  🔒 {saving ? 'Saving...' : 'Change Password'}
                 </button>
               </div>
             </form>

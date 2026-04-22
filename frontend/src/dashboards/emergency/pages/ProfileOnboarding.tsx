@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { FiSave, FiCamera, FiLock } from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
 import apiClient from '../services/apiClient';
 
 const ProfileOnboarding: React.FC = () => {
@@ -181,7 +181,7 @@ const ProfileOnboarding: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                  <FiSave className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -207,7 +207,7 @@ const ProfileOnboarding: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
-                  <FiLock size={16} /> {saving ? 'Saving...' : 'Change Password'}
+                  🔒 {saving ? 'Saving...' : 'Change Password'}
                 </button>
               </div>
             </form>

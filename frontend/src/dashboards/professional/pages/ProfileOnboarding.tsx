@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { FiSave, FiCamera, FiLock } from 'react-icons/fi';
+import { FiSave } from 'react-icons/fi';
 import apiClient from '../services/apiClient';
 
 const ProfileOnboarding: React.FC = () => {
@@ -115,8 +115,8 @@ const ProfileOnboarding: React.FC = () => {
           <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-2xl font-bold">
             {form.firstName?.[0]}{form.lastName?.[0]}
           </div>
-          <label className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full p-1 cursor-pointer hover:bg-green-700">
-            <FiCamera size={12} />
+          <label className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full p-1 cursor-pointer hover:bg-green-700 text-xs">
+            📷
             <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
           </label>
         </div>
@@ -201,7 +201,7 @@ const ProfileOnboarding: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                  <FiSave className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -227,7 +227,7 @@ const ProfileOnboarding: React.FC = () => {
               <div className="flex justify-end pt-4">
                 <button type="submit" disabled={saving}
                   className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                  <FiLock size={16} /> {saving ? 'Saving...' : 'Change Password'}
+                  🔒 {saving ? 'Saving...' : 'Change Password'}
                 </button>
               </div>
             </form>
