@@ -248,12 +248,17 @@ router.post('/services/create', protect, async (req, res) => {
         let professional = await Professional.findOne({ user: req.user._id });
         console.log('Professional found:', professional ? professional._id : 'NOT FOUND');
         
+        // Auto-create professional profile if it doesn't exist
         if (!professional) {
-            console.log('ERROR: Professional profile not found for user:', req.user._id);
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Professional profile not found. Please complete your professional registration first.' 
+            console.log('Auto-creating Professional profile for user:', req.user._id);
+            professional = await Professional.create({
+                user: req.user._id,
+                professionalType: 'other',
+                licenseNumber: '',
+                specialization: '',
+                yearsOfExperience: 0
             });
+            console.log('Professional profile created:', professional._id);
         }
         
         // Validate required fields
