@@ -38,7 +38,7 @@ const Subscription: React.FC = () => {
     try {
       setLoading(true);
       
-      const API_URL = import.meta.env.VITE_API_URL || 'https://healthmarketarena.com/api/v1';
+      const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
       
       // Fetch plans
       const plansResponse = await fetch(`${API_URL}/subscriptions/plans`);
@@ -71,7 +71,7 @@ const Subscription: React.FC = () => {
       setSelectedPlan(planId);
 
       const token = localStorage.getItem('authToken');
-      const API_URL = import.meta.env.VITE_API_URL || 'https://healthmarketarena.com/api/v1';
+      const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api/v1';
       
       // Create subscription
       const response = await fetch(`${API_URL}/subscriptions/subscribe`, {
