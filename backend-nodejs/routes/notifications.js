@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 
 // Get user notifications
-router.get('/', auth, async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     // For now, return empty array
     // TODO: Implement notification system with database model
@@ -21,7 +21,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Mark notification as read
-router.put('/:id/read', auth, async (req, res) => {
+router.put('/:id/read', protect, async (req, res) => {
   try {
     // TODO: Implement mark as read functionality
     res.json({
@@ -38,7 +38,7 @@ router.put('/:id/read', auth, async (req, res) => {
 });
 
 // Mark all notifications as read
-router.put('/read-all', auth, async (req, res) => {
+router.put('/read-all', protect, async (req, res) => {
   try {
     // TODO: Implement mark all as read functionality
     res.json({
