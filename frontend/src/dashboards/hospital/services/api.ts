@@ -252,6 +252,10 @@ class HospitalApiService {
     const response = await this.api.get<ApiResponse<any>>('/billing/usage/');
     return response.data.data!;
   }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.api.put('/hospitals/profile/password', { currentPassword, newPassword });
+  }
 }
 
 export const hospitalApi = new HospitalApiService();

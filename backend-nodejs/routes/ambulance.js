@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const Ambulance = require('../models/Ambulance');
+const User = require('../models/User');
 
 // Dashboard stats
 router.get('/dashboard-stats', protect, async (req, res) => {
@@ -55,6 +56,26 @@ router.put('/profile/update', protect, async (req, res) => {
         }
         
         res.json({ success: true, data: ambulance, message: 'Profile updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Change password
+router.post('/change-password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Both passwords are required' });
+        }
+        const user = await User.findById(req.user._id).select('+password');
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+        }
+        user.password = newPassword;
+        await user.save();
+        res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

@@ -5,6 +5,7 @@ const adminPatientsController = require('../controllers/admin/patientsController
 const adminProfessionalsController = require('../controllers/admin/professionalsController');
 const adminHospitalsController = require('../controllers/admin/hospitalsController');
 const adminAmbulancesController = require('../controllers/admin/ambulancesController');
+const adminGymPhysioController = require('../controllers/admin/gymPhysioController');
 const { adminAuth } = require('../middleware/adminAuth');
 
 const router = express.Router();
@@ -156,5 +157,14 @@ router.patch('/ambulances/:id/vehicles/:vehicleId', adminAuth, adminAmbulancesCo
 router.get('/ambulances/:id/documents', adminAuth, adminAmbulancesController.getProviderDocuments);
 router.post('/ambulances/:id/verify', adminAuth, adminAmbulancesController.verifyProvider);
 router.post('/ambulances/:id/reject', adminAuth, adminAmbulancesController.rejectProvider);
+
+// Gym & Physio Management Routes
+router.get('/gym-physio', adminAuth, adminGymPhysioController.getGymPhysios);
+router.get('/gym-physio/verification/pending', adminAuth, adminGymPhysioController.getPendingVerifications);
+router.get('/gym-physio/:id', adminAuth, adminGymPhysioController.getGymPhysioById);
+router.put('/gym-physio/:id/update', adminAuth, adminGymPhysioController.updateGymPhysio);
+router.delete('/gym-physio/:id/delete', adminAuth, adminGymPhysioController.deleteGymPhysio);
+router.post('/gym-physio/:id/verify', adminAuth, adminGymPhysioController.verifyGymPhysio);
+router.post('/gym-physio/:id/reject', adminAuth, adminGymPhysioController.rejectGymPhysio);
 
 module.exports = router;

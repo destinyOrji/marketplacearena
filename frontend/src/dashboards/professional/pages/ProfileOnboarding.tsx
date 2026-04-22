@@ -1,184 +1,236 @@
-// Profile Onboarding Page - Complete professional profile
-
-import React, { useState } from 'react';
-import OnboardingWizard from '../components/OnboardingWizard';
-import { ProfessionalProfile } from '../types';
-import { profileApi } from '../services/api';
-import { profileSchema, formatValidationErrors } from '../utils/validation';
+import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
+import { FiSave, FiCamera, FiLock } from 'react-icons/fi';
+import apiClient from '../services/apiClient';
 
 const ProfileOnboarding: React.FC = () => {
-  const [showWizard, setShowWizard] = useState(true);
-  const [profile, setProfile] = useState<Partial<ProfessionalProfile>>({
-    fullName: '',
-    email: '',
-    phone: '',
-    specialization: [],
-    yearsOfExperience: 0,
-    licenseNumber: '',
-    certifications: [],
-    education: [],
-    bio: '',
-    languages: [],
-    completionPercentage: 0,
+  const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '', phone: '',
+    specialization: '', licenseNumber: '', yearsOfExperience: 0,
+    professionalType: '', bio: '', city: '', state: '', address: '',
+    consultationFee: 0,
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  const handleComplete = async (updatedProfile: Partial<ProfessionalProfile>) => {
-    setError(null);
+  const [passwords, setPasswords] = useState({
+    currentPassword: '', newPassword: '', confirmPassword: '',
+  });
+
+  useEffect(() => { loadProfile(); }, []);
+
+  const loadProfile = async () => {
     setLoading(true);
-
     try {
-      // Validate profile data
-      const validationResult = profileSchema.safeParse({
-        fullName: updatedProfile.fullName,
-        phone: updatedProfile.phone,
-        licenseNumber: updatedProfile.licenseNumber,
-        yearsOfExperience: updatedProfile.yearsOfExperience,
-        specialization: updatedProfile.specialization,
-        bio: updatedProfile.bio,
-        languages: updatedProfile.languages,
+      const res = await apiClient.get('/professionals/profile');
+      const d = res.data?.data || res.data;
+      setForm({
+        firstName: d.user?.firstName || d.firstName || '',
+        lastName: d.user?.lastName || d.lastName || '',
+        email: d.user?.email || d.email || '',
+        phone: d.phone || '',
+        specialization: d.specialization || '',
+        licenseNumber: d.licenseNumber || '',
+        yearsOfExperience: d.yearsOfExperience || 0,
+        professionalType: d.professionalType || '',
+        bio: d.bio || '',
+        city: d.city || '',
+        state: d.state || '',
+        address: d.address || '',
+        consultationFee: d.consultationFee || 0,
       });
-
-      if (!validationResult.success) {
-        const errors = formatValidationErrors(validationResult.error);
-        setError(Object.values(errors).join(', '));
-        setLoading(false);
-        return;
-      }
-
-      // Submit to API
-      await profileApi.updateProfile(updatedProfile);
-      
-      setProfile(updatedProfile);
-      setShowWizard(false);
-      setSuccess(true);
-      
-      // Hide success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save profile. Please try again.');
+    } catch (e) {
+      toast.error('Failed to load profile');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSkip = () => {
-    setShowWizard(false);
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await apiClient.put('/professionals/profile/update', form);
+      toast.success('Profile updated successfully');
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (showWizard) {
-    return (
-      <div>
-        {error && (
-          <div className="max-w-4xl mx-auto mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            {error}
-          </div>
-        )}
-        {loading && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
-              <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <span className="text-gray-900">Saving profile...</span>
-            </div>
-          </div>
-        )}
-        <OnboardingWizard profile={profile} onComplete={handleComplete} onSkip={handleSkip} />
-      </div>
-    );
-  }
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiClient.put('/professionals/profile/password', {
+        currentPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword,
+      });
+      toast.success('Password changed successfully');
+      setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to change password');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      await apiClient.post('/professionals/upload-photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success('Photo uploaded');
+      loadProfile();
+    } catch {
+      toast.error('Failed to upload photo');
+    }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    </div>
+  );
+
+  const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm";
+  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
   return (
-    <div className="p-6">
-      <div className="max-w-4xl mx-auto">
-        {success && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-            Profile saved successfully!
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm p-6 flex items-center gap-6">
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-2xl font-bold">
+            {form.firstName?.[0]}{form.lastName?.[0]}
           </div>
-        )}
-        
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-          <button
-            onClick={() => setShowWizard(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Edit Profile
-          </button>
+          <label className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full p-1 cursor-pointer hover:bg-green-700">
+            <FiCamera size={12} />
+            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+          </label>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{form.firstName} {form.lastName}</h1>
+          <p className="text-gray-500 text-sm">{form.email}</p>
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1 capitalize">
+            {form.professionalType || 'Professional'}
+          </span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm">
+        <div className="border-b border-gray-200 flex">
+          {(['profile', 'password'] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-6 py-4 text-sm font-medium capitalize border-b-2 transition-colors ${activeTab === tab ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              {tab}
+            </button>
+          ))}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Basic Information</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">Name:</span>
-                <span className="ml-2 text-gray-900">{profile.fullName || 'Not set'}</span>
+        <div className="p-6">
+          {activeTab === 'profile' && (
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>First Name</label>
+                  <input className={inputClass} value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>Last Name</label>
+                  <input className={inputClass} value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>Email</label>
+                  <input className={inputClass} value={form.email} disabled />
+                </div>
+                <div>
+                  <label className={labelClass}>Phone</label>
+                  <input className={inputClass} value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>Professional Type</label>
+                  <select className={inputClass} value={form.professionalType} onChange={e => setForm(p => ({ ...p, professionalType: e.target.value }))}>
+                    <option value="">Select type</option>
+                    {['doctor','nurse','technician','therapist','pharmacist','physiotherapist','other'].map(t => (
+                      <option key={t} value={t} className="capitalize">{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Specialization</label>
+                  <input className={inputClass} value={form.specialization} onChange={e => setForm(p => ({ ...p, specialization: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>License Number</label>
+                  <input className={inputClass} value={form.licenseNumber} onChange={e => setForm(p => ({ ...p, licenseNumber: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>Years of Experience</label>
+                  <input type="number" min="0" className={inputClass} value={form.yearsOfExperience} onChange={e => setForm(p => ({ ...p, yearsOfExperience: parseInt(e.target.value) || 0 }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>Consultation Fee (₦)</label>
+                  <input type="number" min="0" className={inputClass} value={form.consultationFee} onChange={e => setForm(p => ({ ...p, consultationFee: parseFloat(e.target.value) || 0 }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>City</label>
+                  <input className={inputClass} value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelClass}>State</label>
+                  <input className={inputClass} value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Bio</label>
+                  <textarea rows={4} className={inputClass} value={form.bio} onChange={e => setForm(p => ({ ...p, bio: e.target.value }))} placeholder="Tell patients about yourself..." />
+                </div>
               </div>
-              <div>
-                <span className="text-gray-600">Phone:</span>
-                <span className="ml-2 text-gray-900">{profile.phone || 'Not set'}</span>
+              <div className="flex justify-end pt-4">
+                <button type="submit" disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                  <FiSave size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
-              <div>
-                <span className="text-gray-600">License:</span>
-                <span className="ml-2 text-gray-900">{profile.licenseNumber || 'Not set'}</span>
-              </div>
-              <div>
-                <span className="text-gray-600">Experience:</span>
-                <span className="ml-2 text-gray-900">{profile.yearsOfExperience} years</span>
-              </div>
-            </div>
-          </div>
-
-          {profile.specialization && profile.specialization.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Specializations</h3>
-              <div className="flex flex-wrap gap-2">
-                {profile.specialization.map((spec, index) => (
-                  <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    {spec}
-                  </span>
-                ))}
-              </div>
-            </div>
+            </form>
           )}
 
-          {profile.certifications && profile.certifications.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Certifications</h3>
-              <div className="space-y-2">
-                {profile.certifications.map((cert, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium text-gray-900">{cert.name}</h4>
-                    <p className="text-sm text-gray-600">{cert.issuingOrganization}</p>
-                  </div>
-                ))}
+          {activeTab === 'password' && (
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+              <div>
+                <label className={labelClass}>Current Password</label>
+                <input type="password" className={inputClass} value={passwords.currentPassword}
+                  onChange={e => setPasswords(p => ({ ...p, currentPassword: e.target.value }))} />
               </div>
-            </div>
-          )}
-
-          {profile.bio && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Bio</h3>
-              <p className="text-gray-700">{profile.bio}</p>
-            </div>
-          )}
-
-          {profile.languages && profile.languages.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Languages</h3>
-              <div className="flex flex-wrap gap-2">
-                {profile.languages.map((lang, index) => (
-                  <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    {lang}
-                  </span>
-                ))}
+              <div>
+                <label className={labelClass}>New Password</label>
+                <input type="password" className={inputClass} value={passwords.newPassword}
+                  onChange={e => setPasswords(p => ({ ...p, newPassword: e.target.value }))} />
               </div>
-            </div>
+              <div>
+                <label className={labelClass}>Confirm New Password</label>
+                <input type="password" className={inputClass} value={passwords.confirmPassword}
+                  onChange={e => setPasswords(p => ({ ...p, confirmPassword: e.target.value }))} />
+              </div>
+              <div className="flex justify-end pt-4">
+                <button type="submit" disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                  <FiLock size={16} /> {saving ? 'Saving...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
           )}
         </div>
       </div>
