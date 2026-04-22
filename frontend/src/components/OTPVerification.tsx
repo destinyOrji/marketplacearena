@@ -23,7 +23,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
   // Timer for resend button
   useEffect(() => {

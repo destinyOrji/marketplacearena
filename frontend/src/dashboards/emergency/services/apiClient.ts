@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -34,7 +34,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('emergency_token');
       localStorage.removeItem('ambulanceToken');
       localStorage.removeItem('ambulance');
-      window.location.href = '/auth/login';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }
