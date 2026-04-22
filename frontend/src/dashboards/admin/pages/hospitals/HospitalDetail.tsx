@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiChevronLeft, FiTrash2, FiMail, FiCheckCircle, FiXCircle, FiPhone, FiMapPin } from 'react-icons/fi';
+import { FiChevronLeft, FiTrash2, FiMail, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { Button, Modal } from '../../components';
 import { hospitalService } from '../../services/hospitalService';
 
@@ -127,11 +127,11 @@ const HospitalDetail: React.FC = () => {
                 <FiMail className="h-4 w-4" /> <span>{hospital.email}</span>
               </div>
               <div className="flex items-center text-gray-600 gap-2">
-                <FiPhone className="h-4 w-4" /> <span>{hospital.phone}</span>
+                <span>📞</span> <span>{hospital.phone}</span>
               </div>
               {addressStr && (
                 <div className="flex items-center text-gray-600 gap-2 md:col-span-2">
-                  <FiMapPin className="h-4 w-4" /> <span>{addressStr}</span>
+                  <span>📍</span> <span>{addressStr}</span>
                 </div>
               )}
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiChevronLeft, FiEdit, FiTrash2, FiMail, FiUser, FiCheckCircle, FiXCircle, FiFileText, FiPhone } from 'react-icons/fi';
+import { FiChevronLeft, FiEdit, FiTrash2, FiMail, FiUser, FiCheckCircle, FiXCircle, FiFileText } from 'react-icons/fi';
 import { Button, Modal } from '../../components';
 import { professionalService } from '../../services/professionalService';
 
@@ -132,7 +132,7 @@ const ProfessionalDetail: React.FC = () => {
               </div>
               {professional.phone && (
                 <div className="flex items-center text-gray-600 gap-2">
-                  <FiPhone className="h-4 w-4" /> <span>{professional.phone}</span>
+                  <span>📞</span> <span>{professional.phone}</span>
                 </div>
               )}
               {professional.licenseNumber && (
