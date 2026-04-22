@@ -100,15 +100,19 @@ class AuthService {
         return null;
       }
 
-      const response = await axios.post<{ access: string }>(
-        `${API_BASE_URL}/token/refresh/`,
+      const response = await axios.post<{ statuscode: number; data: { access: string; refresh: string } }>(
+        `${API_BASE_URL}/admin/auth/refresh`,
         { refresh: refreshToken }
       );
 
-      const newAccessToken = response.data.access;
-      this.setAccessToken(newAccessToken);
-      
-      return newAccessToken;
+      if (response.data.statuscode === 0) {
+        const { access, refresh } = response.data.data;
+        this.setAccessToken(access);
+        this.setRefreshToken(refresh); // store rotated refresh token
+        return access;
+      }
+
+      return null;
     } catch (error) {
       console.error('Token refresh failed:', error);
       this.clearTokens();

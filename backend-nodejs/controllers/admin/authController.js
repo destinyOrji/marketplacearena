@@ -1,12 +1,28 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../../models/User');
 const Admin = require('../../models/Admin');
 
-// Generate JWT token
-const generateToken = (userId) => {
-    return jwt.sign({ userId }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE || '7d'
+// Generate short-lived access token (1 day)
+const generateAccessToken = (userId) => {
+    return jwt.sign({ userId, type: 'access' }, process.env.JWT_SECRET, {
+        expiresIn: '1d'
     });
+};
+
+// Generate long-lived refresh token (30 days) and store in DB
+const generateRefreshToken = async (userId) => {
+    const token = jwt.sign({ userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh', {
+        expiresIn: '30d'
+    });
+
+    // Store refresh token in user record
+    await User.findByIdAndUpdate(userId, {
+        refreshToken: token,
+        refreshTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    });
+
+    return token;
 };
 
 // Admin registration (for creating new admin users)
@@ -133,8 +149,8 @@ exports.register = async (req, res) => {
         await admin.save();
 
         // Generate tokens
-        const accessToken = generateToken(user._id);
-        const refreshToken = generateToken(user._id);
+        const accessToken = generateAccessToken(user._id);
+        const refreshToken = await generateRefreshToken(user._id);
 
         res.status(201).json({
             statuscode: 0,
@@ -231,8 +247,8 @@ exports.login = async (req, res) => {
         await user.updateLoginInfo();
 
         // Generate tokens
-        const accessToken = generateToken(user._id);
-        const refreshToken = generateToken(user._id); // In production, use different secret/expiry
+        const accessToken = generateAccessToken(user._id);
+        const refreshToken = await generateRefreshToken(user._id);
 
         res.json({
             statuscode: 0,
@@ -261,10 +277,15 @@ exports.login = async (req, res) => {
     }
 };
 
-// Admin logout
+// Admin logout - clears refresh token from DB
 exports.logout = async (req, res) => {
     try {
-        // In a production app, you might want to blacklist the token
+        // Clear refresh token from database
+        await User.findByIdAndUpdate(req.user._id, {
+            refreshToken: null,
+            refreshTokenExpiry: null
+        });
+
         res.json({
             statuscode: 0,
             status: 'success',
@@ -276,6 +297,94 @@ exports.logout = async (req, res) => {
             statuscode: 1,
             status: 'error',
             message: 'Logout failed',
+            error: error.message
+        });
+    }
+};
+
+// Refresh access token using refresh token stored in DB
+exports.refreshToken = async (req, res) => {
+    try {
+        const { refresh } = req.body;
+
+        if (!refresh) {
+            return res.status(400).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'Refresh token is required'
+            });
+        }
+
+        // Verify refresh token
+        let decoded;
+        try {
+            decoded = jwt.verify(refresh, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh');
+        } catch (err) {
+            return res.status(401).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'Invalid or expired refresh token. Please login again.'
+            });
+        }
+
+        // Find user and validate stored refresh token
+        const user = await User.findById(decoded.userId);
+        if (!user) {
+            return res.status(401).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+        // Check if refresh token matches what's stored in DB
+        if (user.refreshToken !== refresh) {
+            return res.status(401).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'Refresh token is invalid or has been revoked. Please login again.'
+            });
+        }
+
+        // Check if refresh token is expired in DB
+        if (user.refreshTokenExpiry && new Date() > user.refreshTokenExpiry) {
+            await User.findByIdAndUpdate(user._id, { refreshToken: null, refreshTokenExpiry: null });
+            return res.status(401).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'Refresh token expired. Please login again.'
+            });
+        }
+
+        // Check admin role
+        if (!['super_admin', 'admin'].includes(user.role)) {
+            return res.status(403).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'Access denied.'
+            });
+        }
+
+        // Issue new access token (and rotate refresh token)
+        const newAccessToken = generateAccessToken(user._id);
+        const newRefreshToken = await generateRefreshToken(user._id);
+
+        res.json({
+            statuscode: 0,
+            status: 'success',
+            message: 'Token refreshed successfully',
+            data: {
+                access: newAccessToken,
+                refresh: newRefreshToken
+            }
+        });
+
+    } catch (error) {
+        console.error('Token refresh error:', error);
+        res.status(500).json({
+            statuscode: 1,
+            status: 'error',
+            message: 'Token refresh failed',
             error: error.message
         });
     }

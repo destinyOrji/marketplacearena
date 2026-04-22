@@ -6,9 +6,20 @@ const OTPStorage = require('../models/OTPStorage');
 
 // Generate JWT token
 const generateToken = (userId) => {
-    return jwt.sign({ userId }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE || '7d'
+    return jwt.sign({ userId, type: 'access' }, process.env.JWT_SECRET, {
+        expiresIn: '1d'
     });
+};
+
+const generateRefreshToken = async (userId) => {
+    const token = jwt.sign({ userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh', {
+        expiresIn: '30d'
+    });
+    await User.findByIdAndUpdate(userId, {
+        refreshToken: token,
+        refreshTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    });
+    return token;
 };
 
 // Generate 6-digit OTP
@@ -214,6 +225,7 @@ exports.register = async (req, res) => {
         }
 
         const token = generateToken(user._id);
+        const refreshToken = await generateRefreshToken(user._id);
 
         res.status(201).json({
             success: true,
@@ -230,7 +242,8 @@ exports.register = async (req, res) => {
                     phoneVerified: user.phoneVerified,
                     emailVerified: user.emailVerified
                 },
-                token
+                token,
+                refresh: refreshToken
             }
         });
     } catch (error) {
@@ -280,6 +293,7 @@ exports.login = async (req, res) => {
         await user.updateLoginInfo();
 
         const token = generateToken(user._id);
+        const refreshToken = await generateRefreshToken(user._id);
 
         res.status(200).json({
             success: true,
@@ -296,7 +310,8 @@ exports.login = async (req, res) => {
                     phoneVerified: user.phoneVerified,
                     emailVerified: user.emailVerified
                 },
-                token
+                token,
+                refresh: refreshToken
             }
         });
     } catch (error) {

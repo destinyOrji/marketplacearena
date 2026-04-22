@@ -13,6 +13,7 @@ const router = express.Router();
 router.post('/auth/register', adminAuthController.register);
 router.post('/auth/login', adminAuthController.login);
 router.post('/auth/logout', adminAuth, adminAuthController.logout);
+router.post('/auth/refresh', adminAuthController.refreshToken);
 router.get('/auth/profile', adminAuth, adminAuthController.getProfile);
 
 // Dashboard Routes
