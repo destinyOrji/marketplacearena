@@ -13,15 +13,15 @@ const professionalSchema = new mongoose.Schema({
     },
     licenseNumber: {
         type: String,
-        required: true
+        default: ''
     },
     specialization: {
         type: String,
-        required: true
+        default: ''
     },
     yearsOfExperience: {
         type: Number,
-        required: true,
+        default: 0,
         min: 0
     },
     
@@ -48,7 +48,7 @@ const professionalSchema = new mongoose.Schema({
     // Contact information
     phone: {
         type: String,
-        required: true
+        default: ''
     },
     address: String,
     city: String,
