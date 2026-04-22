@@ -1,0 +1,395 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Health Market Arena - PRODUCTION",
+  "dateExported": "2026-04-22",
+  "version": "1.2",
+  "folders": [
+    {
+      "_id": "prod-auth",
+      "name": "1. Authentication",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 10000
+    },
+    {
+      "_id": "prod-dashboard",
+      "name": "2. Dashboard",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 20000
+    },
+    {
+      "_id": "prod-management",
+      "name": "3. Management",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 30000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "prod-signup",
+      "colId": "prod-collection",
+      "containerId": "prod-auth",
+      "name": "1. Admin Sign Up (Register)",
+      "url": "https://healthmarketarena.com/api/admin/auth/register",
+      "method": "POST",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@healthmarket.com\",\n  \"password\": \"Admin@123456\",\n  \"firstName\": \"System\",\n  \"lastName\": \"Administrator\",\n  \"role\": \"super_admin\"\n}",
+        "form": []
+      },
+      "tests": [
+        {
+          "type": "set-env-var",
+          "custom": "tc.setVar(\"admin_token\", json.data.access);",
+          "action": "setto",
+          "value": "{{admin_token}}"
+        }
+      ]
+    },
+    {
+      "_id": "prod-login",
+      "colId": "prod-collection",
+      "containerId": "prod-auth",
+      "name": "2. Admin Login",
+      "url": "https://healthmarketarena.com/api/admin/auth/login",
+      "method": "POST",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@healthmarket.com\",\n  \"password\": \"Admin@123456\"\n}",
+        "form": []
+      },
+      "tests": [
+        {
+          "type": "set-env-var",
+          "custom": "tc.setVar(\"admin_token\", json.data.access);",
+          "action": "setto",
+          "value": "{{admin_token}}"
+        }
+      ]
+    },
+    {
+      "_id": "prod-profile",
+      "colId": "prod-collection",
+      "containerId": "prod-auth",
+      "name": "3. Get Admin Profile",
+      "url": "https://healthmarketarena.com/api/admin/auth/profile",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-logout",
+      "colId": "prod-collection",
+      "containerId": "prod-auth",
+      "name": "4. Admin Logout",
+      "url": "https://healthmarketarena.com/api/admin/auth/logout",
+      "method": "POST",
+      "sortNum": 40000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-stats",
+      "colId": "prod-collection",
+      "containerId": "prod-dashboard",
+      "name": "Get Dashboard Stats",
+      "url": "https://healthmarketarena.com/api/admin/dashboard/stats",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-trends",
+      "colId": "prod-collection",
+      "containerId": "prod-dashboard",
+      "name": "Get Registration Trends",
+      "url": "https://healthmarketarena.com/api/admin/dashboard/registration-trends",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-appointments",
+      "colId": "prod-collection",
+      "containerId": "prod-dashboard",
+      "name": "Get Appointment Stats",
+      "url": "https://healthmarketarena.com/api/admin/dashboard/appointment-stats",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-emergency",
+      "colId": "prod-collection",
+      "containerId": "prod-dashboard",
+      "name": "Get Emergency Stats",
+      "url": "https://healthmarketarena.com/api/admin/dashboard/emergency-stats",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-revenue",
+      "colId": "prod-collection",
+      "containerId": "prod-dashboard",
+      "name": "Get Revenue Distribution",
+      "url": "https://healthmarketarena.com/api/admin/dashboard/revenue-distribution",
+      "method": "GET",
+      "sortNum": 50000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-activities",
+      "colId": "prod-collection",
+      "containerId": "prod-dashboard",
+      "name": "Get Recent Activities",
+      "url": "https://healthmarketarena.com/api/admin/dashboard/recent-activities",
+      "method": "GET",
+      "sortNum": 60000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "prod-patients",
+      "colId": "prod-collection",
+      "containerId": "prod-management",
+      "name": "Get All Patients",
+      "url": "https://healthmarketarena.com/api/admin/patients?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "prod-professionals",
+      "colId": "prod-collection",
+      "containerId": "prod-management",
+      "name": "Get All Professionals",
+      "url": "https://healthmarketarena.com/api/admin/professionals?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "prod-hospitals",
+      "colId": "prod-collection",
+      "containerId": "prod-management",
+      "name": "Get All Hospitals",
+      "url": "https://healthmarketarena.com/api/admin/hospitals?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "prod-ambulances",
+      "colId": "prod-collection",
+      "containerId": "prod-management",
+      "name": "Get All Ambulances",
+      "url": "https://healthmarketarena.com/api/admin/ambulances?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "prod-services",
+      "colId": "prod-collection",
+      "containerId": "prod-management",
+      "name": "Get All Services",
+      "url": "https://healthmarketarena.com/api/admin/services?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 50000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    }
+  ]
+}

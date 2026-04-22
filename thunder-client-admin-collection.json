@@ -1,0 +1,513 @@
+{
+  "client": "Thunder Client",
+  "collectionName": "Admin Testing - Health Market Arena",
+  "dateExported": "2026-04-22",
+  "version": "1.2",
+  "folders": [
+    {
+      "_id": "auth-folder",
+      "name": "1. Authentication",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 10000
+    },
+    {
+      "_id": "dashboard-folder",
+      "name": "2. Dashboard",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 20000
+    },
+    {
+      "_id": "patients-folder",
+      "name": "3. Patients Management",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 30000
+    },
+    {
+      "_id": "professionals-folder",
+      "name": "4. Professionals Management",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 40000
+    },
+    {
+      "_id": "hospitals-folder",
+      "name": "5. Hospitals Management",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 50000
+    },
+    {
+      "_id": "ambulances-folder",
+      "name": "6. Ambulances Management",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 60000
+    },
+    {
+      "_id": "services-folder",
+      "name": "7. Services Management",
+      "containerId": "",
+      "created": "2026-04-22T10:00:00.000Z",
+      "sortNum": 70000
+    }
+  ],
+  "requests": [
+    {
+      "_id": "health-check",
+      "colId": "admin-collection",
+      "containerId": "auth-folder",
+      "name": "0. Health Check",
+      "url": "{{base_url}}/health",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "admin-register",
+      "colId": "admin-collection",
+      "containerId": "auth-folder",
+      "name": "1. Admin Sign Up (Register)",
+      "url": "{{base_url}}/admin/auth/register",
+      "method": "POST",
+      "sortNum": 15000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@healthmarket.com\",\n  \"password\": \"Admin@123456\",\n  \"firstName\": \"System\",\n  \"lastName\": \"Administrator\",\n  \"role\": \"super_admin\"\n}",
+        "form": []
+      },
+      "tests": [
+        {
+          "type": "set-env-var",
+          "custom": "tc.setVar(\"admin_token\", json.data.access);",
+          "action": "setto",
+          "value": "{{admin_token}}"
+        }
+      ]
+    },
+    {
+      "_id": "admin-login",
+      "colId": "admin-collection",
+      "containerId": "auth-folder",
+      "name": "2. Admin Login",
+      "url": "{{base_url}}/admin/auth/login",
+      "method": "POST",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "params": [],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+        "form": []
+      },
+      "tests": [
+        {
+          "type": "set-env-var",
+          "custom": "tc.setVar(\"admin_token\", json.data.access);",
+          "action": "setto",
+          "value": "{{admin_token}}"
+        }
+      ]
+    },
+    {
+      "_id": "admin-profile",
+      "colId": "admin-collection",
+      "containerId": "auth-folder",
+      "name": "3. Get Admin Profile",
+      "url": "{{base_url}}/admin/auth/profile",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "admin-logout",
+      "colId": "admin-collection",
+      "containerId": "auth-folder",
+      "name": "4. Admin Logout",
+      "url": "{{base_url}}/admin/auth/logout",
+      "method": "POST",
+      "sortNum": 40000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "dashboard-stats",
+      "colId": "admin-collection",
+      "containerId": "dashboard-folder",
+      "name": "Get Dashboard Stats",
+      "url": "{{base_url}}/admin/dashboard/stats",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "registration-trends",
+      "colId": "admin-collection",
+      "containerId": "dashboard-folder",
+      "name": "Get Registration Trends",
+      "url": "{{base_url}}/admin/dashboard/registration-trends",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "appointment-stats",
+      "colId": "admin-collection",
+      "containerId": "dashboard-folder",
+      "name": "Get Appointment Stats",
+      "url": "{{base_url}}/admin/dashboard/appointment-stats",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "emergency-stats",
+      "colId": "admin-collection",
+      "containerId": "dashboard-folder",
+      "name": "Get Emergency Stats",
+      "url": "{{base_url}}/admin/dashboard/emergency-stats",
+      "method": "GET",
+      "sortNum": 40000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "revenue-distribution",
+      "colId": "admin-collection",
+      "containerId": "dashboard-folder",
+      "name": "Get Revenue Distribution",
+      "url": "{{base_url}}/admin/dashboard/revenue-distribution",
+      "method": "GET",
+      "sortNum": 50000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "recent-activities",
+      "colId": "admin-collection",
+      "containerId": "dashboard-folder",
+      "name": "Get Recent Activities",
+      "url": "{{base_url}}/admin/dashboard/recent-activities",
+      "method": "GET",
+      "sortNum": 60000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "get-patients",
+      "colId": "admin-collection",
+      "containerId": "patients-folder",
+      "name": "Get All Patients",
+      "url": "{{base_url}}/admin/patients?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "get-professionals",
+      "colId": "admin-collection",
+      "containerId": "professionals-folder",
+      "name": "Get All Professionals",
+      "url": "{{base_url}}/admin/professionals?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "get-pending-professionals",
+      "colId": "admin-collection",
+      "containerId": "professionals-folder",
+      "name": "Get Pending Professional Verifications",
+      "url": "{{base_url}}/admin/professionals/verification/pending",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "get-hospitals",
+      "colId": "admin-collection",
+      "containerId": "hospitals-folder",
+      "name": "Get All Hospitals",
+      "url": "{{base_url}}/admin/hospitals?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "get-pending-hospitals",
+      "colId": "admin-collection",
+      "containerId": "hospitals-folder",
+      "name": "Get Pending Hospital Verifications",
+      "url": "{{base_url}}/admin/hospitals/verification/pending",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "get-ambulances",
+      "colId": "admin-collection",
+      "containerId": "ambulances-folder",
+      "name": "Get All Ambulances",
+      "url": "{{base_url}}/admin/ambulances?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    },
+    {
+      "_id": "get-emergency-bookings",
+      "colId": "admin-collection",
+      "containerId": "ambulances-folder",
+      "name": "Get Emergency Bookings",
+      "url": "{{base_url}}/admin/ambulances/bookings",
+      "method": "GET",
+      "sortNum": 20000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "get-pending-ambulances",
+      "colId": "admin-collection",
+      "containerId": "ambulances-folder",
+      "name": "Get Pending Ambulance Verifications",
+      "url": "{{base_url}}/admin/ambulances/verification/pending",
+      "method": "GET",
+      "sortNum": 30000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [],
+      "tests": []
+    },
+    {
+      "_id": "get-services",
+      "colId": "admin-collection",
+      "containerId": "services-folder",
+      "name": "Get All Services",
+      "url": "{{base_url}}/admin/services?page=1&page_size=10",
+      "method": "GET",
+      "sortNum": 10000,
+      "created": "2026-04-22T10:00:00.000Z",
+      "modified": "2026-04-22T10:00:00.000Z",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ],
+      "params": [
+        {
+          "name": "page",
+          "value": "1",
+          "isPath": false
+        },
+        {
+          "name": "page_size",
+          "value": "10",
+          "isPath": false
+        }
+      ],
+      "tests": []
+    }
+  ]
+}

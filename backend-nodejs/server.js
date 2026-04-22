@@ -97,6 +97,11 @@ if (process.env.NODE_ENV !== 'production') {
     app.use('/api/debug', require('./routes/debug'));
 }
 
+// Temporary admin setup routes (REMOVE IN PRODUCTION!)
+// These routes allow creating admin users without authentication
+// Only for initial setup and testing
+app.use('/api/temp', require('./routes/temp-admin-setup'));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({

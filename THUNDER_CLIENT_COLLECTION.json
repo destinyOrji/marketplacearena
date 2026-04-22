@@ -1,0 +1,210 @@
+{
+  "clientName": "Thunder Client",
+  "collectionName": "Health Market Arena - Complete API Testing",
+  "collectionId": "health-market-arena-api",
+  "dateExported": "2026-04-22",
+  "version": "1.2",
+  "folders": [
+    {
+      "id": "admin-folder",
+      "name": "1. ADMIN",
+      "folders": [
+        {
+          "id": "admin-auth",
+          "name": "Authentication"
+        },
+        {
+          "id": "admin-dashboard",
+          "name": "Dashboard"
+        },
+        {
+          "id": "admin-patients",
+          "name": "Patients Management"
+        },
+        {
+          "id": "admin-professionals",
+          "name": "Professionals Management"
+        },
+        {
+          "id": "admin-services",
+          "name": "Services Management"
+        },
+        {
+          "id": "admin-hospitals",
+          "name": "Hospitals Management"
+        },
+        {
+          "id": "admin-ambulances",
+          "name": "Ambulances Management"
+        }
+      ]
+    },
+    {
+      "id": "auth-folder",
+      "name": "2. AUTHENTICATION (All Users)"
+    },
+    {
+      "id": "professional-folder",
+      "name": "3. PROFESSIONAL"
+    },
+    {
+      "id": "hospital-folder",
+      "name": "4. HOSPITAL"
+    },
+    {
+      "id": "ambulance-folder",
+      "name": "5. AMBULANCE/EMERGENCY"
+    },
+    {
+      "id": "gym-physio-folder",
+      "name": "6. GYM/PHYSIOTHERAPY"
+    },
+    {
+      "id": "client-folder",
+      "name": "7. CLIENT/PATIENT"
+    },
+    {
+      "id": "subscriptions-folder",
+      "name": "8. SUBSCRIPTIONS"
+    }
+  ],
+  "requests": [
+    {
+      "id": "health-check",
+      "name": "Health Check",
+      "url": "http://localhost:3001/api/health",
+      "method": "GET",
+      "headers": [],
+      "tests": []
+    },
+    {
+      "id": "admin-login",
+      "folderId": "admin-auth",
+      "name": "Admin Login",
+      "url": "http://localhost:3001/api/admin/auth/login",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "type": "json",
+        "raw": "{\n  \"email\": \"admin@healthmarket.com\",\n  \"password\": \"Admin@123\"\n}"
+      },
+      "tests": [
+        {
+          "type": "set-env-var",
+          "custom": "json.token",
+          "action": "setto",
+          "value": "{{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-profile",
+      "folderId": "admin-auth",
+      "name": "Get Admin Profile",
+      "url": "http://localhost:3001/api/admin/auth/profile",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-logout",
+      "folderId": "admin-auth",
+      "name": "Admin Logout",
+      "url": "http://localhost:3001/api/admin/auth/logout",
+      "method": "POST",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-dashboard-stats",
+      "folderId": "admin-dashboard",
+      "name": "Get Dashboard Stats",
+      "url": "http://localhost:3001/api/admin/dashboard/stats",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-registration-trends",
+      "folderId": "admin-dashboard",
+      "name": "Get Registration Trends",
+      "url": "http://localhost:3001/api/admin/dashboard/registration-trends",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-appointment-stats",
+      "folderId": "admin-dashboard",
+      "name": "Get Appointment Stats",
+      "url": "http://localhost:3001/api/admin/dashboard/appointment-stats",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-emergency-stats",
+      "folderId": "admin-dashboard",
+      "name": "Get Emergency Stats",
+      "url": "http://localhost:3001/api/admin/dashboard/emergency-stats",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-revenue-distribution",
+      "folderId": "admin-dashboard",
+      "name": "Get Revenue Distribution",
+      "url": "http://localhost:3001/api/admin/dashboard/revenue-distribution",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    },
+    {
+      "id": "admin-recent-activities",
+      "folderId": "admin-dashboard",
+      "name": "Get Recent Activities",
+      "url": "http://localhost:3001/api/admin/dashboard/recent-activities",
+      "method": "GET",
+      "headers": [
+        {
+          "name": "Authorization",
+          "value": "Bearer {{admin_token}}"
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ const { adminAuth } = require('../middleware/adminAuth');
 const router = express.Router();
 
 // Admin Authentication Routes
+router.post('/auth/register', adminAuthController.register);
 router.post('/auth/login', adminAuthController.login);
 router.post('/auth/logout', adminAuth, adminAuthController.logout);
 router.get('/auth/profile', adminAuth, adminAuthController.getProfile);
