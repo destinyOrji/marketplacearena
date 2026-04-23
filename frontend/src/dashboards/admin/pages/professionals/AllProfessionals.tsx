@@ -146,94 +146,68 @@ const AllProfessionals: React.FC = () => {
   const columns: Column<Professional>[] = [
     {
       key: 'id',
-      label: 'Professional ID',
-      sortable: true
-    },
-    {
-      key: 'user',
       label: 'Name',
       sortable: true,
-      render: (professional) => `${professional.user?.firstName || ''} ${professional.user?.lastName || ''}`
+      render: (p: any) => (
+        <div>
+          <p className="font-medium text-gray-900">
+            {p.user?.firstName || ''} {p.user?.lastName || ''}
+          </p>
+          <p className="text-xs text-gray-500">{p.user?.email || ''}</p>
+        </div>
+      )
     },
     {
-      key: 'professional_type',
+      key: 'professionalType',
       label: 'Type',
-      sortable: true
+      sortable: true,
+      render: (p: any) => <span className="capitalize">{p.professionalType || 'N/A'}</span>
     },
     {
       key: 'specialization',
       label: 'Specialization',
-      sortable: true
-    },
-    {
-      key: 'license_number',
-      label: 'License Number',
-      sortable: false
-    },
-    {
-      key: 'verification_status',
-      label: 'Verification Status',
       sortable: true,
-      render: (professional) => {
-        const isVerified = professional.isVerified || professional.verification_status === 'verified';
-        const status = isVerified ? 'verified' : 'pending';
-        
+      render: (p: any) => p.specialization || 'N/A'
+    },
+    {
+      key: 'licenseNumber',
+      label: 'License',
+      sortable: false,
+      render: (p: any) => p.licenseNumber || 'N/A'
+    },
+    {
+      key: 'isVerified',
+      label: 'Status',
+      sortable: true,
+      render: (p: any) => {
+        const verified = p.isVerified;
         return (
-          <span
-            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-              status === 'verified'
-                ? 'bg-green-100 text-green-800'
-                : status === 'pending'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+            verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+          }`}>
+            {verified ? 'Verified' : 'Pending'}
           </span>
         );
       }
     }
   ];
 
-  const renderActions = (professional: Professional) => (
+  const renderActions = (professional: any) => (
     <div className="flex space-x-2">
-      <button
-        onClick={() => handleView(professional)}
-        className="text-blue-600 hover:text-blue-800"
-        title="View"
-      >
+      <button onClick={() => handleView(professional)} className="text-blue-600 hover:text-blue-800" title="View">
         <FiEye className="h-5 w-5" />
       </button>
-      <button
-        onClick={() => handleEdit(professional)}
-        className="text-green-600 hover:text-green-800"
-        title="Edit"
-      >
-        <FiEdit className="h-5 w-5" />
-      </button>
-      {professional.verification_status === 'pending' && (
+      {!professional.isVerified && (
         <>
-          <button
-            onClick={() => handleVerifyClick(professional)}
-            className="text-green-600 hover:text-green-800"
-            title="Verify"
-          >
+          <button onClick={() => handleVerifyClick(professional)} className="text-green-600 hover:text-green-800" title="Verify">
             <FiCheckCircle className="h-5 w-5" />
           </button>
-          <button
-            onClick={() => handleRejectClick(professional)}
-            className="text-red-600 hover:text-red-800"
-            title="Reject"
-          >
+          <button onClick={() => handleRejectClick(professional)} className="text-red-600 hover:text-red-800" title="Reject">
             <FiXCircle className="h-5 w-5" />
           </button>
         </>
       )}
-      <button
-        onClick={() => handleDeleteClick(professional)}
-        className="text-red-600 hover:text-red-800"
-        title="Delete"
-      >
+      <button onClick={() => handleDeleteClick(professional)} className="text-red-600 hover:text-red-800" title="Delete">
         <FiTrash2 className="h-5 w-5" />
       </button>
     </div>
@@ -311,11 +285,7 @@ const AllProfessionals: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Are you sure you want to delete professional{' '}
-            <strong>
-              {deleteModal.professional?.first_name} {deleteModal.professional?.last_name}
-            </strong>
-            ? This action cannot be undone.
+            Delete <strong>{(deleteModal.professional as any)?.user?.firstName} {(deleteModal.professional as any)?.user?.lastName}</strong>? This cannot be undone.
           </p>
           <div className="flex justify-end space-x-3">
             <Button
@@ -339,11 +309,7 @@ const AllProfessionals: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Are you sure you want to verify professional{' '}
-            <strong>
-              {verifyModal.professional?.first_name} {verifyModal.professional?.last_name}
-            </strong>
-            ?
+            Verify <strong>{(verifyModal.professional as any)?.user?.firstName} {(verifyModal.professional as any)?.user?.lastName}</strong>?
           </p>
           <div className="flex justify-end space-x-3">
             <Button
@@ -367,11 +333,7 @@ const AllProfessionals: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Please provide a reason for rejecting professional{' '}
-            <strong>
-              {rejectModal.professional?.first_name} {rejectModal.professional?.last_name}
-            </strong>
-            :
+            Reason for rejecting <strong>{(rejectModal.professional as any)?.user?.firstName} {(rejectModal.professional as any)?.user?.lastName}</strong>:
           </p>
           <textarea
             value={rejectModal.reason}

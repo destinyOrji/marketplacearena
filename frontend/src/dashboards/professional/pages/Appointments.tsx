@@ -23,10 +23,32 @@ const Appointments: React.FC = () => {
     try {
       setLoading(true);
       const data = await appointmentsApi.getAppointments();
-      setAppointments(data);
+      // Normalize data - backend may return different field names
+      const normalized = data.map((apt: any) => ({
+        ...apt,
+        id: apt._id || apt.id,
+        date: apt.scheduledDate || apt.date,
+        time: apt.scheduledTime || apt.time || '00:00',
+        status: apt.status || 'pending',
+        type: apt.appointmentType || apt.type || 'in-person',
+        patient: apt.patient || {
+          id: apt.client?._id || apt.clientId || '',
+          name: apt.client?.user ? `${apt.client.user.firstName} ${apt.client.user.lastName}` : apt.patientName || 'Patient',
+          photo: apt.client?.profilePhoto || null,
+        },
+        service: apt.service || {
+          id: apt.serviceId || '',
+          title: apt.serviceName || apt.serviceTitle || 'Consultation',
+          price: apt.price || 0,
+        },
+        payment: apt.payment || {
+          amount: apt.price || apt.amount || 0,
+          status: apt.paymentStatus || 'pending',
+        },
+      }));
+      setAppointments(normalized);
     } catch (error) {
       toast.error('Failed to load appointments');
-      console.error('Error fetching appointments:', error);
     } finally {
       setLoading(false);
     }

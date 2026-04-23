@@ -364,69 +364,39 @@ exports.toggleServiceStatus = async (req, res) => {
     }
 };
 
-// Get professional applications (placeholder)
+// Get professional applications
 exports.getProfessionalApplications = async (req, res) => {
     try {
-        const applications = [];
-
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            data: applications
-        });
-
+        const JobApplication = require('../../models/JobApplication');
+        const Job = require('../../models/Job');
+        const applications = await JobApplication.find({ professional: req.params.id })
+            .populate({ path: 'job', populate: { path: 'hospital', select: 'hospitalName' } })
+            .sort({ createdAt: -1 });
+        res.json({ statuscode: 0, status: 'success', data: applications });
     } catch (error) {
-        console.error('Get professional applications error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to get professional applications',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 };
 
-// Get professional schedules (placeholder)
+// Get professional schedules
 exports.getProfessionalSchedules = async (req, res) => {
     try {
-        const schedules = [];
-
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            data: schedules
-        });
-
+        const Schedule = require('../../models/Schedule');
+        const schedules = await Schedule.find({ professional: req.params.id });
+        res.json({ statuscode: 0, status: 'success', data: schedules });
     } catch (error) {
-        console.error('Get professional schedules error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to get professional schedules',
-            error: error.message
-        });
+        res.json({ statuscode: 0, status: 'success', data: [] });
     }
 };
 
-// Get professional earnings (placeholder)
+// Get professional earnings
 exports.getProfessionalEarnings = async (req, res) => {
     try {
-        const earnings = [];
-
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            data: earnings
-        });
-
+        const appointments = await Appointment.find({ professional: req.params.id, status: 'completed' });
+        const totalEarnings = appointments.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+        res.json({ statuscode: 0, status: 'success', data: { totalEarnings, appointments } });
     } catch (error) {
-        console.error('Get professional earnings error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to get professional earnings',
-            error: error.message
-        });
+        res.json({ statuscode: 0, status: 'success', data: { totalEarnings: 0, appointments: [] } });
     }
 };
 

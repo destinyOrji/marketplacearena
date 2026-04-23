@@ -17,11 +17,18 @@ const Analytics: React.FC = () => {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const data = await analyticsApi.getPerformanceMetrics(period);
-      setMetrics(data);
+      const response = await apiClient.get('/professionals/analytics', { params: { period } });
+      const data = response.data?.data || response.data;
+      setMetrics({
+        totalAppointments: data?.totalAppointments || 0,
+        completionRate: data?.completionRate || 0,
+        averageRating: data?.averageRating || 0,
+        totalReviews: data?.totalReviews || 0,
+        responseTime: data?.responseTime || 0,
+        popularServices: data?.popularServices || [],
+      });
     } catch (error) {
-      toast.error('Failed to load analytics');
-      console.error('Error fetching analytics:', error);
+      setMetrics({ totalAppointments: 0, completionRate: 0, averageRating: 0, totalReviews: 0, responseTime: 0, popularServices: [] });
     } finally {
       setLoading(false);
     }

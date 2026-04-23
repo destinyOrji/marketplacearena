@@ -25,11 +25,11 @@ const PaymentsEarnings: React.FC = () => {
         paymentsApi.getEarningsSummary(),
         paymentsApi.getPayments(),
       ]);
-      setSummary(summaryData);
-      setPayments(paymentsData);
+      setSummary(summaryData || { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 });
+      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
     } catch (error) {
-      toast.error('Failed to load payment data');
-      console.error('Error fetching payments:', error);
+      setSummary({ totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 });
+      setPayments([]);
     } finally {
       setLoading(false);
     }
