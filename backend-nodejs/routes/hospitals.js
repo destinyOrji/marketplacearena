@@ -7,7 +7,20 @@ const User = require('../models/User');
 // Hospital dashboard stats
 router.get('/dashboard-stats', protect, async (req, res) => {
     try {
+        const Job = require('../models/Job');
+        const JobApplication = require('../models/JobApplication');
         const hospital = await Hospital.findOne({ user: req.user._id });
+
+        let activeVacancies = 0, totalVacancies = 0, totalApplications = 0, pendingApplications = 0;
+
+        if (hospital) {
+            activeVacancies = await Job.countDocuments({ hospital: hospital._id, status: 'active' });
+            totalVacancies = await Job.countDocuments({ hospital: hospital._id });
+            const jobs = await Job.find({ hospital: hospital._id }).select('_id');
+            const jobIds = jobs.map(j => j._id);
+            totalApplications = await JobApplication.countDocuments({ job: { $in: jobIds } });
+            pendingApplications = await JobApplication.countDocuments({ job: { $in: jobIds }, status: 'pending' });
+        }
 
         res.json({
             success: true,
@@ -21,6 +34,14 @@ router.get('/dashboard-stats', protect, async (req, res) => {
                 totalReviews: hospital ? hospital.totalReviews : 0,
                 isVerified: hospital ? hospital.isVerified : false,
                 emergencyServices: hospital ? hospital.emergencyServices : false,
+                activeVacancies,
+                totalVacancies,
+                totalApplications,
+                pendingApplications,
+                active_vacancies: activeVacancies,
+                total_vacancies: totalVacancies,
+                total_applications: totalApplications,
+                pending_applications: pendingApplications,
             }
         });
     } catch (error) {

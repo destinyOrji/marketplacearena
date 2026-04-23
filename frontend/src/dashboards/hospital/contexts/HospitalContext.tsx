@@ -40,9 +40,10 @@ export const HospitalProvider: React.FC<HospitalProviderProps> = ({ children }) 
     try {
       setLoading(true);
       setError(null);
-      // Try to get profile from API, fall back to localStorage
       try {
-        const data = await hospitalApi.getProfile();
+        const res = await hospitalApi.getProfile();
+        // Handle both direct data and wrapped response
+        const data = (res as any)?.data || res;
         setHospital(data);
       } catch {
         // Fall back to user data from localStorage
@@ -50,12 +51,12 @@ export const HospitalProvider: React.FC<HospitalProviderProps> = ({ children }) 
         if (userStr) {
           const user = JSON.parse(userStr);
           setHospital({
-            hospital_name: user.firstName + ' ' + user.lastName,
+            hospitalName: user.hospitalName || user.firstName + ' ' + user.lastName,
+            hospital_name: user.hospitalName || user.firstName + ' ' + user.lastName,
             email: user.email,
+            isVerified: user.isVerified || false,
             verification_status: user.isVerified ? 'verified' : 'pending',
-            onboarding_completed: user.emailVerified,
-            city: '',
-            state: '',
+            onboarding_completed: true,
           } as any);
         }
       }
@@ -68,7 +69,8 @@ export const HospitalProvider: React.FC<HospitalProviderProps> = ({ children }) 
 
   const refreshDashboardStats = async () => {
     try {
-      const data = await hospitalApi.getDashboardStats();
+      const res = await hospitalApi.getDashboardStats();
+      const data = (res as any)?.data || res;
       setDashboardStats(data);
     } catch (err: any) {
       console.error('Error loading dashboard stats:', err);

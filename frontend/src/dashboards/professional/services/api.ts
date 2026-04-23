@@ -183,9 +183,27 @@ export const jobsApi = {
   },
 
   getApplications: async (): Promise<JobApplication[]> => {
-    const response = await apiClient.get('/professionals/applications');
+    const response = await apiClient.get('/jobs/my/applications');
     const payload = response.data?.data ?? response.data;
-    return Array.isArray(payload) ? payload : [];
+    const list = Array.isArray(payload) ? payload : [];
+    return list.map((app: any): JobApplication => ({
+      id: app._id || app.id || '',
+      status: app.status || 'pending',
+      coverLetter: app.coverLetter || '',
+      appliedDate: new Date(app.createdAt || app.appliedDate || Date.now()),
+      job: {
+        id: app.job?.id || app.job?._id || '',
+        title: app.job?.jobTitle || app.job?.title || 'N/A',
+        description: app.job?.jobDescription || app.job?.description || '',
+        specialty: app.job?.department || app.job?.specialty || '',
+        location: app.job?.location || 'On-site',
+        jobType: (app.job?.employmentType || app.job?.jobType || 'full-time').replace(/_/g, '-') as any,
+        compensation: app.job?.compensation || { type: 'negotiable' },
+        postedDate: new Date(app.job?.publishedAt || app.job?.createdAt || Date.now()),
+        applicationDeadline: new Date(app.job?.applicationDeadline || Date.now() + 30 * 24 * 60 * 60 * 1000),
+        hasApplied: true,
+      },
+    }));
   },
 
   acceptOffer: async (applicationId: string): Promise<JobApplication> => {

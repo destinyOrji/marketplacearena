@@ -67,20 +67,24 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           {hospital && (
             <div className="px-6 py-4 border-b">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {hospital.hospital_name}
+                {(hospital as any).hospitalName || hospital.hospital_name || 'Hospital'}
               </p>
-              <p className="text-xs text-gray-500">{hospital.city}, {hospital.state}</p>
-              <span
-                className={`inline-flex mt-2 items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  hospital.verification_status === 'verified'
-                    ? 'bg-green-100 text-green-800'
-                    : hospital.verification_status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {hospital.verification_status}
-              </span>
+              <p className="text-xs text-gray-500">
+                {(hospital as any).address?.city || hospital.city || ''}{((hospital as any).address?.state || hospital.state) ? `, ${(hospital as any).address?.state || hospital.state}` : ''}
+              </p>
+              {(() => {
+                const isVerified = (hospital as any).isVerified;
+                const status = isVerified ? 'verified' : (hospital.verification_status || 'pending');
+                return (
+                  <span className={`inline-flex mt-2 items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    status === 'verified' ? 'bg-green-100 text-green-800' :
+                    status === 'rejected' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </span>
+                );
+              })()}
             </div>
           )}
 

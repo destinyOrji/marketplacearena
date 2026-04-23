@@ -41,40 +41,33 @@ class HospitalApiService {
 
   // Hospital Profile
   async getProfile(): Promise<Hospital> {
-    const response = await this.api.get<ApiResponse<Hospital>>('/profile');
-    return response.data.data!;
+    const response = await this.api.get('/profile');
+    return (response.data?.data || response.data) as Hospital;
   }
 
   async updateProfile(data: Partial<Hospital>): Promise<Hospital> {
-    const response = await this.api.put<ApiResponse<Hospital>>('/profile/update', data);
-    return response.data.data!;
+    const response = await this.api.put('/profile/update', data);
+    return (response.data?.data || response.data) as Hospital;
   }
 
   async completeOnboarding(data: Partial<Hospital>): Promise<Hospital> {
-    const response = await this.api.post<ApiResponse<Hospital>>('/onboarding', data);
-    return response.data.data!;
+    const response = await this.api.post('/onboarding', data);
+    return (response.data?.data || response.data) as Hospital;
   }
 
   async uploadImage(file: File, imageType: 'logo' | 'facility'): Promise<{ image_url: string }> {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('image_type', imageType);
-
-    const response = await this.api.post<ApiResponse<{ image_url: string }>>(
-      '/upload-image/',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    return response.data.data!;
+    const response = await this.api.post('/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return (response.data?.data || response.data) as { image_url: string };
   }
 
   async getDashboardStats(): Promise<DashboardStats> {
-    const response = await this.api.get<ApiResponse<DashboardStats>>('/dashboard-stats/');
-    return response.data.data!;
+    const response = await this.api.get('/dashboard-stats');
+    return (response.data?.data || response.data) as DashboardStats;
   }
 
   // Vacancies
@@ -85,65 +78,48 @@ class HospitalApiService {
     page?: number;
     page_size?: number;
   }): Promise<{ vacancies: Vacancy[]; pagination: PaginationMeta }> {
-    const response = await this.api.get<ApiResponse<{ vacancies: Vacancy[]; pagination: PaginationMeta }>>(
-      '/vacancies',
-      { params }
-    );
-    return response.data.data!;
+    const response = await this.api.get('/vacancies', { params });
+    const d = response.data?.data || response.data || {};
+    return {
+      vacancies: d.vacancies || (Array.isArray(d) ? d : []),
+      pagination: d.pagination || { page: 1, page_size: 10, total_count: 0, total_pages: 1 }
+    };
   }
 
   async getVacancy(vacancyId: number): Promise<Vacancy> {
-    const response = await this.api.get<ApiResponse<Vacancy>>(`/vacancies/${vacancyId}/`);
-    return response.data.data!;
+    const response = await this.api.get(`/vacancies/${vacancyId}`);
+    return (response.data?.data || response.data) as Vacancy;
   }
 
   async createVacancy(data: Partial<Vacancy>): Promise<Vacancy> {
-    const response = await this.api.post<ApiResponse<Vacancy>>('/vacancies/create', data);
-    return response.data.data!;
+    const response = await this.api.post('/vacancies/create', data);
+    return (response.data?.data || response.data) as Vacancy;
   }
 
   async updateVacancy(vacancyId: number, data: Partial<Vacancy>): Promise<Vacancy> {
-    const response = await this.api.put<ApiResponse<Vacancy>>(
-      `/vacancies/${vacancyId}/update/`,
-      data
-    );
-    return response.data.data!;
+    const response = await this.api.put(`/vacancies/${vacancyId}/update`, data);
+    return (response.data?.data || response.data) as Vacancy;
   }
 
   async updateVacancyStatus(vacancyId: number, status: string): Promise<Vacancy> {
-    const response = await this.api.patch<ApiResponse<Vacancy>>(
-      `/vacancies/${vacancyId}/status/`,
-      { status }
-    );
-    return response.data.data!;
+    const response = await this.api.patch(`/vacancies/${vacancyId}/status`, { status });
+    return (response.data?.data || response.data) as Vacancy;
   }
 
   async deleteVacancy(vacancyId: number): Promise<void> {
-    await this.api.delete(`/vacancies/${vacancyId}/delete/`);
+    await this.api.delete(`/vacancies/${vacancyId}/delete`);
   }
 
-  async getVacancyApplications(vacancyId: number, status?: string): Promise<{
-    vacancy_id: number;
-    job_title: string;
-    applications: Application[];
-    total_count: number;
-  }> {
-    const response = await this.api.get<ApiResponse<{
-      vacancy_id: number;
-      job_title: string;
-      applications: Application[];
-      total_count: number;
-    }>>(`/vacancies/${vacancyId}/applications/`, {
+  async getVacancyApplications(vacancyId: number, status?: string): Promise<any> {
+    const response = await this.api.get(`/vacancies/${vacancyId}/applications`, {
       params: status ? { status } : undefined,
     });
-    return response.data.data!;
+    return response.data?.data || response.data;
   }
 
   async getVacancyStats(vacancyId: number): Promise<VacancyStats> {
-    const response = await this.api.get<ApiResponse<VacancyStats>>(
-      `/vacancies/${vacancyId}/stats/`
-    );
-    return response.data.data!;
+    const response = await this.api.get(`/vacancies/${vacancyId}/stats`);
+    return (response.data?.data || response.data) as VacancyStats;
   }
 
   // Applications
@@ -153,18 +129,17 @@ class HospitalApiService {
     page?: number;
     page_size?: number;
   }): Promise<{ applications: Application[]; pagination: PaginationMeta }> {
-    const response = await this.api.get<ApiResponse<{ applications: Application[]; pagination: PaginationMeta }>>(
-      '/applications/',
-      { params }
-    );
-    return response.data.data!;
+    const response = await this.api.get('/applications', { params });
+    const d = response.data?.data || response.data || {};
+    return {
+      applications: Array.isArray(d) ? d : (d.applications || []),
+      pagination: d.pagination || { page: 1, page_size: 10, total_count: 0, total_pages: 1 }
+    };
   }
 
   async getApplication(applicationId: number): Promise<ApplicationDetail> {
-    const response = await this.api.get<ApiResponse<ApplicationDetail>>(
-      `/applications/${applicationId}/`
-    );
-    return response.data.data!;
+    const response = await this.api.get(`/applications/${applicationId}`);
+    return (response.data?.data || response.data) as ApplicationDetail;
   }
 
   async updateApplicationStatus(applicationId: number, status: string): Promise<ApplicationDetail> {

@@ -668,7 +668,44 @@ router.get('/analytics', protect, async (req, res) => {
 
 // Applications (job applications)
 router.get('/applications', protect, async (req, res) => {
-    res.json({ success: true, data: [] });
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const professional = await Professional.findOne({ user: req.user._id });
+        if (!professional) return res.json({ success: true, data: [] });
+
+        const applications = await JobApplication.find({ professional: professional._id })
+            .populate({
+                path: 'job',
+                populate: { path: 'hospital', select: 'hospitalName address' }
+            })
+            .sort({ createdAt: -1 });
+
+        const data = applications.map(app => ({
+            id: app._id,
+            status: app.status,
+            coverLetter: app.coverLetter,
+            appliedDate: app.createdAt,
+            reviewedAt: app.reviewedAt,
+            reviewNotes: app.reviewNotes,
+            job: {
+                id: app.job?._id,
+                title: app.job?.jobTitle || 'N/A',
+                specialty: app.job?.department || '',
+                location: [app.job?.hospital?.address?.city, app.job?.hospital?.address?.state].filter(Boolean).join(', ') || 'On-site',
+                jobType: (app.job?.employmentType || 'full_time').replace(/_/g, '-'),
+                hospitalName: app.job?.hospital?.hospitalName || '',
+                compensation: {
+                    type: app.job?.salaryRangeMin ? 'fixed' : 'negotiable',
+                    amount: app.job?.salaryRangeMin
+                }
+            }
+        }));
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Get applications error:', error);
+        res.json({ success: true, data: [] });
+    }
 });
 
 // Settings
