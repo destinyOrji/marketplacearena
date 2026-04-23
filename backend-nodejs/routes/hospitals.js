@@ -121,35 +121,56 @@ router.get('/vacancies', protect, async (req, res) => {
 router.post('/vacancies/create/', protect, async (req, res) => {
     try {
         const Job = require('../models/Job');
-        const hospital = await Hospital.findOne({ user: req.user._id });
+        const Notification = require('../models/Notification');
+        const Professional = require('../models/Professional');
+        const hospital = await Hospital.findOne({ user: req.user._id }).populate('user', 'firstName lastName');
         
         if (!hospital) {
-            return res.status(404).json({ 
-                statuscode: 1,
-                status: 'error',
-                message: 'Hospital profile not found' 
-            });
+            return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital profile not found' });
         }
 
+        // Map frontend snake_case fields to model camelCase
         const jobData = {
             hospital: hospital._id,
-            ...req.body
+            jobTitle: req.body.jobTitle || req.body.job_title,
+            department: req.body.department,
+            jobDescription: req.body.jobDescription || req.body.job_description,
+            requiredQualifications: req.body.requiredQualifications || req.body.required_qualifications || [],
+            experienceLevel: req.body.experienceLevel || req.body.experience_level || 'mid',
+            minimumExperienceYears: req.body.minimumExperienceYears || req.body.minimum_experience_years || 0,
+            employmentType: req.body.employmentType || req.body.employment_type || 'full_time',
+            salaryRangeMin: req.body.salaryRangeMin || req.body.salary_range_min,
+            salaryRangeMax: req.body.salaryRangeMax || req.body.salary_range_max,
+            salaryCurrency: req.body.salaryCurrency || req.body.salary_currency || 'NGN',
+            benefits: req.body.benefits || [],
+            numberOfPositions: req.body.numberOfPositions || req.body.number_of_positions || 1,
+            applicationDeadline: req.body.applicationDeadline || req.body.application_deadline,
+            status: req.body.status || 'draft',
         };
 
         const job = await Job.create(jobData);
-        res.status(201).json({ 
-            statuscode: 0,
-            status: 'success',
-            data: job, 
-            message: 'Vacancy created successfully' 
-        });
+
+        // If status is active, notify all professionals
+        if (job.status === 'active') {
+            const professionals = await Professional.find({}).populate('user', '_id');
+            const notifications = professionals
+                .filter(p => p.user)
+                .map(p => ({
+                    user: p.user._id,
+                    title: 'New Job Vacancy',
+                    message: `${hospital.hospitalName} posted a new vacancy: ${job.jobTitle} (${job.department})`,
+                    type: 'job_posted',
+                    data: { jobId: job._id, hospitalId: hospital._id }
+                }));
+            if (notifications.length > 0) {
+                await Notification.insertMany(notifications);
+            }
+        }
+
+        res.status(201).json({ statuscode: 0, status: 'success', data: job, message: 'Vacancy created successfully' });
     } catch (error) {
         console.error('Error creating vacancy:', error);
-        res.status(500).json({ 
-            statuscode: 1,
-            status: 'error',
-            message: error.message 
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 });
 

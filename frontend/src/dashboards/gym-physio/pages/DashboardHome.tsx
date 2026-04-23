@@ -1,118 +1,80 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotification } from '../contexts/NotificationContext';
 import { getDashboardStats } from '../services/api';
-import type { DashboardStats } from '../types';
 
 const DashboardHome: React.FC = () => {
   const { gymPhysio } = useAuth();
-  const { showError } = useNotification();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const data = await getDashboardStats();
-        setStats(data);
-      } catch (error: any) {
-        showError(error.message || 'Failed to load dashboard stats');
-      } finally {
-        setLoading(false);
-      }
-    };
+    getDashboardStats()
+      .then(data => setStats(data || {}))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
-    fetchStats();
-  }, [showError]);
+  const name = gymPhysio?.businessName || 'Business';
+  const isVerified = gymPhysio?.isVerified;
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-      </div>
-    );
-  }
+  const statCards = [
+    { label: 'Total Bookings', value: stats.totalBookings ?? 0, emoji: '📅', color: 'bg-orange-100 text-orange-600' },
+    { label: 'Completed Bookings', value: stats.completedBookings ?? 0, emoji: '✅', color: 'bg-green-100 text-green-600' },
+    { label: 'Active Services', value: stats.activeServices ?? 0, emoji: '💪', color: 'bg-blue-100 text-blue-600' },
+    { label: 'Average Rating', value: (stats.averageRating || 0).toFixed(1), emoji: '⭐', color: 'bg-yellow-100 text-yellow-600' },
+    { label: 'Total Earnings', value: `₦${(stats.totalEarnings || 0).toLocaleString()}`, emoji: '💰', color: 'bg-purple-100 text-purple-600' },
+    { label: 'Total Reviews', value: stats.totalReviews ?? 0, emoji: '💬', color: 'bg-pink-100 text-pink-600' },
+  ];
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {gymPhysio?.businessName || 'Gym Owner'}!
-        </h1>
-        <p className="text-gray-600 mt-2">Here's what's happening with your business today</p>
+    <div className="space-y-6">
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-orange-500 to-orange-700 rounded-xl p-6 text-white">
+        <h1 className="text-2xl font-bold mb-1">Welcome back, {name} 👋</h1>
+        <p className="opacity-80 text-sm">
+          {gymPhysio?.businessType || 'Gym/Physio'} &bull;{' '}
+          <span className={isVerified ? 'text-green-300' : 'text-yellow-300'}>
+            {isVerified ? '✓ Verified' : '⏳ Pending Verification'}
+          </span>
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Bookings</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.totalBookings || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📅</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active Services</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.activeServices || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💪</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Average Rating</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats?.averageRating?.toFixed(1) || '0.0'}</p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">⭐</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Earnings</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">${stats?.totalEarnings || 0}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💰</span>
-            </div>
-          </div>
-        </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading
+          ? [...Array(6)].map((_, i) => <div key={i} className="rounded-xl bg-gray-200 animate-pulse h-28" />)
+          : statCards.map(({ label, value, emoji, color }) => (
+              <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">{label}</p>
+                    <p className="text-3xl font-bold text-gray-900">{value}</p>
+                  </div>
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${color}`}>
+                    <span className="text-2xl">{emoji}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="space-y-3">
-            <button className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-              Add New Service
-            </button>
-            <button className="w-full px-4 py-3 bg-white border-2 border-orange-600 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors">
-              View Appointments
-            </button>
-            <button className="w-full px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-              Update Schedule
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-4">
-            <p className="text-gray-600 text-center py-8">No recent activity</p>
-          </div>
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { to: '/gym-physio/services', label: 'Add Service', emoji: '➕' },
+            { to: '/gym-physio/appointments', label: 'Appointments', emoji: '📅' },
+            { to: '/gym-physio/schedule', label: 'Schedule', emoji: '🗓️' },
+            { to: '/gym-physio/profile', label: 'Edit Profile', emoji: '👤' },
+          ].map(({ to, label, emoji }) => (
+            <Link key={to} to={to}
+              className="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors text-center">
+              <span className="text-2xl">{emoji}</span>
+              <span className="text-sm font-medium text-gray-700">{label}</span>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

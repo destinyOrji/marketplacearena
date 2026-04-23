@@ -5,6 +5,31 @@ const { requireSubscription } = require('../middleware/subscription');
 const Client = require('../models/Client');
 const User = require('../models/User');
 
+// Dashboard stats for patient
+router.get('/dashboard-stats', protect, async (req, res) => {
+    try {
+        const Appointment = require('../models/Appointment');
+        const client = await Client.findOne({ user: req.user._id });
+        const totalAppointments = await Appointment.countDocuments({ client: client?._id });
+        const upcomingAppointments = await Appointment.countDocuments({
+            client: client?._id,
+            status: { $in: ['scheduled', 'confirmed'] },
+            scheduledDate: { $gte: new Date() }
+        });
+        res.json({
+            success: true,
+            data: {
+                totalAppointments,
+                upcomingAppointments,
+                pendingPayments: 0,
+                totalRecords: 0,
+            }
+        });
+    } catch (error) {
+        res.json({ success: true, data: { totalAppointments: 0, upcomingAppointments: 0, pendingPayments: 0, totalRecords: 0 } });
+    }
+});
+
 // Get client profile
 router.get('/profile', protect, async (req, res) => {
     try {
