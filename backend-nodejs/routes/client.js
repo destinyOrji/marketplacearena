@@ -148,15 +148,15 @@ router.get('/services', protect, async (req, res) => {
         ];
 
         // Filter by rating
-        if (minRating) allServices = allServices.filter(s => s.rating >= parseFloat(minRating as string));
+        if (minRating) allServices = allServices.filter(s => s.rating >= parseFloat(minRating));
 
         // Filter by specialty
-        if (specialty) allServices = allServices.filter(s => s.specialty?.toLowerCase().includes((specialty as string).toLowerCase()));
+        if (specialty) allServices = allServices.filter(s => s.specialty?.toLowerCase().includes(specialty.toLowerCase()));
 
         const total = allServices.length;
-        const paginated = allServices.slice(skip, skip + parseInt(pageSize as string));
+        const paginated = allServices.slice(skip, skip + parseInt(pageSize));
 
-        res.json({ success: true, data: { data: paginated, total, totalPages: Math.ceil(total / parseInt(pageSize as string)) } });
+        res.json({ success: true, data: { data: paginated, total, totalPages: Math.ceil(total / parseInt(pageSize)) } });
     } catch (error) {
         console.error('Error fetching services:', error);
         res.json({ success: true, data: { data: [], total: 0, totalPages: 1 } });
