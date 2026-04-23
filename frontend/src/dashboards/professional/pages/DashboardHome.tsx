@@ -17,7 +17,7 @@ const DashboardHome: React.FC = () => {
 
   const name = professional?.fullName || (professional as any)?.firstName || 'Doctor';
   const specialization = Array.isArray(professional?.specialization)
-    ? professional.specialization[0]
+    ? (professional?.specialization[0] || 'Healthcare Professional')
     : (professional as any)?.specialization || 'Healthcare Professional';
   const isVerified = professional?.verificationStatus === 'verified' || (professional as any)?.isVerified;
 
