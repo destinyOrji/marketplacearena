@@ -62,22 +62,76 @@ const EmergencyServices: React.FC = () => {
         async (position) => {
           const { latitude, longitude } = position.coords;
           
-          // Reverse geocode to get address (simplified - in production use a geocoding service)
-          const address = `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`;
-          
-          setPatientLocation({
-            latitude,
-            longitude,
-            address,
-          });
+          try {
+            // Use OpenStreetMap Nominatim for reverse geocoding (free, no API key)
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+              { headers: { 'Accept-Language': 'en' } }
+            );
+            const data = await response.json();
+            
+            // Build a readable address
+            const addr = data.address || {};
+            const parts = [
+              addr.house_number,
+              addr.road || addr.street,
+              addr.suburb || addr.neighbourhood || addr.quarter,
+              addr.city || addr.town || addr.village || addr.county,
+              addr.state,
+              addr.country,
+            ].filter(Boolean);
+            
+            const readableAddress = parts.length > 0
+              ? parts.join(', ')
+              : data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+            // Also search for nearby bus stops using Overpass API
+            const busStopQuery = `
+              [out:json][timeout:10];
+              (
+                node["highway"="bus_stop"](around:500,${latitude},${longitude});
+                node["public_transport"="stop_position"](around:500,${latitude},${longitude});
+              );
+              out body 3;
+            `;
+            let nearbyBusStop = '';
+            try {
+              const busRes = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                body: busStopQuery,
+              });
+              const busData = await busRes.json();
+              if (busData.elements && busData.elements.length > 0) {
+                const stop = busData.elements[0];
+                nearbyBusStop = stop.tags?.name || stop.tags?.ref || '';
+              }
+            } catch {
+              // Bus stop lookup failed silently
+            }
+
+            const fullAddress = nearbyBusStop
+              ? `${readableAddress} (Near: ${nearbyBusStop})`
+              : readableAddress;
+
+            setPatientLocation({ latitude, longitude, address: fullAddress });
+            showSuccessToast('Location detected successfully');
+          } catch (err) {
+            // Fallback to coordinates if geocoding fails
+            setPatientLocation({
+              latitude,
+              longitude,
+              address: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+            });
+            showSuccessToast('Location detected (coordinates only)');
+          }
           setDetectingLocation(false);
-          showSuccessToast('Location detected successfully');
         },
         (error) => {
           console.error('Error detecting location:', error);
           setDetectingLocation(false);
           showErrorToast('Failed to detect location. Please enter manually.');
-        }
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
       setDetectingLocation(false);
@@ -213,9 +267,9 @@ const EmergencyServices: React.FC = () => {
               <input
                 type="text"
                 value={patientLocation?.address || ''}
-                readOnly
+                onChange={(e) => setPatientLocation(prev => prev ? { ...prev, address: e.target.value } : null)}
                 placeholder="Detecting your location..."
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
                 onClick={detectCurrentLocation}
