@@ -146,89 +146,73 @@ const AllHospitals: React.FC = () => {
   const columns: Column<Hospital>[] = [
     {
       key: 'id',
-      label: 'Hospital ID',
-      sortable: true
-    },
-    {
-      key: 'hospital_name',
       label: 'Hospital Name',
-      sortable: true
-    },
-    {
-      key: 'facility_type',
-      label: 'Facility Type',
-      sortable: true
-    },
-    {
-      key: 'city',
-      label: 'Location',
       sortable: true,
-      render: (hospital) => `${hospital.city}, ${hospital.state}`
-    },
-    {
-      key: 'registration_number',
-      label: 'Registration Number',
-      sortable: false
-    },
-    {
-      key: 'verification_status',
-      label: 'Verification Status',
-      sortable: true,
-      render: (hospital) => (
-        <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            hospital.verification_status === 'verified'
-              ? 'bg-green-100 text-green-800'
-              : hospital.verification_status === 'pending'
-              ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
-          {hospital.verification_status.charAt(0).toUpperCase() + hospital.verification_status.slice(1)}
-        </span>
+      render: (h: any) => (
+        <div>
+          <p className="font-medium text-gray-900">{h.hospitalName || h.hospital_name || 'N/A'}</p>
+          <p className="text-xs text-gray-500">{h.email || h.user?.email || ''}</p>
+        </div>
       )
+    },
+    {
+      key: 'hospitalType',
+      label: 'Type',
+      sortable: true,
+      render: (h: any) => h.hospitalType || h.facility_type || 'N/A'
+    },
+    {
+      key: 'address',
+      label: 'Location',
+      sortable: false,
+      render: (h: any) => {
+        const city = h.address?.city || h.city || '';
+        const state = h.address?.state || h.state || '';
+        return [city, state].filter(Boolean).join(', ') || 'N/A';
+      }
+    },
+    {
+      key: 'registrationNumber',
+      label: 'Reg. Number',
+      sortable: false,
+      render: (h: any) => h.registrationNumber || h.registration_number || 'N/A'
+    },
+    {
+      key: 'isVerified',
+      label: 'Status',
+      sortable: true,
+      render: (h: any) => {
+        const verified = h.isVerified;
+        const status = verified ? 'verified' : (h.verification_status || 'pending');
+        return (
+          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+            status === 'verified' ? 'bg-green-100 text-green-800' :
+            status === 'rejected' ? 'bg-red-100 text-red-800' :
+            'bg-yellow-100 text-yellow-800'
+          }`}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
+        );
+      }
     }
   ];
 
-  const renderActions = (hospital: Hospital) => (
+  const renderActions = (hospital: any) => (
     <div className="flex space-x-2">
-      <button
-        onClick={() => handleView(hospital)}
-        className="text-blue-600 hover:text-blue-800"
-        title="View"
-      >
+      <button onClick={() => handleView(hospital)} className="text-blue-600 hover:text-blue-800" title="View">
         <FiEye className="h-5 w-5" />
       </button>
-      <button
-        onClick={() => handleEdit(hospital)}
-        className="text-green-600 hover:text-green-800"
-        title="Edit"
-      >
-        <FiEdit className="h-5 w-5" />
-      </button>
-      {hospital.verification_status === 'pending' && (
+      {!hospital.isVerified && (
         <>
-          <button
-            onClick={() => handleVerifyClick(hospital)}
-            className="text-green-600 hover:text-green-800"
-            title="Verify"
-          >
+          <button onClick={() => handleVerifyClick(hospital)} className="text-green-600 hover:text-green-800" title="Verify">
             <FiCheckCircle className="h-5 w-5" />
           </button>
-          <button
-            onClick={() => handleRejectClick(hospital)}
-            className="text-red-600 hover:text-red-800"
-            title="Reject"
-          >
+          <button onClick={() => handleRejectClick(hospital)} className="text-red-600 hover:text-red-800" title="Reject">
             <FiXCircle className="h-5 w-5" />
           </button>
         </>
       )}
-      <button
-        onClick={() => handleDeleteClick(hospital)}
-        className="text-red-600 hover:text-red-800"
-        title="Delete"
-      >
+      <button onClick={() => handleDeleteClick(hospital)} className="text-red-600 hover:text-red-800" title="Delete">
         <FiTrash2 className="h-5 w-5" />
       </button>
     </div>
@@ -307,8 +291,8 @@ const AllHospitals: React.FC = () => {
         <div className="space-y-4">
           <p className="text-gray-700">
             Are you sure you want to delete hospital{' '}
-            <strong>{deleteModal.hospital?.hospital_name}</strong>
-            ? This action cannot be undone.
+            <strong>{(deleteModal.hospital as any)?.hospitalName || deleteModal.hospital?.hospital_name}</strong>?
+            This action cannot be undone.
           </p>
           <div className="flex justify-end space-x-3">
             <Button
@@ -332,9 +316,7 @@ const AllHospitals: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Are you sure you want to verify hospital{' '}
-            <strong>{verifyModal.hospital?.hospital_name}</strong>
-            ?
+            Verify <strong>{(verifyModal.hospital as any)?.hospitalName || verifyModal.hospital?.hospital_name}</strong>?
           </p>
           <div className="flex justify-end space-x-3">
             <Button
@@ -358,9 +340,7 @@ const AllHospitals: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-gray-700">
-            Please provide a reason for rejecting hospital{' '}
-            <strong>{rejectModal.hospital?.hospital_name}</strong>
-            :
+            Reason for rejecting <strong>{(rejectModal.hospital as any)?.hospitalName || rejectModal.hospital?.hospital_name}</strong>:
           </p>
           <textarea
             value={rejectModal.reason}

@@ -127,11 +127,47 @@ export const servicesApi = {
 // Jobs API
 // ============================================================================
 
+// Helper to map backend employment type to frontend type
+const mapEmploymentType = (type: string): 'full-time' | 'part-time' | 'contract' | 'per-diem' => {
+  const map: Record<string, 'full-time' | 'part-time' | 'contract' | 'per-diem'> = {
+    full_time: 'full-time', full: 'full-time',
+    part_time: 'part-time', part: 'part-time',
+    contract: 'contract', temporary: 'contract',
+    per_diem: 'per-diem',
+  };
+  return map[type?.toLowerCase()] || 'full-time';
+};
+
 export const jobsApi = {
   getJobs: async (filters?: any): Promise<JobPosting[]> => {
     const response = await apiClient.get('/jobs', { params: filters });
     const payload = response.data?.data ?? response.data;
-    return Array.isArray(payload) ? payload : [];
+    const list = Array.isArray(payload) ? payload : [];
+
+    // Map backend camelCase fields to JobPosting type
+    return list.map((job: any): JobPosting => ({
+      id: job._id || job.id || '',
+      title: job.jobTitle || job.title || 'Untitled',
+      description: job.jobDescription || job.description || '',
+      specialty: job.department || job.specialty || '',
+      location: [job.hospital?.city, job.hospital?.state].filter(Boolean).join(', ') || job.location || 'On-site',
+      jobType: mapEmploymentType(job.employmentType || job.jobType || 'full_time'),
+      compensation: {
+        type: job.salaryRangeMin ? 'fixed' : 'negotiable',
+        amount: job.salaryRangeMin || undefined,
+      },
+      postedDate: new Date(job.publishedAt || job.createdAt || Date.now()),
+      applicationDeadline: new Date(job.applicationDeadline || Date.now() + 30 * 24 * 60 * 60 * 1000),
+      hasApplied: job.hasApplied || false,
+      // Extra fields for display
+      hospitalName: job.hospital?.name || '',
+      experienceLevel: job.experienceLevel || '',
+      salaryMin: job.salaryRangeMin,
+      salaryMax: job.salaryRangeMax,
+      currency: job.salaryCurrency || 'NGN',
+      benefits: job.benefits || [],
+      requiredQualifications: job.requiredQualifications || [],
+    } as any));
   },
 
   getJob: async (id: string): Promise<JobPosting> => {
@@ -140,13 +176,8 @@ export const jobsApi = {
   },
 
   applyForJob: async (jobId: string, data: { coverLetter: string; attachments?: File[] }): Promise<JobApplication> => {
-    const formData = new FormData();
-    formData.append('coverLetter', data.coverLetter);
-    if (data.attachments) {
-      data.attachments.forEach((file) => formData.append('attachments', file));
-    }
-    const response = await apiClient.post(`/jobs/${jobId}/apply`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    const response = await apiClient.post(`/jobs/${jobId}/apply`, {
+      coverLetter: data.coverLetter,
     });
     return response.data?.data ?? response.data;
   },

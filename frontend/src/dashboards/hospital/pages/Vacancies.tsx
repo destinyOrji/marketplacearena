@@ -20,14 +20,18 @@ const Vacancies: React.FC = () => {
   const loadVacancies = async () => {
     try {
       setLoading(true);
-      const data = await hospitalApi.listVacancies({
+      const res = await hospitalApi.listVacancies({
         status: statusFilter || undefined,
         search: searchTerm || undefined,
         page: currentPage,
         page_size: 10,
       });
-      setVacancies(data.vacancies);
-      setPagination(data.pagination);
+      // Handle both response formats
+      const data = (res as any)?.data || res;
+      const list = data?.vacancies || data?.data || (Array.isArray(data) ? data : []);
+      const pag = data?.pagination || null;
+      setVacancies(list);
+      setPagination(pag);
     } catch (error: any) {
       toast.error('Failed to load vacancies');
     } finally {
@@ -151,73 +155,68 @@ const Vacancies: React.FC = () => {
         <>
           <div className="bg-white shadow overflow-hidden sm:rounded-lg">
             <ul className="divide-y divide-gray-200">
-              {vacancies.map((vacancy) => (
-                <li key={vacancy.vacancy_id} className="hover:bg-gray-50">
-                  <div className="px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3">
-                          <Link
-                            to={`/hospital/vacancies/${vacancy.vacancy_id}`}
-                            className="text-lg font-medium text-blue-600 hover:text-blue-800 truncate"
-                          >
-                            {vacancy.job_title}
+              {vacancies.map((vacancy: any) => {
+                // Normalize camelCase (backend) and snake_case (type) fields
+                const id = vacancy._id || vacancy.vacancy_id;
+                const title = vacancy.jobTitle || vacancy.job_title || 'Untitled';
+                const dept = vacancy.department || '';
+                const empType = (vacancy.employmentType || vacancy.employment_type || '').replace(/_/g, ' ');
+                const expLevel = vacancy.experienceLevel || vacancy.experience_level || '';
+                const views = vacancy.views || vacancy.views_count || 0;
+                const apps = vacancy.applicationsCount || vacancy.applications_count || 0;
+                const deadline = vacancy.applicationDeadline || vacancy.application_deadline;
+                const status = vacancy.status || 'draft';
+
+                return (
+                  <li key={id} className="hover:bg-gray-50">
+                    <div className="px-6 py-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3">
+                            <Link to={`/hospital/vacancies/${id}`}
+                              className="text-lg font-medium text-blue-600 hover:text-blue-800 truncate">
+                              {title}
+                            </Link>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(status)}`}>
+                              {status}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center text-sm text-gray-500 space-x-4">
+                            {dept && <span>{dept}</span>}
+                            {empType && <><span>•</span><span className="capitalize">{empType}</span></>}
+                            {expLevel && <><span>•</span><span className="capitalize">{expLevel} level</span></>}
+                          </div>
+                          <div className="mt-2 flex items-center text-sm text-gray-500 space-x-4">
+                            <span className="flex items-center">
+                              <FiEye className="mr-1 h-4 w-4" />{views} views
+                            </span>
+                            <span>•</span>
+                            <span>{apps} applications</span>
+                            {deadline && (
+                              <><span>•</span>
+                              <span>Deadline: {format(new Date(deadline), 'MMM d, yyyy')}</span></>
+                            )}
+                          </div>
+                        </div>
+                        <div className="ml-4 flex items-center space-x-2">
+                          <Link to={`/hospital/vacancies/${id}`}
+                            className="p-2 text-gray-400 hover:text-blue-600" title="View">
+                            <FiEye className="h-5 w-5" />
                           </Link>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(
-                              vacancy.status
-                            )}`}
-                          >
-                            {vacancy.status}
-                          </span>
+                          <Link to={`/hospital/vacancies/${id}/edit`}
+                            className="p-2 text-gray-400 hover:text-blue-600" title="Edit">
+                            <FiEdit className="h-5 w-5" />
+                          </Link>
+                          <button onClick={() => handleDelete(id)}
+                            className="p-2 text-gray-400 hover:text-red-600" title="Delete">
+                            <FiTrash2 className="h-5 w-5" />
+                          </button>
                         </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-500 space-x-4">
-                          <span>{vacancy.department}</span>
-                          <span>•</span>
-                          <span>{vacancy.employment_type.replace('_', ' ')}</span>
-                          <span>•</span>
-                          <span>{vacancy.experience_level} level</span>
-                        </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-500 space-x-4">
-                          <span className="flex items-center">
-                            <FiEye className="mr-1 h-4 w-4" />
-                            {vacancy.views_count} views
-                          </span>
-                          <span>•</span>
-                          <span>{vacancy.applications_count} applications</span>
-                          <span>•</span>
-                          <span>
-                            Deadline: {format(new Date(vacancy.application_deadline), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4 flex items-center space-x-2">
-                        <Link
-                          to={`/hospital/vacancies/${vacancy.vacancy_id}`}
-                          className="p-2 text-gray-400 hover:text-blue-600"
-                          title="View Details"
-                        >
-                          <FiEye className="h-5 w-5" />
-                        </Link>
-                        <Link
-                          to={`/hospital/vacancies/${vacancy.vacancy_id}/edit`}
-                          className="p-2 text-gray-400 hover:text-blue-600"
-                          title="Edit"
-                        >
-                          <FiEdit className="h-5 w-5" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(vacancy.vacancy_id)}
-                          className="p-2 text-gray-400 hover:text-red-600"
-                          title="Close Vacancy"
-                        >
-                          <FiTrash2 className="h-5 w-5" />
-                        </button>
                       </div>
                     </div>
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 

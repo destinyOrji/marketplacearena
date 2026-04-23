@@ -157,7 +157,16 @@ exports.deleteHospital = async (req, res) => {
 
 // Placeholder methods for other hospital operations
 exports.getHospitalVacancies = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: [] });
+    try {
+        const Job = require('../../models/Job');
+        const hospital = await Hospital.findById(req.params.id);
+        if (!hospital) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital not found' });
+
+        const vacancies = await Job.find({ hospital: hospital._id }).sort({ createdAt: -1 });
+        res.json({ statuscode: 0, status: 'success', data: vacancies });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };
 
 exports.toggleVacancyStatus = async (req, res) => {

@@ -94,6 +94,7 @@ const AdminRoutes: React.FC = () => {
                   
                   {/* Hospital Management Routes */}
                   <Route path="/hospitals" element={<AllHospitalsPage />} />
+                  <Route path="/hospitals/vacancies" element={<HospitalVacanciesPage />} />
                   <Route path="/hospitals/:hospitalId" element={<HospitalDetailPage />} />
                   <Route path="/hospitals/:hospitalId/vacancies" element={<HospitalVacanciesPage />} />
                   <Route path="/hospitals/:hospitalId/applications" element={<HospitalApplicationsPage />} />
