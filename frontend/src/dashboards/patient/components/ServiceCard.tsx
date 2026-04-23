@@ -19,20 +19,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
 
   // Get full image URL
   const getImageUrl = (imagePath: string | undefined) => {
-    if (!imagePath) return '/default-avatar.png';
-    // If already a full URL, return as is
+    if (!imagePath) return null;
     if (imagePath.startsWith('http')) return imagePath;
-    // Otherwise, prepend the backend URL
     const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com';
     return `${backendUrl}${imagePath}`;
   };
 
-  // Get the image URL - check both service level and provider level
-  const imageUrl = provider.photo 
-    ? getImageUrl(provider.photo) 
-    : (provider.images && provider.images.length > 0 
-      ? getImageUrl(provider.images[0]) 
-      : '/default-avatar.png');
+  const imageUrl = getImageUrl(provider.photo) || 
+    (provider.images && provider.images.length > 0 ? getImageUrl(provider.images[0]) : null);
 
   console.log('Provider data:', provider);
   console.log('Image URL:', imageUrl);
@@ -78,18 +72,23 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       <>
         <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
           {/* Provider Photo */}
-          <div className="relative h-48 bg-gray-200">
-            <img
-              src={imageUrl}
-              alt={`${provider.name}, ${provider.specialty || provider.type}`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                console.error('Image failed to load:', imageUrl);
-                e.currentTarget.src = '/default-avatar.png';
-              }}
-            />
+          <div className="relative h-48 bg-gradient-to-br from-blue-100 to-blue-200">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={`${provider.name}`}
+                className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-6xl">
+                  {(provider as any).providerType === 'gym-physio' ? '🏋️' : '🩺'}
+                </span>
+              </div>
+            )}
             {provider.availability && (
-              <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-medium px-3 py-1 rounded-full" aria-label="Available now">
+              <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-medium px-3 py-1 rounded-full">
                 Available
               </span>
             )}
@@ -191,18 +190,23 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden focus-within:ring-2 focus-within:ring-blue-500">
         <div className="flex">
           {/* Provider Photo */}
-          <div className="relative w-48 h-48 flex-shrink-0 bg-gray-200">
-            <img
-              src={imageUrl}
-              alt={`${provider.name}, ${provider.specialty || provider.type}`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                console.error('Image failed to load:', imageUrl);
-                e.currentTarget.src = '/default-avatar.png';
-              }}
-            />
+          <div className="relative w-48 h-48 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={`${provider.name}`}
+                className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-5xl">
+                  {(provider as any).providerType === 'gym-physio' ? '🏋️' : '🩺'}
+                </span>
+              </div>
+            )}
             {provider.availability && (
-              <span className="absolute top-3 left-3 bg-green-500 text-white text-xs font-medium px-3 py-1 rounded-full" aria-label="Available now">
+              <span className="absolute top-3 left-3 bg-green-500 text-white text-xs font-medium px-3 py-1 rounded-full">
                 Available
               </span>
             )}
