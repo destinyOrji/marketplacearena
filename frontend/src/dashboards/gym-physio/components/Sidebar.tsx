@@ -32,13 +32,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
+      {/* Mobile overlay */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />
       )}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+
+      {/* Sidebar - fixed on mobile (slides in), fixed on desktop (always visible) */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-5 border-b border-gray-200">
             <h2 className="text-xl font-bold text-orange-600">Gym & Physio</h2>
             {gymPhysio && (
               <div className="mt-3 flex items-center gap-3">
