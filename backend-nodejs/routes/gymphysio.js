@@ -184,9 +184,10 @@ router.post('/services/create', protect, async (req, res) => {
         
         const serviceData = {
             professional: gymPhysio._id,
+            gymPhysio: gymPhysio._id, // also store gymPhysio ref so patients can find it
             title: req.body.title,
             description: req.body.description,
-            category: req.body.category,
+            category: req.body.category || 'fitness',
             price: parseFloat(req.body.price),
             duration: parseInt(req.body.duration),
             status: req.body.status || 'active',
@@ -359,12 +360,57 @@ router.put('/schedule/update', protect, async (req, res) => {
 
 // Earnings & Payments
 router.get('/earnings', protect, async (req, res) => {
-    res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 } });
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) return res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 } });
+
+        const completedApts = await Appointment.find({ gymPhysio: gymPhysio._id, status: 'completed' });
+        const totalEarnings = completedApts.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+        const platformFees = Math.round(totalEarnings * 0.1);
+        const netEarnings = totalEarnings - platformFees;
+
+        const pendingApts = await Appointment.find({ gymPhysio: gymPhysio._id, status: { $in: ['scheduled', 'confirmed'] } });
+        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+
+        res.json({ success: true, data: { totalEarnings, pendingPayments, completedPayments: totalEarnings, platformFees, netEarnings } });
+    } catch (error) {
+        res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 } });
+    }
 });
 
 // Analytics
 router.get('/analytics', protect, async (req, res) => {
-    res.json({ success: true, data: { totalBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, responseTime: 0, popularServices: [] } });
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) return res.json({ success: true, data: { totalBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, activeServices: 0, popularServices: [] } });
+
+        const activeServices = await Service.countDocuments({ professional: gymPhysio._id, status: 'active' });
+        const services = await Service.find({ professional: gymPhysio._id }).sort({ bookingCount: -1 }).limit(5);
+        const popularServices = services.map(s => ({
+            serviceId: s._id,
+            serviceName: s.title,
+            bookings: s.bookingCount || 0,
+            revenue: (s.bookingCount || 0) * (s.price || 0)
+        }));
+
+        const completionRate = gymPhysio.totalBookings > 0
+            ? Math.round((gymPhysio.completedBookings / gymPhysio.totalBookings) * 100) : 0;
+
+        res.json({
+            success: true,
+            data: {
+                totalBookings: gymPhysio.totalBookings || 0,
+                completedBookings: gymPhysio.completedBookings || 0,
+                completionRate,
+                averageRating: gymPhysio.averageRating || 0,
+                totalReviews: gymPhysio.totalReviews || 0,
+                activeServices,
+                popularServices
+            }
+        });
+    } catch (error) {
+        res.json({ success: true, data: { totalBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, activeServices: 0, popularServices: [] } });
+    }
 });
 
 // Settings

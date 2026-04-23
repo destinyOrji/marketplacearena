@@ -3,8 +3,13 @@ const mongoose = require('mongoose');
 const serviceSchema = new mongoose.Schema({
     professional: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Professional',
-        required: true
+        ref: 'Professional'
+        // Not required - gym-physio services won't have this
+    },
+    gymPhysio: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'GymPhysio'
+        // Set for gym-physio services
     },
     title: {
         type: String,
@@ -18,7 +23,8 @@ const serviceSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: ['consultation', 'procedure', 'therapy', 'diagnostic', 'emergency', 'other']
+        enum: ['consultation', 'procedure', 'therapy', 'diagnostic', 'emergency', 'fitness', 'physiotherapy', 'yoga', 'massage', 'nutrition', 'other'],
+        default: 'other'
     },
     price: {
         type: Number,
@@ -26,7 +32,7 @@ const serviceSchema = new mongoose.Schema({
         min: 0
     },
     duration: {
-        type: Number, // in minutes
+        type: Number,
         required: true,
         min: 15
     },
@@ -35,37 +41,21 @@ const serviceSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'pending'],
         default: 'active'
     },
-    images: [{
-        type: String
-    }],
-    tags: [{
-        type: String
-    }],
+    images: [{ type: String }],
+    tags: [{ type: String }],
     availability: {
         type: String,
         enum: ['available', 'limited', 'unavailable'],
         default: 'available'
     },
-    bookingCount: {
-        type: Number,
-        default: 0
-    },
-    rating: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 5
-    },
-    reviewCount: {
-        type: Number,
-        default: 0
-    }
-}, {
-    timestamps: true
-});
+    bookingCount: { type: Number, default: 0 },
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0 }
+}, { timestamps: true });
 
 // Index for faster queries
 serviceSchema.index({ professional: 1, status: 1 });
+serviceSchema.index({ gymPhysio: 1, status: 1 });
 serviceSchema.index({ category: 1, status: 1 });
 serviceSchema.index({ title: 'text', description: 'text' });
 

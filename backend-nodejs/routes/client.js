@@ -73,89 +73,90 @@ router.get('/services', protect, async (req, res) => {
     try {
         const Service = require('../models/Service');
         const Professional = require('../models/Professional');
-        const { search, type, specialty, page = 1, pageSize = 12, minRating, location } = req.query;
+        const GymPhysio = require('../models/GymPhysio');
+        const { search, type, specialty, page = 1, pageSize = 12, minRating } = req.query;
         const skip = (page - 1) * pageSize;
 
-        // Build query for active services only
         let serviceQuery = { status: 'active' };
-        
-        // Search by title or description
         if (search) {
             serviceQuery.$or = [
                 { title: { $regex: search, $options: 'i' } },
                 { description: { $regex: search, $options: 'i' } },
-                { tags: { $in: [new RegExp(search, 'i')] } }
+                { category: { $regex: search, $options: 'i' } }
             ];
         }
-        
-        // Filter by category
-        if (type) {
-            serviceQuery.category = type;
-        }
+        if (type && type !== 'all') serviceQuery.category = type;
 
-        // Get services with professional details
-        const services = await Service.find(serviceQuery)
-            .populate({
-                path: 'professional',
-                populate: {
-                    path: 'user',
-                    select: 'firstName lastName email'
-                }
-            })
-            .skip(skip)
-            .limit(parseInt(pageSize))
+        // Get professional services
+        const professionalServices = await Service.find({ ...serviceQuery, professional: { $exists: true } })
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
             .sort({ createdAt: -1 });
 
-        // Filter by specialty if provided
-        let filteredServices = services;
-        if (specialty) {
-            filteredServices = services.filter(s => 
-                s.professional?.specialization?.some(spec => 
-                    spec.toLowerCase().includes(specialty.toLowerCase())
-                )
-            );
-        }
+        // Get gym-physio services (stored in Service model with gymPhysio field OR in GymPhysio model)
+        const gymPhysioServices = await Service.find({ ...serviceQuery, gymPhysio: { $exists: true } })
+            .populate({ path: 'gymPhysio', select: 'businessName businessType city state phone' })
+            .sort({ createdAt: -1 });
 
-        // Filter by rating if provided
-        if (minRating) {
-            filteredServices = filteredServices.filter(s => s.rating >= parseFloat(minRating));
-        }
+        // Combine all services
+        let allServices = [
+            ...professionalServices.map(s => ({
+                id: s._id,
+                name: s.title,
+                title: s.title,
+                type: s.category,
+                specialty: s.professional?.specialization?.[0] || s.category,
+                rating: s.rating || 0,
+                reviewCount: s.reviewCount || 0,
+                price: s.price,
+                duration: s.duration,
+                description: s.description,
+                images: s.images || [],
+                photo: s.images?.[0] || null,
+                isAvailable: s.availability === 'available',
+                providerType: 'professional',
+                provider: {
+                    id: s.professional?._id,
+                    name: s.professional?.user ? `${s.professional.user.firstName} ${s.professional.user.lastName}`.trim() : 'Professional',
+                    type: 'professional',
+                    specialty: s.professional?.specialization?.[0] || '',
+                    photo: null
+                }
+            })),
+            ...gymPhysioServices.map(s => ({
+                id: s._id,
+                name: s.title,
+                title: s.title,
+                type: s.category || 'fitness',
+                specialty: s.category || 'Fitness',
+                rating: s.rating || 0,
+                reviewCount: s.reviewCount || 0,
+                price: s.price,
+                duration: s.duration,
+                description: s.description,
+                images: s.images || [],
+                photo: s.images?.[0] || null,
+                isAvailable: s.availability === 'available',
+                providerType: 'gym-physio',
+                provider: {
+                    id: s.gymPhysio?._id,
+                    name: s.gymPhysio?.businessName || 'Gym/Physio',
+                    type: 'gym-physio',
+                    specialty: s.gymPhysio?.businessType || 'Fitness',
+                    photo: null
+                }
+            }))
+        ];
 
-        const total = await Service.countDocuments(serviceQuery);
+        // Filter by rating
+        if (minRating) allServices = allServices.filter(s => s.rating >= parseFloat(minRating as string));
 
-        // Format services for frontend
-        const data = filteredServices.map(service => ({
-            id: service._id,
-            name: service.title,
-            type: service.category,
-            specialty: service.professional?.specialization?.[0] || service.category,
-            rating: service.rating || 0,
-            reviewCount: service.reviewCount || 0,
-            price: service.price,
-            duration: service.duration,
-            description: service.description,
-            images: service.images || [],
-            photo: service.images?.[0] || null,
-            isAvailable: service.availability === 'available',
-            provider: {
-                id: service.professional?._id,
-                name: service.professional?.user ? 
-                    `${service.professional.user.firstName} ${service.professional.user.lastName}`.trim() : 
-                    'Professional',
-                type: 'professional',
-                specialty: service.professional?.specialization?.[0] || '',
-                photo: null
-            }
-        }));
+        // Filter by specialty
+        if (specialty) allServices = allServices.filter(s => s.specialty?.toLowerCase().includes((specialty as string).toLowerCase()));
 
-        res.json({ 
-            success: true, 
-            data: { 
-                data, 
-                total: filteredServices.length, 
-                totalPages: Math.ceil(total / pageSize) 
-            } 
-        });
+        const total = allServices.length;
+        const paginated = allServices.slice(skip, skip + parseInt(pageSize as string));
+
+        res.json({ success: true, data: { data: paginated, total, totalPages: Math.ceil(total / parseInt(pageSize as string)) } });
     } catch (error) {
         console.error('Error fetching services:', error);
         res.json({ success: true, data: { data: [], total: 0, totalPages: 1 } });

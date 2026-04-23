@@ -139,9 +139,18 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
             {provider.price && (
               <div className="mb-4">
                 <span className="text-lg font-bold text-blue-600">
-                  ${provider.price}
+                  ₦{Number(provider.price).toLocaleString()}
                 </span>
-                <span className="text-sm text-gray-600"> / consultation</span>
+                <span className="text-sm text-gray-600"> / session</span>
+              </div>
+            )}
+
+            {/* Provider type badge */}
+            {(provider as any).providerType === 'gym-physio' && (
+              <div className="mb-3">
+                <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full font-medium">
+                  🏋️ Gym & Physio
+                </span>
               </div>
             )}
 
@@ -215,9 +224,9 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
                 {provider.price && (
                   <div className="text-right">
                     <span className="text-2xl font-bold text-blue-600">
-                      ${provider.price}
+                      ₦{Number(provider.price).toLocaleString()}
                     </span>
-                    <p className="text-xs text-gray-600">/ consultation</p>
+                    <p className="text-xs text-gray-600">/ session</p>
                   </div>
                 )}
               </div>

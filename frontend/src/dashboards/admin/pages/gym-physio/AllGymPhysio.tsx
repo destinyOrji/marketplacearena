@@ -1,171 +1,178 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FiEye, FiCheckCircle, FiXCircle, FiTrash2, FiSearch } from 'react-icons/fi';
+import { authService } from '../../services/authService';
+import axios from 'axios';
 
-interface GymPhysio {
-  id: string;
-  businessName: string;
-  businessType: string;
-  specialization: string;
-  phone: string;
-  city: string;
-  state: string;
-  isVerified: boolean;
-  averageRating: number;
-  totalBookings: number;
-  createdAt: string;
-}
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
 
 const AllGymPhysio: React.FC = () => {
   const navigate = useNavigate();
-  const [gymPhysios, setGymPhysios] = useState<GymPhysio[]>([]);
+  const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [businessTypeFilter, setBusinessTypeFilter] = useState('');
-  const [verificationFilter, setVerificationFilter] = useState('');
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [verFilter, setVerFilter] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchGymPhysios();
-  }, [searchQuery, businessTypeFilter, verificationFilter]);
+  const getHeaders = () => ({ headers: { Authorization: `Bearer ${authService.getAccessToken()}` } });
 
-  const fetchGymPhysios = async () => {
+  useEffect(() => { fetchList(); }, []);
+
+  const fetchList = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await adminApi.getGymPhysios({ search: searchQuery, businessType: businessTypeFilter, verified: verificationFilter });
-      // setGymPhysios(response.data);
-      setGymPhysios([]);
-    } catch (error) {
-      console.error('Failed to fetch gym/physio providers:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleView = (id: string) => {
-    navigate(`/admin/gym-physio/${id}`);
+      const params: any = {};
+      if (verFilter === 'verified') params.verification_status = 'verified';
+      if (verFilter === 'pending') params.verification_status = 'pending';
+      const res = await axios.get(`${API_BASE_URL}/admin/gym-physio`, { ...getHeaders(), params });
+      setList(res.data?.data || []);
+    } catch { setList([]); }
+    finally { setLoading(false); }
   };
 
   const handleVerify = async (id: string) => {
+    setActionLoading(id + 'v');
     try {
-      // await adminApi.verifyGymPhysio(id);
-      fetchGymPhysios();
-    } catch (error) {
-      console.error('Failed to verify:', error);
-    }
+      await axios.post(`${API_BASE_URL}/admin/gym-physio/${id}/verify`, {}, getHeaders());
+      setList(prev => prev.map(p => (p._id || p.id) === id ? { ...p, isVerified: true } : p));
+    } catch { alert('Failed to verify'); }
+    finally { setActionLoading(null); }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const handleReject = async (id: string) => {
+    const reason = window.prompt('Rejection reason:');
+    if (!reason) return;
+    setActionLoading(id + 'r');
+    try {
+      await axios.post(`${API_BASE_URL}/admin/gym-physio/${id}/reject`, { reason }, getHeaders());
+      setList(prev => prev.map(p => (p._id || p.id) === id ? { ...p, isVerified: false } : p));
+    } catch { alert('Failed to reject'); }
+    finally { setActionLoading(null); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this provider?')) return;
+    setActionLoading(id + 'd');
+    try {
+      await axios.delete(`${API_BASE_URL}/admin/gym-physio/${id}/delete`, getHeaders());
+      setList(prev => prev.filter(p => (p._id || p.id) !== id));
+    } catch { alert('Failed to delete'); }
+    finally { setActionLoading(null); }
+  };
+
+  const filtered = list.filter(p => {
+    const name = p.businessName || '';
+    const matchSearch = !search || name.toLowerCase().includes(search.toLowerCase());
+    const matchType = !typeFilter || p.businessType === typeFilter;
+    const matchVer = !verFilter || (verFilter === 'verified' ? p.isVerified : !p.isVerified);
+    return matchSearch && matchType && matchVer;
+  });
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Gym & Physiotherapy Providers</h1>
-        <button
-          onClick={() => navigate('/admin/gym-physio/verification')}
-          className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-        >
-          Pending Verifications
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            placeholder="Search by name, phone, or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-          />
-          <select
-            value={businessTypeFilter}
-            onChange={(e) => setBusinessTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="">All Business Types</option>
-            <option value="gym">Gym</option>
-            <option value="physiotherapy">Physiotherapy</option>
-            <option value="both">Both</option>
-          </select>
-          <select
-            value={verificationFilter}
-            onChange={(e) => setVerificationFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="verified">Verified</option>
-            <option value="pending">Pending</option>
-          </select>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Gym & Physiotherapy Providers</h1>
+        <div className="flex gap-3">
+          <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+            {filtered.length} providers
+          </span>
+          <button onClick={() => navigate('/admin/gym-physio/verification')}
+            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">
+            Pending Verifications
+          </button>
         </div>
       </div>
 
-      {gymPhysios.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
-          <p className="text-gray-600">No gym/physio providers found</p>
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-4 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 relative">
+          <FiSearch className="absolute left-3 top-3 text-gray-400 h-4 w-4" />
+          <input type="text" placeholder="Search by name..." value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
         </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+          <option value="">All Types</option>
+          <option value="gym">Gym</option>
+          <option value="physiotherapy">Physiotherapy</option>
+          <option value="both">Both</option>
+        </select>
+        <select value={verFilter} onChange={e => { setVerFilter(e.target.value); fetchList(); }}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+          <option value="">All Status</option>
+          <option value="verified">Verified</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-600" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-5xl mb-3">🏋️</p>
+            <p className="text-gray-500">No gym/physio providers found</p>
+          </div>
+        ) : (
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Business Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rating</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                {['Business', 'Type', 'Location', 'Contact', 'Rating', 'Status', 'Actions'].map(h => (
+                  <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {gymPhysios.map((provider) => (
-                <tr key={provider.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{provider.businessName}</div>
-                    <div className="text-sm text-gray-500">{provider.specialization}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap capitalize">{provider.businessType}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{provider.city}, {provider.state}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <span className="text-yellow-400">★</span>
-                      <span className="ml-1">{provider.averageRating.toFixed(1)}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      provider.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {provider.isVerified ? 'Verified' : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => handleView(provider.id)}
-                      className="text-blue-600 hover:text-blue-700 mr-3"
-                    >
-                      View
-                    </button>
-                    {!provider.isVerified && (
-                      <button
-                        onClick={() => handleVerify(provider.id)}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        Verify
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-gray-200">
+              {filtered.map((p: any) => {
+                const id = p._id || p.id;
+                return (
+                  <tr key={id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <p className="font-medium text-gray-900">{p.businessName || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">{p.specialization || ''}</p>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">{p.businessType || 'N/A'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{[p.city, p.state].filter(Boolean).join(', ') || 'N/A'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{p.phone || 'N/A'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      ⭐ {(p.averageRating || 0).toFixed(1)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${p.isVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {p.isVerified ? 'Verified' : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => navigate(`/admin/gym-physio/${id}`)} className="text-blue-600 hover:text-blue-800" title="View">
+                          <FiEye className="h-4 w-4" />
+                        </button>
+                        {!p.isVerified && (
+                          <>
+                            <button onClick={() => handleVerify(id)} disabled={!!actionLoading} className="text-green-600 hover:text-green-800" title="Verify">
+                              <FiCheckCircle className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleReject(id)} disabled={!!actionLoading} className="text-red-600 hover:text-red-800" title="Reject">
+                              <FiXCircle className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                        <button onClick={() => handleDelete(id)} disabled={!!actionLoading} className="text-red-600 hover:text-red-800" title="Delete">
+                          <FiTrash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
