@@ -48,19 +48,46 @@ const upload = multer({
 router.get('/dashboard-stats', protect, async (req, res) => {
     try {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+
+        // Get real counts from DB
+        const activeServices = gymPhysio
+            ? await Service.countDocuments({ professional: gymPhysio._id, status: 'active' })
+            : 0;
+
+        const totalServices = gymPhysio
+            ? await Service.countDocuments({ professional: gymPhysio._id })
+            : 0;
+
+        const upcomingAppointments = gymPhysio
+            ? await Appointment.countDocuments({
+                professional: gymPhysio._id,
+                status: { $in: ['scheduled', 'confirmed'] },
+                scheduledDate: { $gte: new Date() }
+              })
+            : 0;
+
+        const completedAppointments = gymPhysio
+            ? await Appointment.countDocuments({ professional: gymPhysio._id, status: 'completed' })
+            : 0;
+
+        const totalBookings = gymPhysio ? (gymPhysio.totalBookings || completedAppointments) : 0;
+        const completionRate = totalBookings > 0
+            ? Math.round((completedAppointments / totalBookings) * 100) : 0;
+
         res.json({
             success: true,
             data: {
                 totalEarnings: 0,
                 pendingPayments: 0,
-                upcomingAppointments: gymPhysio ? Math.max(0, gymPhysio.totalBookings - gymPhysio.completedBookings) : 0,
-                activeServices: 0,
-                completionRate: gymPhysio && gymPhysio.totalBookings > 0
-                    ? Math.round((gymPhysio.completedBookings / gymPhysio.totalBookings) * 100) : 0,
+                upcomingAppointments,
+                activeServices,
+                totalServices,
+                completedBookings: completedAppointments,
+                totalBookings,
+                completionRate,
                 averageRating: gymPhysio ? gymPhysio.averageRating : 0,
                 totalReviews: gymPhysio ? gymPhysio.totalReviews : 0,
-                totalBookings: gymPhysio ? gymPhysio.totalBookings : 0,
-                completedBookings: gymPhysio ? gymPhysio.completedBookings : 0,
+                isVerified: gymPhysio ? gymPhysio.isVerified : false,
             }
         });
     } catch (error) {
