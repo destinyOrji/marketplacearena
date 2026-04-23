@@ -43,7 +43,7 @@ const RevenueDistributionChart: React.FC<Props> = ({ data }) => {
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" outerRadius={90} dataKey="amount"
-            label={({ source, percentage }) => `${source}: ${percentage}%`}
+            label={(entry: any) => `${entry.source}: ${entry.percentage}%`}
             labelLine={false}>
             {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
