@@ -175,10 +175,18 @@ router.post('/services/create', protect, async (req, res) => {
     try {
         let gymPhysio = await GymPhysio.findOne({ user: req.user._id });
         
+        // Auto-create gym-physio profile if it doesn't exist
         if (!gymPhysio) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Gym/Physio profile not found. Please complete your registration first.' 
+            gymPhysio = await GymPhysio.create({
+                user: req.user._id,
+                businessType: 'gym',
+                businessName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'My Business',
+                licenseNumber: '',
+                specialization: '',
+                yearsInBusiness: 0,
+                phone: req.user.phone || '',
+                city: '',
+                state: ''
             });
         }
         

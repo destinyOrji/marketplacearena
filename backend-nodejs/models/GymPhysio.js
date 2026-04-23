@@ -8,24 +8,24 @@ const gymPhysioSchema = new mongoose.Schema({
     },
     businessType: {
         type: String,
-        required: true,
-        enum: ['gym', 'physiotherapy', 'both']
+        enum: ['gym', 'physiotherapy', 'both'],
+        default: 'gym'
     },
     businessName: {
         type: String,
-        required: true
+        default: ''
     },
     licenseNumber: {
         type: String,
-        required: true
+        default: ''
     },
     specialization: {
         type: String,
-        required: true
+        default: ''
     },
     yearsInBusiness: {
         type: Number,
-        required: true,
+        default: 0,
         min: 0
     },
     
