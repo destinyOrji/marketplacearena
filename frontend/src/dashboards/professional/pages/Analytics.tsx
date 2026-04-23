@@ -1,8 +1,7 @@
-// Analytics Page - Performance metrics and insights
-
 import React, { useState, useEffect } from 'react';
-import { PerformanceMetrics, DashboardStats } from '../types';
+import { PerformanceMetrics } from '../types';
 import { analyticsApi } from '../services/api';
+import apiClient from '../services/apiClient';
 import { toast } from 'react-toastify';
 
 const Analytics: React.FC = () => {
