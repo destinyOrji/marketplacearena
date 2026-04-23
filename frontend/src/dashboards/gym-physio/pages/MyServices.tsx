@@ -38,10 +38,10 @@ const MyServices: React.FC = () => {
     setSaving(true);
     try {
       if (editing) {
-        await updateService(editing._id || editing.id, form);
+        await updateService(editing._id || editing.id, form as any);
         toast.success('Service updated');
       } else {
-        await createService(form);
+        await createService(form as any);
         toast.success('Service created');
       }
       setShowModal(false);
