@@ -23,7 +23,7 @@ class HospitalApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: `${API_BASE_URL}/hospital`,
+      baseURL: `${API_BASE_URL}/hospitals`,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -41,17 +41,17 @@ class HospitalApiService {
 
   // Hospital Profile
   async getProfile(): Promise<Hospital> {
-    const response = await this.api.get<ApiResponse<Hospital>>('/profile/');
+    const response = await this.api.get<ApiResponse<Hospital>>('/profile');
     return response.data.data!;
   }
 
   async updateProfile(data: Partial<Hospital>): Promise<Hospital> {
-    const response = await this.api.put<ApiResponse<Hospital>>('/profile/update/', data);
+    const response = await this.api.put<ApiResponse<Hospital>>('/profile/update', data);
     return response.data.data!;
   }
 
   async completeOnboarding(data: Partial<Hospital>): Promise<Hospital> {
-    const response = await this.api.post<ApiResponse<Hospital>>('/onboarding/', data);
+    const response = await this.api.post<ApiResponse<Hospital>>('/onboarding', data);
     return response.data.data!;
   }
 
@@ -86,7 +86,7 @@ class HospitalApiService {
     page_size?: number;
   }): Promise<{ vacancies: Vacancy[]; pagination: PaginationMeta }> {
     const response = await this.api.get<ApiResponse<{ vacancies: Vacancy[]; pagination: PaginationMeta }>>(
-      '/vacancies/',
+      '/vacancies',
       { params }
     );
     return response.data.data!;
@@ -98,7 +98,7 @@ class HospitalApiService {
   }
 
   async createVacancy(data: Partial<Vacancy>): Promise<Vacancy> {
-    const response = await this.api.post<ApiResponse<Vacancy>>('/vacancies/create/', data);
+    const response = await this.api.post<ApiResponse<Vacancy>>('/vacancies/create', data);
     return response.data.data!;
   }
 
@@ -254,7 +254,7 @@ class HospitalApiService {
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await this.api.put('/hospitals/profile/password', { currentPassword, newPassword });
+    await this.api.put('/profile/password', { currentPassword, newPassword });
   }
 }
 
