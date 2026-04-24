@@ -1,57 +1,39 @@
-// Equipment Modal Component
 import React, { useState } from 'react';
-import { Equipment } from '../types';
 import { equipmentApi } from '../services/api';
-import { format } from 'date-fns';
+import { toast } from 'react-toastify';
 
 interface EquipmentModalProps {
-  equipment: Equipment | null;
+  equipment: any | null;
+  vehicles: any[];
   onClose: () => void;
-  onSave: (equipment: Equipment) => void;
+  onSave: (equipment: any) => void;
 }
 
-const EquipmentModal: React.FC<EquipmentModalProps> = ({ equipment, onClose, onSave }) => {
+const categoryOptions = [
+  'Medical Equipment', 'Safety Equipment', 'Communication Equipment',
+  'Rescue Equipment', 'Diagnostic Equipment', 'Life Support', 'Other',
+];
+
+const EquipmentModal: React.FC<EquipmentModalProps> = ({ equipment, vehicles, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: equipment?.name || '',
     category: equipment?.category || '',
     quantity: equipment?.quantity || 1,
-    status: equipment?.status || 'available',
-    lastInspection: equipment?.lastInspection ? format(new Date(equipment.lastInspection), 'yyyy-MM-dd') : '',
-    nextInspection: equipment?.nextInspection ? format(new Date(equipment.nextInspection), 'yyyy-MM-dd') : '',
+    status: equipment?.status || 'operational',
+    vehicleId: equipment?.vehicleId || (vehicles[0]?._id || vehicles[0]?.id || ''),
   });
   const [loading, setLoading] = useState(false);
 
-  const categoryOptions = [
-    'Medical Equipment',
-    'Safety Equipment',
-    'Communication Equipment',
-    'Rescue Equipment',
-    'Diagnostic Equipment',
-    'Life Support',
-    'Other',
-  ];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) { toast.error('Equipment name is required'); return; }
     setLoading(true);
-
     try {
-      const payload = {
-        ...formData,
-        lastInspection: new Date(formData.lastInspection),
-        nextInspection: new Date(formData.nextInspection),
-      };
-
-      let result;
-      if (equipment) {
-        result = await equipmentApi.updateEquipment(equipment.id, payload);
-      } else {
-        result = await equipmentApi.createEquipment(payload);
-      }
-
-      onSave(result);
-    } catch (error) {
-      console.error('Error saving equipment:', error);
+      const result = await equipmentApi.createEquipment({ name: formData.name, vehicleId: formData.vehicleId });
+      toast.success('Equipment added');
+      onSave({ ...result, ...formData });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Failed to save equipment');
     } finally {
       setLoading(false);
     }
@@ -59,117 +41,62 @@ const EquipmentModal: React.FC<EquipmentModalProps> = ({ equipment, onClose, onS
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">
-            {equipment ? 'Edit Equipment' : 'Add Equipment'}
-          </h2>
+      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900">{equipment ? 'Edit Equipment' : 'Add Equipment'}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Equipment Name
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="e.g., Defibrillator"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Name *</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              placeholder="e.g., Defibrillator"
+              required
+            />
+          </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              value={formData.category}
+              onChange={e => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            >
+              <option value="">Select category</option>
+              {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {vehicles.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assign to Vehicle</label>
               <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                value={formData.vehicleId}
+                onChange={e => setFormData({ ...formData, vehicleId: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                required
               >
-                <option value="">Select category</option>
-                {categoryOptions.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                {vehicles.map((v: any) => (
+                  <option key={v._id || v.id} value={v._id || v.id}>
+                    {v.vehicleNumber} ({v.vehicleType})
+                  </option>
                 ))}
               </select>
             </div>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quantity
-              </label>
-              <input
-                type="number"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                min="1"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              >
-                <option value="available">Available</option>
-                <option value="in-use">In Use</option>
-                <option value="maintenance">Maintenance</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Last Inspection
-              </label>
-              <input
-                type="date"
-                value={formData.lastInspection}
-                onChange={(e) => setFormData({ ...formData, lastInspection: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Next Inspection
-              </label>
-              <input
-                type="date"
-                value={formData.nextInspection}
-                onChange={(e) => setFormData({ ...formData, nextInspection: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              disabled={loading}
-            >
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} disabled={loading}
+              className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
               Cancel
             </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : equipment ? 'Update Equipment' : 'Add Equipment'}
+            <button type="submit" disabled={loading}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
+              {loading ? 'Saving...' : 'Add Equipment'}
             </button>
           </div>
         </form>

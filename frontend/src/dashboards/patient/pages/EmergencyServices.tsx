@@ -525,35 +525,26 @@ const EmergencyServices: React.FC = () => {
                     <div>
                       <p className="text-sm text-gray-500">Service Provider</p>
                       <p className="font-semibold text-gray-900">
-                        {bookingConfirmation.ambulance.name}
+                        {bookingConfirmation.ambulance?.name || bookingConfirmation.ambulance?.serviceName || selectedAmbulance?.serviceName || 'Emergency Service'}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Vehicle Number</p>
                       <p className="font-semibold text-gray-900">
-                        {bookingConfirmation.vehicleNumber}
+                        {bookingConfirmation.vehicleNumber || 'TBD'}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Distance</p>
                       <p className="font-semibold text-gray-900">
-                        {bookingConfirmation.ambulance.distance.toFixed(1)} km away
+                        {bookingConfirmation.ambulance?.distance ? `${bookingConfirmation.ambulance.distance.toFixed(1)} km away` : 'Dispatching...'}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Rating</p>
-                      <div className="flex items-center space-x-1">
-                        <svg
-                          className="w-5 h-5 text-yellow-400"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        <span className="font-semibold text-gray-900">
-                          {bookingConfirmation.ambulance.rating.toFixed(1)}
-                        </span>
-                      </div>
+                      <p className="font-semibold text-gray-900">
+                        ⭐ {(bookingConfirmation.ambulance?.averageRating || bookingConfirmation.ambulance?.rating || 0).toFixed(1)}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -715,87 +706,113 @@ const EmergencyServices: React.FC = () => {
             {availableAmbulances.map((ambulance) => (
               <div
                 key={ambulance.id}
-                className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-md transition-all"
+                className="border border-gray-200 rounded-xl p-6 hover:border-red-300 hover:shadow-md transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="bg-red-100 p-3 rounded-lg">
-                        <svg
-                          className="w-6 h-6 text-red-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
+                        <span className="text-2xl">🚑</span>
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {ambulance.name}
+                          {ambulance.serviceName || ambulance.name}
                         </h3>
-                        <p className="text-sm text-gray-600">
-                          Vehicle: {ambulance.vehicleNumber}
+                        <p className="text-sm text-gray-500 capitalize">
+                          {(ambulance.serviceType || '').replace(/_/g, ' ')}
                         </p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Distance</p>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {ambulance.distance ? ambulance.distance.toFixed(1) : '0.0'} km
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">ETA</p>
-                        <p className="text-sm font-semibold text-gray-900">
-                          {ambulance.estimatedArrival || 'N/A'} min
-                        </p>
-                      </div>
-                      <div>
                         <p className="text-xs text-gray-500 mb-1">Rating</p>
-                        <div className="flex items-center space-x-1">
-                          <svg
-                            className="w-4 h-4 text-yellow-400"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="text-sm font-semibold text-gray-900">
-                            {ambulance.rating.toFixed(1)}
-                          </span>
-                        </div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          ⭐ {(ambulance.averageRating || 0).toFixed(1)} ({ambulance.totalReviews || 0})
+                        </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Price</p>
+                        <p className="text-xs text-gray-500 mb-1">Response Time</p>
                         <p className="text-sm font-semibold text-gray-900">
-                          ${ambulance.price}
+                          {ambulance.averageResponseTime ? `~${ambulance.averageResponseTime} min` : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Active Vehicles</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {ambulance.activeVehicles || ambulance.vehicles?.length || 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Emergency Line</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {ambulance.emergencyNumber || ambulance.phone || 'N/A'}
                         </p>
                       </div>
                     </div>
+
+                    {/* Vehicles Section */}
+                    {ambulance.vehicles && ambulance.vehicles.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Available Vehicles</p>
+                        <div className="flex flex-wrap gap-2">
+                          {ambulance.vehicles.map((v: any) => (
+                            <div key={v.id || v._id} className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                              <span className="font-semibold text-red-800">{v.vehicleNumber}</span>
+                              <span className="text-red-600 ml-1 capitalize">({(v.vehicleType || '').replace(/_/g, ' ')})</span>
+                              {v.capacity && <span className="text-gray-500 ml-1">· {v.capacity} seats</span>}
+                              {v.equipment && v.equipment.length > 0 && (
+                                <span className="text-gray-500 ml-1">· {v.equipment.slice(0, 2).join(', ')}{v.equipment.length > 2 ? '...' : ''}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Services Section */}
+                    {ambulance.services && ambulance.services.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Services & Pricing</p>
+                        <div className="flex flex-wrap gap-2">
+                          {ambulance.services.map((s: any) => (
+                            <div key={s.id || s._id} className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs">
+                              <span className="font-semibold text-blue-800">{s.name}</span>
+                              {s.basePrice > 0 && (
+                                <span className="text-blue-600 ml-1">· {s.currency || 'NGN'} {s.basePrice.toLocaleString()}</span>
+                              )}
+                              {s.pricePerKm > 0 && (
+                                <span className="text-gray-500 ml-1">+ {s.pricePerKm}/km</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <button
-                    onClick={() => handleBookAmbulance(ambulance)}
-                    disabled={loading && selectedAmbulance?.id === ambulance.id}
-                    className="ml-4 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {loading && selectedAmbulance?.id === ambulance.id ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Booking...</span>
-                      </>
-                    ) : (
-                      <span>Book Now</span>
+                  <div className="ml-4 flex flex-col gap-2">
+                    <button
+                      onClick={() => handleBookAmbulance(ambulance)}
+                      disabled={loading && selectedAmbulance?.id === ambulance.id}
+                      className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 whitespace-nowrap"
+                    >
+                      {loading && selectedAmbulance?.id === ambulance.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Booking...</span>
+                        </>
+                      ) : (
+                        <span>Book Now</span>
+                      )}
+                    </button>
+                    {ambulance.emergencyNumber && (
+                      <a href={`tel:${ambulance.emergencyNumber}`}
+                        className="text-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium">
+                        📞 Call
+                      </a>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             ))}

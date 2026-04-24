@@ -96,12 +96,41 @@ export interface EmergencyBooking {
 
 export interface AmbulanceService {
   id: string;
-  name: string;
-  vehicleNumber: string;
-  distance: number;
-  estimatedArrival: number; // minutes
-  rating: number;
-  price: number;
+  name?: string;
+  serviceName?: string;
+  serviceType?: string;
+  vehicleNumber?: string;
+  distance?: number;
+  estimatedArrival?: number;
+  rating?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  averageResponseTime?: number;
+  price?: number;
+  phone?: string;
+  emergencyNumber?: string;
+  email?: string;
+  isAvailable?: boolean;
+  activeVehicles?: number;
+  totalVehicles?: number;
+  vehicles?: Array<{
+    id: string;
+    vehicleNumber: string;
+    vehicleType: string;
+    capacity: number;
+    equipment: string[];
+    isActive: boolean;
+  }>;
+  services?: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    basePrice: number;
+    pricePerKm: number;
+    currency: string;
+  }>;
+  baseAddress?: any;
+  coverageAreas?: any[];
 }
 
 // Medical Records Types

@@ -69,7 +69,7 @@ const DashboardLayout: React.FC = () => {
         provider={provider}
       />
 
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div className="flex-1 flex flex-col lg:pl-64">
         <Header
           provider={provider}
           isAvailable={isAvailable}

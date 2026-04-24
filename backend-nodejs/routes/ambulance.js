@@ -412,14 +412,9 @@ router.post('/equipment/create', protect, async (req, res) => {
 router.get('/services', protect, async (req, res) => {
     try {
         const ambulance = await Ambulance.findOne({ user: req.user._id });
-        
-        if (!ambulance) {
-            return res.json({ success: true, data: [] });
-        }
-
+        if (!ambulance) return res.json({ success: true, data: [] });
         res.json({ success: true, data: ambulance.services || [] });
     } catch (error) {
-        console.error('Error fetching services:', error);
         res.json({ success: true, data: [] });
     }
 });
@@ -427,21 +422,37 @@ router.get('/services', protect, async (req, res) => {
 router.post('/services/add', protect, async (req, res) => {
     try {
         const ambulance = await Ambulance.findOne({ user: req.user._id });
-        
-        if (!ambulance) {
-            return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
-        }
-
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
         ambulance.services.push(req.body);
         await ambulance.save();
-
-        res.status(201).json({ 
-            success: true, 
-            data: ambulance.services,
-            message: 'Service added successfully' 
-        });
+        res.status(201).json({ success: true, data: ambulance.services, message: 'Service added successfully' });
     } catch (error) {
-        console.error('Error adding service:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/services/:id/update', protect, async (req, res) => {
+    try {
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
+        const service = ambulance.services.id(req.params.id);
+        if (!service) return res.status(404).json({ success: false, message: 'Service not found' });
+        Object.assign(service, req.body);
+        await ambulance.save();
+        res.json({ success: true, data: service, message: 'Service updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.delete('/services/:id/delete', protect, async (req, res) => {
+    try {
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
+        ambulance.services.pull(req.params.id);
+        await ambulance.save();
+        res.json({ success: true, message: 'Service deleted successfully' });
+    } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -633,6 +644,51 @@ router.delete('/coverage-area/:id/delete', protect, async (req, res) => {
     } catch (error) {
         console.error('Error deleting coverage area:', error);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Analytics
+router.get('/analytics', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.json({ success: true, data: { totalEmergencies: 0, completionRate: 0, averageRating: 0, totalReviews: 0, peakHours: [], emergencyTypeBreakdown: [] } });
+
+        const { period = 'month' } = req.query;
+        const now = new Date();
+        const cutoff = new Date();
+        if (period === 'week') cutoff.setDate(now.getDate() - 7);
+        else if (period === 'month') cutoff.setMonth(now.getMonth() - 1);
+        else if (period === 'quarter') cutoff.setMonth(now.getMonth() - 3);
+        else cutoff.setFullYear(now.getFullYear() - 1);
+
+        const bookings = await EmergencyBooking.find({ provider: ambulance._id, createdAt: { $gte: cutoff } });
+        const total = bookings.length;
+        const completed = bookings.filter(b => b.status === 'completed').length;
+
+        const typeMap = {};
+        bookings.forEach(b => { const t = b.emergencyType || 'Other'; typeMap[t] = (typeMap[t] || 0) + 1; });
+        const emergencyTypeBreakdown = Object.entries(typeMap).map(([type, count]) => ({ type, count }));
+
+        const hourMap = {};
+        bookings.forEach(b => { const h = new Date(b.createdAt).getHours(); hourMap[h] = (hourMap[h] || 0) + 1; });
+        const peakHours = Object.entries(hourMap).map(([hour, count]) => ({ hour: parseInt(hour), count })).sort((a, b) => a.hour - b.hour);
+
+        res.json({
+            success: true,
+            data: {
+                totalEmergencies: total,
+                completionRate: total > 0 ? (completed / total) * 100 : 0,
+                averageRating: ambulance.averageRating || 0,
+                totalReviews: ambulance.totalReviews || 0,
+                averageResponseTime: ambulance.averageResponseTime || 0,
+                peakHours,
+                emergencyTypeBreakdown,
+            }
+        });
+    } catch (error) {
+        console.error('Analytics error:', error);
+        res.json({ success: true, data: { totalEmergencies: 0, completionRate: 0, averageRating: 0, totalReviews: 0, peakHours: [], emergencyTypeBreakdown: [] } });
     }
 });
 

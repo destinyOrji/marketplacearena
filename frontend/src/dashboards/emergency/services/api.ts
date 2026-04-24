@@ -51,12 +51,12 @@ export const authApi = {
 export const profileApi = {
   getProfile: async (): Promise<EmergencyProvider> => {
     const response = await apiClient.get('/ambulance/profile');
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   updateProfile: async (data: Partial<EmergencyProviderProfile>): Promise<EmergencyProvider> => {
     const response = await apiClient.put('/ambulance/profile/update', data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   uploadPhoto: async (file: File): Promise<string> => {
@@ -86,22 +86,23 @@ export const profileApi = {
 export const servicesApi = {
   getServices: async (): Promise<EmergencyService[]> => {
     const response = await apiClient.get('/ambulance/services');
-    return response.data;
+    return response.data?.data ?? response.data ?? [];
   },
 
   getService: async (id: string): Promise<EmergencyService> => {
     const response = await apiClient.get(`/ambulance/services/${id}`);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   createService: async (data: Partial<EmergencyService>): Promise<EmergencyService> => {
-    const response = await apiClient.post('/ambulance/services/create', data);
-    return response.data;
+    const response = await apiClient.post('/ambulance/services/add', data);
+    const services = response.data?.data ?? response.data ?? [];
+    return Array.isArray(services) ? services[services.length - 1] : services;
   },
 
   updateService: async (id: string, data: Partial<EmergencyService>): Promise<EmergencyService> => {
     const response = await apiClient.put(`/ambulance/services/${id}/update`, data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   deleteService: async (id: string): Promise<void> => {
@@ -196,17 +197,17 @@ export const paymentsApi = {
 export const coverageApi = {
   getCoverageAreas: async (): Promise<CoverageZone[]> => {
     const response = await apiClient.get('/ambulance/coverage-area');
-    return response.data;
+    return response.data?.data ?? response.data ?? [];
   },
 
   createCoverageArea: async (data: Partial<CoverageZone>): Promise<CoverageZone> => {
     const response = await apiClient.post('/ambulance/coverage-area/create', data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   updateCoverageArea: async (id: string, data: Partial<CoverageZone>): Promise<CoverageZone> => {
     const response = await apiClient.put(`/ambulance/coverage-area/${id}/update`, data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   deleteCoverageArea: async (id: string): Promise<void> => {
@@ -221,17 +222,17 @@ export const coverageApi = {
 export const vehiclesApi = {
   getVehicles: async (): Promise<Vehicle[]> => {
     const response = await apiClient.get('/ambulance/vehicles');
-    return response.data;
+    return response.data?.data ?? response.data ?? [];
   },
 
   createVehicle: async (data: Partial<Vehicle>): Promise<Vehicle> => {
     const response = await apiClient.post('/ambulance/vehicles/create', data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   updateVehicle: async (id: string, data: Partial<Vehicle>): Promise<Vehicle> => {
     const response = await apiClient.put(`/ambulance/vehicles/${id}/update`, data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   deleteVehicle: async (id: string): Promise<void> => {
@@ -246,17 +247,17 @@ export const vehiclesApi = {
 export const equipmentApi = {
   getEquipment: async (): Promise<Equipment[]> => {
     const response = await apiClient.get('/ambulance/equipment');
-    return response.data;
+    return response.data?.data ?? response.data ?? [];
   },
 
   createEquipment: async (data: Partial<Equipment>): Promise<Equipment> => {
     const response = await apiClient.post('/ambulance/equipment/create', data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   updateEquipment: async (id: string, data: Partial<Equipment>): Promise<Equipment> => {
     const response = await apiClient.put(`/ambulance/equipment/${id}/update`, data);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   deleteEquipment: async (id: string): Promise<void> => {
@@ -271,12 +272,12 @@ export const equipmentApi = {
 export const analyticsApi = {
   getDashboardStats: async (): Promise<DashboardStats> => {
     const response = await apiClient.get('/ambulance/dashboard-stats');
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   getPerformanceMetrics: async (period?: string): Promise<PerformanceMetrics> => {
     const response = await apiClient.get('/ambulance/analytics', { params: { period } });
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   exportReport: async (format: 'pdf' | 'csv', period?: string): Promise<Blob> => {
@@ -314,12 +315,20 @@ export const notificationsApi = {
 export const settingsApi = {
   getSettings: async (): Promise<ProviderSettings> => {
     const response = await apiClient.get('/ambulance/settings');
-    return response.data;
+    const raw = response.data?.data ?? response.data ?? {};
+    // Merge backend data with sensible defaults for frontend-only settings
+    return {
+      notifications: raw.notifications ?? { push: true, sms: true, email: true, sound: true },
+      privacy: raw.privacy ?? { profileVisibility: 'public', showRatings: true },
+      emergency: raw.emergency ?? { autoDeclineAfter: 60, maxSimultaneousBookings: 2 },
+      isAvailable: raw.isAvailable,
+      operatingHours: raw.operatingHours,
+    } as any;
   },
 
   updateSettings: async (settings: Partial<ProviderSettings>): Promise<ProviderSettings> => {
     const response = await apiClient.put('/ambulance/settings/update', settings);
-    return response.data;
+    return response.data?.data ?? response.data;
   },
 
   changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
