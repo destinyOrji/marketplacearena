@@ -29,7 +29,7 @@ const EquipmentModal: React.FC<EquipmentModalProps> = ({ equipment, vehicles, on
     if (!formData.name.trim()) { toast.error('Equipment name is required'); return; }
     setLoading(true);
     try {
-      const result = await equipmentApi.createEquipment({ name: formData.name, vehicleId: formData.vehicleId });
+      const result = await equipmentApi.createEquipment({ name: formData.name, vehicleId: formData.vehicleId } as any);
       toast.success('Equipment added');
       onSave({ ...result, ...formData });
     } catch (err: any) {
