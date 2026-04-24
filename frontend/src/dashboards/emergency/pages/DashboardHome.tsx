@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import apiClient from '../services/apiClient';
 
 const DashboardHome: React.FC = () => {
-  const { provider } = useAuth() as any;
   const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
+
+  // Read provider info directly from localStorage (safe fallback)
+  let providerName = 'Ambulance Service';
+  let isVerified = false;
+  try {
+    const stored = localStorage.getItem('ambulance') || localStorage.getItem('user');
+    if (stored) {
+      const p = JSON.parse(stored);
+      providerName = p.serviceName || p.organizationName || p.firstName || 'Ambulance Service';
+      isVerified = p.isVerified || p.verificationStatus === 'verified';
+    }
+  } catch { }
 
   useEffect(() => {
     apiClient.get('/ambulance/dashboard-stats')
@@ -15,8 +25,7 @@ const DashboardHome: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const name = provider?.serviceName || (provider as any)?.organizationName || 'Ambulance Service';
-  const isVerified = provider?.isVerified || (provider as any)?.verificationStatus === 'verified';
+  const name = providerName;
 
   const statCards = [
     { label: 'Total Bookings', value: stats.totalBookings ?? 0, emoji: '🚑', color: 'from-red-500 to-red-700' },

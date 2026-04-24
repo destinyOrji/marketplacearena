@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DashboardLayout from './components/DashboardLayout';
 import Loading from './components/Loading';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Lazy load pages for code splitting
 const DashboardHome = React.lazy(() => import('./pages/DashboardHome'));
@@ -22,25 +23,27 @@ const EmergencyRoutes: React.FC = () => {
   const token = localStorage.getItem('authToken');
   
   return (
-    <NotificationProvider token={token}>
-      <Suspense fallback={<Loading size="lg" text="Loading..." />}>
-        <Routes>
-          <Route path="/" element={<DashboardLayout />}>
-            <Route index element={<Navigate to="/ambulance/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardHome />} />
-            <Route path="profile" element={<ProfileOnboarding />} />
-            <Route path="services" element={<MyServices />} />
-            <Route path="active-emergency" element={<ActiveEmergency />} />
-            <Route path="bookings" element={<BookingHistory />} />
-            <Route path="earnings" element={<EarningsPayments />} />
-            <Route path="coverage" element={<CoverageAreas />} />
-            <Route path="vehicles" element={<VehiclesEquipment />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-        </Routes>
-      </Suspense>
-    </NotificationProvider>
+    <AuthProvider>
+      <NotificationProvider token={token}>
+        <Suspense fallback={<Loading size="lg" text="Loading..." />}>
+          <Routes>
+            <Route path="/" element={<DashboardLayout />}>
+              <Route index element={<Navigate to="/ambulance/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardHome />} />
+              <Route path="profile" element={<ProfileOnboarding />} />
+              <Route path="services" element={<MyServices />} />
+              <Route path="active-emergency" element={<ActiveEmergency />} />
+              <Route path="bookings" element={<BookingHistory />} />
+              <Route path="earnings" element={<EarningsPayments />} />
+              <Route path="coverage" element={<CoverageAreas />} />
+              <Route path="vehicles" element={<VehiclesEquipment />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </NotificationProvider>
+    </AuthProvider>
   );
 };
 
