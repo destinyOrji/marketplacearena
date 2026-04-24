@@ -37,7 +37,7 @@ const VehiclesEquipment: React.FC = () => {
   const handleToggleVehicle = async (vehicle: any) => {
     const id = vehicle._id || vehicle.id;
     try {
-      const updated = await vehiclesApi.updateVehicle(id, { isActive: !vehicle.isActive });
+      const updated = await vehiclesApi.updateVehicle(id, { isActive: !vehicle.isActive } as any);
       setVehicles(prev => prev.map(v => (v._id || v.id) === id ? { ...v, ...updated, isActive: !vehicle.isActive } : v));
       toast.success(`Vehicle ${!vehicle.isActive ? 'activated' : 'deactivated'}`);
     } catch { toast.error('Failed to update vehicle'); }
