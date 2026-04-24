@@ -140,9 +140,9 @@ const GymPhysioRegisterStep5: React.FC = () => {
       <div className="max-w-2xl w-full">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <img src="/logo512.png" alt="Marketplace Health Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+            <img src="/logo512.png" alt="Health Market Arena Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
           </div>
-          <h1 className="text-2xl font-bold text-orange-600 mb-2">MarketPlace Health</h1>
+          <h1 className="text-2xl font-bold text-orange-600 mb-2">Health Market Arena</h1>
           <div className="flex items-center justify-center mb-4">
             <div className="w-3 h-3 bg-orange-400 rounded-full mr-2"></div>
             <h2 className="text-xl font-semibold text-gray-900">Verification Pending</h2>
@@ -259,7 +259,7 @@ const GymPhysioRegisterStep5: React.FC = () => {
 
             <p className="text-gray-600 leading-relaxed mb-6">
               Your documents have been successfully received and are now under review. We appreciate
-              your commitment to joining Marketplace Healthcare. You will be notified once your profile is
+              your commitment to joining Health Market Arenacare. You will be notified once your profile is
               approved and ready to connect with clients across Nigeria.
             </p>
 

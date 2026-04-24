@@ -48,7 +48,7 @@ const GymPhysioRegisterStep3: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center">
             <img src="/logo512.png" alt="Logo" className="w-10 h-10 rounded-lg shadow-md" />
-            <span className="ml-3 text-xl font-bold text-orange-600">Marketplace Health</span>
+            <span className="ml-3 text-xl font-bold text-orange-600">Health Market Arena</span>
           </div>
         </div>
       </div>
@@ -71,7 +71,7 @@ const GymPhysioRegisterStep3: React.FC = () => {
               <a href="/contact" className="hover:text-orange-600 transition-colors">Contact</a>
               <a href="/privacy" className="hover:text-orange-600 transition-colors">Privacy Policy</a>
             </div>
-            <p className="text-sm text-gray-500">© 2026 Marketplace Health. All rights reserved.</p>
+            <p className="text-sm text-gray-500">© 2026 Health Market Arena. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -102,13 +102,13 @@ const UserTypeSelection: React.FC = () => {
             <div className="flex justify-center mb-6">
               <img 
                 src="/logo512.png" 
-                alt="Marketplace Health Logo" 
+                alt="Health Market Arena Logo" 
                 className="w-16 h-16 rounded-2xl shadow-lg"
               />
             </div>
 
             <h1 className="text-4xl font-bold text-gray-900 mb-3">
-              Welcome to Marketplace Health
+              Welcome to Health Market Arena
             </h1>
             <p className="text-lg text-gray-600">
               Choose your user type to get started
@@ -157,7 +157,7 @@ const UserTypeSelection: React.FC = () => {
               </a>
             </div>
             <p className="text-sm text-gray-500">
-              © 2026 Marketplace Health. All rights reserved.
+              © 2026 Health Market Arena. All rights reserved.
             </p>
           </div>
         </div>

@@ -62,9 +62,9 @@ const GymPhysioRegisterStep4: React.FC = () => {
           <div className="w-full max-w-md mx-auto lg:mx-0">
             <div className="text-center mb-8">
               <div className="flex justify-center mb-6">
-                <img src="/logo512.png" alt="Marketplace Health Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+                <img src="/logo512.png" alt="Health Market Arena Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
               </div>
-              <h1 className="text-3xl font-bold text-orange-600 mb-2">Welcome to Marketplace Health</h1>
+              <h1 className="text-3xl font-bold text-orange-600 mb-2">Welcome to Health Market Arena</h1>
               <h2 className="text-2xl font-semibold text-gray-900 mb-2">Set Your Password</h2>
               <p className="text-gray-600">Create a secure password for your account</p>
             </div>
@@ -148,7 +148,7 @@ const GymPhysioRegisterStep4: React.FC = () => {
               <a href="/contact" className="hover:text-orange-600 transition-colors">Contact</a>
               <a href="/privacy" className="hover:text-orange-600 transition-colors">Privacy Policy</a>
             </div>
-            <p className="text-sm text-gray-500">© 2026 Marketplace Health. All rights reserved.</p>
+            <p className="text-sm text-gray-500">© 2026 Health Market Arena. All rights reserved.</p>
           </div>
         </div>
       </footer>

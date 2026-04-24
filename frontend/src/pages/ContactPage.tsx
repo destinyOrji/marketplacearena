@@ -45,30 +45,6 @@ function ContactPage() {
           </div>
         </div>
 
-        {/* Quick Links Section */}
-        <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <a href="#general" className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors">
-                <h3 className="font-semibold text-gray-900">Billing & Payments</h3>
-                <p className="text-sm text-gray-600 mt-1">Payment inquiries</p>
-              </a>
-              <a href="#general" className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors">
-                <h3 className="font-semibold text-gray-900">Customer Support</h3>
-                <p className="text-sm text-gray-600 mt-1">Get help with your account</p>
-              </a>
-              <a href="#general" className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors">
-                <h3 className="font-semibold text-gray-900">Technical Support</h3>
-                <p className="text-sm text-gray-600 mt-1">Technical assistance</p>
-              </a>
-              <a href="#general" className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors">
-                <h3 className="font-semibold text-gray-900">Business Inquiries</h3>
-                <p className="text-sm text-gray-600 mt-1">Partnership opportunities</p>
-              </a>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -126,7 +102,7 @@ function ContactPage() {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-semibold text-gray-900">Email Support</h3>
-                    <p className="text-gray-600 mt-1">support@marketplacehealth.ng</p>
+                    <p className="text-gray-600 mt-1">support@healthmarketarena.com</p>
                     <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
                   </div>
                 </div>
@@ -143,9 +119,8 @@ function ContactPage() {
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-semibold text-gray-900">Head Office</h3>
-                    <p className="text-gray-600 mt-1">123 Healthcare Avenue</p>
-                    <p className="text-gray-600">Victoria Island, Lagos</p>
-                    <p className="text-gray-600">Nigeria</p>
+                    <p className="text-gray-600 mt-1">Port Harcourt</p>
+                    <p className="text-gray-600">Rivers State, Nigeria</p>
                   </div>
                 </div>
               </div>
@@ -280,14 +255,14 @@ function ContactPage() {
             <h2 className="text-3xl font-bold text-gray-900 text-center mb-8">Find Us</h2>
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3964.7276489456!2d3.4207134!3d6.4281395!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b8b2ae68280c1%3A0xdc9e87a367c3d9cb!2sLagos%20Island%2C%20Lagos!5e0!3m2!1sen!2sng!4v1234567890"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126846.48388584!2d6.9857!3d4.8156!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1069cd7a3a5b7b1b%3A0x4b5b5b5b5b5b5b5b!2sPort%20Harcourt%2C%20Rivers%20State%2C%20Nigeria!5e0!3m2!1sen!2sng!4v1234567890"
                 width="100%"
                 height="450"
                 style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="Office Location"
+                title="Office Location - Port Harcourt"
               />
             </div>
           </div>

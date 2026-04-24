@@ -61,11 +61,11 @@ const PatientOTPVerify: React.FC = () => {
           <div className="flex items-center">
             <img 
               src="/logo512.png" 
-              alt="Marketplace Health Logo" 
+              alt="Health Market Arena Logo" 
               className="w-10 h-10 rounded-lg shadow-md"
             />
             <span className="ml-3 text-xl font-bold text-blue-600">
-              Marketplace Health
+              Health Market Arena
             </span>
           </div>
         </div>
@@ -107,7 +107,7 @@ const PatientOTPVerify: React.FC = () => {
               </a>
             </div>
             <p className="text-sm text-gray-500">
-              © 2026 Marketplace Health. All rights reserved.
+              © 2026 Health Market Arena. All rights reserved.
             </p>
           </div>
         </div>

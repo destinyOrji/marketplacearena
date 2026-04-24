@@ -131,10 +131,10 @@ const Login: React.FC = () => {
             <div className="flex items-center mb-6">
               <img 
                 src="/logo512.png" 
-                alt="Marketplace Health Logo" 
+                alt="Health Market Arena Logo" 
                 className="w-12 h-12 rounded-xl shadow-lg mr-3"
               />
-              <h1 className="text-2xl font-bold text-blue-600">Marketplace Health</h1>
+              <h1 className="text-2xl font-bold text-blue-600">Health Market Arena</h1>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2">

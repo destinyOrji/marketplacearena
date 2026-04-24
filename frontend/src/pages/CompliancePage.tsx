@@ -32,7 +32,7 @@ function CompliancePage() {
             <div className="mb-12">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Our Commitment to Compliance</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
-                At Marketplace Health, we are committed to maintaining the highest standards of regulatory compliance 
+                At Health Market Arena, we are committed to maintaining the highest standards of regulatory compliance 
                 in the healthcare industry. We adhere to all applicable Nigerian healthcare laws, regulations, and 
                 international best practices to ensure the safety, privacy, and quality of care for all users.
               </p>
@@ -244,9 +244,9 @@ function CompliancePage() {
               </p>
               <div className="space-y-2 text-gray-600">
                 <p className="font-semibold">Compliance Office</p>
-                <p>Email: compliance@marketplacehealth.ng</p>
+                <p>Email: compliance@healthmarketarena.com</p>
                 <p>Phone: +234 (0) 800 123 4567</p>
-                <p>Address: Lagos, Nigeria</p>
+                <p>Address: Port Harcourt, Rivers State, Nigeria</p>
               </div>
               <div className="mt-6 p-4 bg-white rounded-lg border-l-4 border-teal-600">
                 <p className="text-sm text-gray-600">

@@ -18,7 +18,7 @@ function AmbulancePage() {
                   Emergency Medical Services
                 </div>
                 <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                  Scale Your Emergency Medical Service with Marketplace Health
+                  Scale Your Emergency Medical Service with Health Market Arena
                 </h1>
                 <p className="text-base sm:text-lg text-blue-100 mb-8 leading-relaxed">
                   Connect with thousands of patients and healthcare facilities across Nigeria. Expand your reach and grow your ambulance service with our efficient platform.

@@ -33,7 +33,7 @@ function PrivacyPage() {
               <div className="mb-12">
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">Introduction</h2>
                 <p className="text-gray-600 leading-relaxed">
-                  At Marketplace Health, we take your privacy seriously. This Privacy Policy explains how we collect, 
+                  At Health Market Arena, we take your privacy seriously. This Privacy Policy explains how we collect, 
                   use, disclose, and safeguard your information when you use our platform. Please read this privacy 
                   policy carefully. If you do not agree with the terms of this privacy policy, please do not access the platform.
                 </p>
@@ -133,9 +133,9 @@ function PrivacyPage() {
                   If you have questions about this Privacy Policy or wish to exercise your privacy rights, please contact us:
                 </p>
                 <div className="space-y-2 text-gray-600">
-                  <p><strong>Email:</strong> privacy@marketplacehealth.ng</p>
+                  <p><strong>Email:</strong> privacy@healthmarketarena.com</p>
                   <p><strong>Phone:</strong> +234 (0) 800 123 4567</p>
-                  <p><strong>Address:</strong> Lagos, Nigeria</p>
+                  <p><strong>Address:</strong> Port Harcourt, Rivers State, Nigeria</p>
                 </div>
               </div>
             </div>
