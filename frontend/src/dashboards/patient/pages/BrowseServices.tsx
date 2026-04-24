@@ -271,11 +271,20 @@ const BrowseServices: React.FC = () => {
       </div>
 
       <div className="flex gap-6">
-        {/* Filter Sidebar */}
+        {/* Filter Sidebar - desktop side panel, mobile full overlay */}
         {showFilters && (
-          <div className="w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-md p-6 sticky top-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+          <>
+            {/* Mobile overlay backdrop */}
+            <div className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" onClick={() => setShowFilters(false)} />
+            <div className={`
+              fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl overflow-y-auto
+              lg:static lg:z-auto lg:w-64 lg:flex-shrink-0 lg:shadow-none
+            `}>
+              <div className="bg-white rounded-xl shadow-md p-6 lg:sticky lg:top-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                  <button onClick={() => setShowFilters(false)} className="lg:hidden text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+                </div>
 
               {/* Service Type Filter */}
               <div className="mb-6">
@@ -369,7 +378,8 @@ const BrowseServices: React.FC = () => {
                 </label>
               </div>
             </div>
-          </div>
+            </div>
+          </>
         )}
 
         {/* Main Content */}

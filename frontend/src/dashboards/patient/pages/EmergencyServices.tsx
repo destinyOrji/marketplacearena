@@ -708,10 +708,10 @@ const EmergencyServices: React.FC = () => {
                 key={ambulance.id}
                 className="border border-gray-200 rounded-xl p-6 hover:border-red-300 hover:shadow-md transition-all"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
-                      <div className="bg-red-100 p-3 rounded-lg">
+                      <div className="bg-red-100 p-3 rounded-lg flex-shrink-0">
                         <span className="text-2xl">🚑</span>
                       </div>
                       <div>
@@ -724,7 +724,7 @@ const EmergencyServices: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Rating</p>
                         <p className="text-sm font-semibold text-gray-900">
@@ -745,7 +745,7 @@ const EmergencyServices: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Emergency Line</p>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
                           {ambulance.emergencyNumber || ambulance.phone || 'N/A'}
                         </p>
                       </div>
@@ -791,11 +791,11 @@ const EmergencyServices: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="ml-4 flex flex-col gap-2">
+                  <div className="flex sm:flex-col gap-2 sm:ml-4">
                     <button
                       onClick={() => handleBookAmbulance(ambulance)}
                       disabled={loading && selectedAmbulance?.id === ambulance.id}
-                      className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 whitespace-nowrap"
+                      className="flex-1 sm:flex-none bg-red-600 text-white px-4 sm:px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2 whitespace-nowrap"
                     >
                       {loading && selectedAmbulance?.id === ambulance.id ? (
                         <>
@@ -808,7 +808,7 @@ const EmergencyServices: React.FC = () => {
                     </button>
                     {ambulance.emergencyNumber && (
                       <a href={`tel:${ambulance.emergencyNumber}`}
-                        className="text-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium">
+                        className="flex-1 sm:flex-none text-center px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium">
                         📞 Call
                       </a>
                     )}

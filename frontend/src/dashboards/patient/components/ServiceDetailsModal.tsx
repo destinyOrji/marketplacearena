@@ -74,16 +74,16 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
         {/* Modal Content */}
         <div className="p-6">
           {/* Provider Photo and Basic Info */}
-          <div className="flex items-start space-x-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-start gap-4 mb-6">
             <img
               src={provider.photo || '/default-avatar.png'}
               alt={provider.name}
-              className="w-32 h-32 rounded-xl object-cover"
+              className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl object-cover flex-shrink-0"
             />
-            <div className="flex-1">
-              <div className="flex items-start justify-between mb-2">
+            <div className="flex-1 w-full">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2">
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                     {provider.name}
                   </h3>
                   <p className="text-gray-600">
@@ -91,7 +91,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
                   </p>
                 </div>
                 {provider.availability && (
-                  <span className="bg-green-500 text-white text-sm font-medium px-4 py-1 rounded-full">
+                  <span className="bg-green-500 text-white text-sm font-medium px-4 py-1 rounded-full self-start">
                     Available
                   </span>
                 )}
@@ -104,7 +104,7 @@ const ServiceDetailsModal: React.FC<ServiceDetailsModalProps> = ({
           <div className="border-t border-gray-200 my-6"></div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {/* Location */}
             <div>
               <h4 className="text-sm font-medium text-gray-500 mb-2">Location</h4>

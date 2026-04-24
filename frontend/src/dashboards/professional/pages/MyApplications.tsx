@@ -159,7 +159,7 @@ const MyApplications: React.FC = () => {
 
       {/* Status Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-        <div className="flex overflow-x-auto">
+        <div className="flex overflow-x-auto scrollbar-hide">
           {[
             { key: 'all', label: 'All' },
             { key: 'pending', label: 'Pending' },
@@ -172,14 +172,14 @@ const MyApplications: React.FC = () => {
             <button
               key={tab.key}
               onClick={() => setStatusFilter(tab.key as any)}
-              className={`flex-1 min-w-[120px] px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex-shrink-0 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 statusFilter === tab.key
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
               }`}
             >
               {tab.label}
-              <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
+              <span className="ml-1 sm:ml-2 px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
                 {statusCounts[tab.key as keyof typeof statusCounts]}
               </span>
             </button>
@@ -223,7 +223,7 @@ const MyApplications: React.FC = () => {
               key={application.id}
               className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
                     {application.job.title}
@@ -238,7 +238,7 @@ const MyApplications: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                   <span className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(application.status)}`}>
                     {getStatusIcon(application.status)}
                     {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
@@ -248,7 +248,7 @@ const MyApplications: React.FC = () => {
 
               {/* Application Timeline */}
               <div className="border-t border-gray-200 pt-4">
-                <div className="flex items-center justify-between text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm">
                   <div className="text-gray-600">
                     Applied {formatDistanceToNow(new Date(application.appliedDate), { addSuffix: true })}
                   </div>
@@ -274,7 +274,7 @@ const MyApplications: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => handleAcceptOffer(application.id)}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

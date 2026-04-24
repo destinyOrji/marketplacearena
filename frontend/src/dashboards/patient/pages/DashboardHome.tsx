@@ -48,26 +48,26 @@ const DashboardHome: React.FC = () => {
     <DashboardLayout>
       {/* Welcome */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, {name}! 👋</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back, {name}! 👋</h1>
         <p className="text-gray-600 mt-1">Here's an overview of your healthcare activities</p>
       </div>
 
       {/* Subscription Banner */}
       {subscription && !subscription.hasActiveSubscription && (
-        <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 rounded-xl p-5 flex items-center justify-between">
+        <div className="mb-6 bg-yellow-50 border-2 border-yellow-400 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-bold text-yellow-900">Subscription Required</h3>
             <p className="text-yellow-800 text-sm mt-1">Subscribe to book appointments and access emergency services</p>
           </div>
           <button onClick={() => navigate('/patient/subscription')}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold text-sm">
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold text-sm self-start sm:self-auto">
             View Plans
           </button>
         </div>
       )}
 
       {subscription?.hasActiveSubscription && (
-        <div className="mb-6 bg-green-50 border-2 border-green-400 rounded-xl p-5 flex items-center justify-between">
+        <div className="mb-6 bg-green-50 border-2 border-green-400 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-bold text-green-900">✓ Active Subscription</h3>
             <p className="text-green-800 text-sm mt-1">
@@ -75,7 +75,7 @@ const DashboardHome: React.FC = () => {
             </p>
           </div>
           <button onClick={() => navigate('/patient/subscription')}
-            className="text-green-700 hover:text-green-900 text-sm font-medium">
+            className="text-green-700 hover:text-green-900 text-sm font-medium self-start sm:self-auto">
             Manage →
           </button>
         </div>

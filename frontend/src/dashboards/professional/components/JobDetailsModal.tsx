@@ -68,13 +68,13 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
         <div className="p-6 space-y-6">
           {/* Header */}
           <div>
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{job.title}</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{job.title}</h3>
                 <p className="text-gray-600">{job.location}</p>
               </div>
               {job.hasApplied && (
-                <span className="px-4 py-2 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                <span className="px-4 py-2 bg-green-100 text-green-800 text-sm font-medium rounded-full self-start">
                   Applied
                 </span>
               )}
@@ -91,7 +91,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
           </div>
 
           {/* Key Information */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
             <div>
               <p className="text-sm text-gray-600 mb-1">Compensation</p>
               <p className="font-semibold text-gray-900">{formatCompensation()}</p>

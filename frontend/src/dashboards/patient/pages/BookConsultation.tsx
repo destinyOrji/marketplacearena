@@ -245,17 +245,17 @@ const BookConsultation: React.FC = () => {
 
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between overflow-x-auto pb-2">
             {[
-              { key: 'provider', label: 'Select Provider' },
+              { key: 'provider', label: 'Provider' },
               { key: 'datetime', label: 'Date & Time' },
               { key: 'details', label: 'Details' },
               { key: 'summary', label: 'Summary' },
             ].map((s, index) => (
-              <div key={s.key} className="flex items-center flex-1">
-                <div className="flex items-center">
+              <div key={s.key} className="flex items-center flex-1 min-w-0">
+                <div className="flex items-center flex-shrink-0">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium ${
                       step === s.key
                         ? 'bg-blue-600 text-white'
                         : index < ['provider', 'datetime', 'details', 'summary'].indexOf(step)
@@ -265,9 +265,9 @@ const BookConsultation: React.FC = () => {
                   >
                     {index + 1}
                   </div>
-                  <span className="ml-2 text-sm font-medium text-gray-700">{s.label}</span>
+                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium text-gray-700 hidden sm:block">{s.label}</span>
                 </div>
-                {index < 3 && <div className="flex-1 h-1 bg-gray-200 mx-4" />}
+                {index < 3 && <div className="flex-1 h-1 bg-gray-200 mx-1 sm:mx-4" />}
               </div>
             ))}
           </div>
@@ -346,29 +346,31 @@ const BookConsultation: React.FC = () => {
               {/* Calendar */}
               <div className="mb-6">
                 <h3 className="font-medium mb-3">Select Date</h3>
-                <div className="grid grid-cols-7 gap-2">
-                  {calendarDays.map((day) => {
-                    const isSelected = selectedDate && isSameDay(day, selectedDate);
-                    const isPast = day < startOfDay(new Date());
-                    return (
-                      <button
-                        key={day.toISOString()}
-                        onClick={() => !isPast && handleDateSelect(day)}
-                        disabled={isPast}
-                        className={`p-3 rounded-lg text-center ${
-                          isSelected
-                            ? 'bg-blue-600 text-white'
-                            : isPast
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-50 hover:bg-blue-50 text-gray-900'
-                        }`}
-                      >
-                        <div className="text-xs">{format(day, 'EEE')}</div>
-                        <div className="text-lg font-semibold">{format(day, 'd')}</div>
-                        <div className="text-xs">{format(day, 'MMM')}</div>
-                      </button>
-                    );
-                  })}
+                <div className="overflow-x-auto pb-2">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-[320px]">
+                    {calendarDays.map((day) => {
+                      const isSelected = selectedDate && isSameDay(day, selectedDate);
+                      const isPast = day < startOfDay(new Date());
+                      return (
+                        <button
+                          key={day.toISOString()}
+                          onClick={() => !isPast && handleDateSelect(day)}
+                          disabled={isPast}
+                          className={`p-1 sm:p-3 rounded-lg text-center ${
+                            isSelected
+                              ? 'bg-blue-600 text-white'
+                              : isPast
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-50 hover:bg-blue-50 text-gray-900'
+                          }`}
+                        >
+                          <div className="text-xs">{format(day, 'EEE')}</div>
+                          <div className="text-sm sm:text-lg font-semibold">{format(day, 'd')}</div>
+                          <div className="text-xs hidden sm:block">{format(day, 'MMM')}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -449,7 +451,7 @@ const BookConsultation: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Consultation Type
                 </label>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
                     { value: 'video', label: 'Video Call', icon: '📹' },
                     { value: 'chat', label: 'Chat', icon: '💬' },
