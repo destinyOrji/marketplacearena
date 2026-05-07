@@ -4,6 +4,7 @@ const { protect } = require('../middleware/auth');
 const Subscription = require('../models/Subscription');
 const Client = require('../models/Client');
 const User = require('../models/User');
+const { initializeTransaction, verifyTransaction } = require('../services/paystackService');
 
 // Get subscription plans
 router.get('/plans', async (req, res) => {
@@ -132,11 +133,9 @@ router.post('/subscribe', protect, async (req, res) => {
     }
 });
 
-// Complete payment (simulate payment for now)
-router.post('/complete-payment/:subscriptionId', protect, async (req, res) => {
+// Initialize Paystack payment for a subscription
+router.post('/initialize-payment/:subscriptionId', protect, async (req, res) => {
     try {
-        const { paymentReference } = req.body;
-        
         const subscription = await Subscription.findOne({
             _id: req.params.subscriptionId,
             user: req.user._id
@@ -149,19 +148,113 @@ router.post('/complete-payment/:subscriptionId', protect, async (req, res) => {
             });
         }
 
-        // Update subscription
+        if (subscription.paymentStatus === 'completed') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Payment already completed for this subscription' 
+            });
+        }
+
+        // Get user email
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Generate a unique reference
+        const reference = `SUB-${subscription._id}-${Date.now()}`;
+
+        const paystackResponse = await initializeTransaction(
+            user.email,
+            subscription.amount,
+            reference,
+            { subscriptionId: subscription._id.toString() }
+        );
+
+        if (!paystackResponse.status) {
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Failed to initialize payment with Paystack' 
+            });
+        }
+
+        // Save the reference so we can verify later
+        subscription.paymentReference = reference;
+        await subscription.save();
+
+        res.json({ 
+            success: true, 
+            data: {
+                authorizationUrl: paystackResponse.data.authorization_url,
+                accessCode: paystackResponse.data.access_code,
+                reference: paystackResponse.data.reference,
+                subscriptionId: subscription._id,
+            },
+            message: 'Payment initialized. Redirect user to authorization URL.'
+        });
+    } catch (error) {
+        console.error('Payment initialization error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Verify Paystack payment after user completes checkout
+router.post('/verify-payment/:reference', protect, async (req, res) => {
+    try {
+        const { reference } = req.params;
+
+        // Verify with Paystack
+        const paystackResponse = await verifyTransaction(reference);
+
+        if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Payment verification failed. Transaction was not successful.' 
+            });
+        }
+
+        const subscriptionId = paystackResponse.data.metadata?.subscriptionId;
+        if (!subscriptionId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid payment metadata — subscription ID missing' 
+            });
+        }
+
+        const subscription = await Subscription.findOne({
+            _id: subscriptionId,
+            user: req.user._id
+        });
+
+        if (!subscription) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Subscription not found' 
+            });
+        }
+
+        // Idempotency: don't double-activate
+        if (subscription.paymentStatus === 'completed') {
+            return res.json({ 
+                success: true, 
+                data: subscription,
+                message: 'Subscription already active.' 
+            });
+        }
+
+        // Activate subscription
         subscription.status = 'active';
         subscription.paymentStatus = 'completed';
-        subscription.paymentReference = paymentReference || `PAY-${Date.now()}`;
+        subscription.paymentReference = reference;
         await subscription.save();
 
         res.json({ 
             success: true, 
             data: subscription,
-            message: 'Payment completed successfully. Your subscription is now active!'
+            message: 'Payment verified. Your subscription is now active!'
         });
     } catch (error) {
-        console.error('Payment completion error:', error);
+        console.error('Payment verification error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

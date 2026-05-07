@@ -59,6 +59,10 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// ⚠️  Webhook route MUST be registered BEFORE express.json() so it receives the raw body
+// Paystack signature verification requires the raw, unparsed request body
+app.use('/api/webhooks', require('./routes/webhooks'));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
