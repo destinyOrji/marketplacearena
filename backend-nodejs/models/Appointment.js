@@ -16,7 +16,11 @@ const appointmentSchema = new mongoose.Schema({
     professional: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Professional',
-        required: true
+        required: false   // not required — gym/physio bookings won't have this
+    },
+    gymPhysio: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'GymPhysio'
     },
     hospital: {
         type: mongoose.Schema.Types.ObjectId,
@@ -27,7 +31,7 @@ const appointmentSchema = new mongoose.Schema({
     appointmentType: {
         type: String,
         required: true,
-        enum: ['consultation', 'follow_up', 'emergency', 'routine_checkup', 'diagnostic', 'treatment']
+        enum: ['consultation', 'follow_up', 'emergency', 'routine_checkup', 'diagnostic', 'treatment', 'fitness', 'physiotherapy', 'therapy']
     },
     appointmentMode: {
         type: String,
@@ -144,6 +148,7 @@ const appointmentSchema = new mongoose.Schema({
 // Indexes
 appointmentSchema.index({ client: 1 });
 appointmentSchema.index({ professional: 1 });
+appointmentSchema.index({ gymPhysio: 1 });
 appointmentSchema.index({ hospital: 1 });
 appointmentSchema.index({ scheduledDate: 1 });
 appointmentSchema.index({ status: 1 });

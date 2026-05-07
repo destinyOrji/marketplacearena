@@ -163,30 +163,25 @@ router.get('/services', protect, async (req, res) => {
     }
 });
 
-// Get service by ID
+// Get service by ID — supports both professional and gym/physio services
 router.get('/services/:id', protect, async (req, res) => {
     try {
         const Service = require('../models/Service');
         const mongoose = require('mongoose');
-        
-        // Validate ObjectId
+
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ success: false, message: 'Invalid service ID' });
         }
-        
+
         const service = await Service.findById(req.params.id)
-            .populate({
-                path: 'professional',
-                populate: {
-                    path: 'user',
-                    select: 'firstName lastName email'
-                }
-            });
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
+            .populate({ path: 'gymPhysio', select: 'businessName businessType city state phone user' });
 
         if (!service) {
             return res.status(404).json({ success: false, message: 'Service not found' });
         }
 
+        const isGymPhysio = !!service.gymPhysio && !service.professional;
         const data = {
             id: service._id,
             name: service.title,
@@ -202,15 +197,22 @@ router.get('/services/:id', protect, async (req, res) => {
             reviewCount: service.reviewCount || 0,
             availability: service.availability,
             isAvailable: service.availability === 'available',
-            provider: {
+            providerType: isGymPhysio ? 'gym-physio' : 'professional',
+            provider: isGymPhysio ? {
+                id: service.gymPhysio?._id,
+                name: service.gymPhysio?.businessName || 'Gym/Physio',
+                type: 'gym-physio',
+                specialty: service.gymPhysio?.businessType || 'Fitness',
+                photo: null,
+            } : {
                 id: service.professional?._id,
-                name: service.professional?.user ? 
-                    `${service.professional.user.firstName} ${service.professional.user.lastName}`.trim() : 
-                    'Professional',
+                name: service.professional?.user
+                    ? `${service.professional.user.firstName} ${service.professional.user.lastName}`.trim()
+                    : 'Professional',
                 type: 'professional',
                 specialty: service.professional?.specialization?.[0] || '',
-                photo: null
-            }
+                photo: null,
+            },
         };
 
         res.json({ success: true, data });
@@ -220,31 +222,92 @@ router.get('/services/:id', protect, async (req, res) => {
     }
 });
 
-// Get service availability/time slots
+// Get service availability/time slots — uses real schedule + checks existing bookings
 router.get('/services/:id/availability', protect, async (req, res) => {
     try {
+        const Service = require('../models/Service');
+        const Schedule = require('../models/Schedule');
+        const Appointment = require('../models/Appointment');
+        const mongoose = require('mongoose');
+
         const { date } = req.query;
-        
-        // Generate mock time slots for now
-        // In production, this would check professional's schedule and existing appointments
-        const timeSlots = [];
-        const startHour = 9;
-        const endHour = 17;
-        
-        for (let hour = startHour; hour < endHour; hour++) {
-            timeSlots.push({
-                id: `slot-${hour}-00`,
-                startTime: `${hour.toString().padStart(2, '0')}:00`,
-                endTime: `${hour.toString().padStart(2, '0')}:30`,
-                available: Math.random() > 0.3 // 70% available
-            });
-            timeSlots.push({
-                id: `slot-${hour}-30`,
-                startTime: `${hour.toString().padStart(2, '0')}:30`,
-                endTime: `${(hour + 1).toString().padStart(2, '0')}:00`,
-                available: Math.random() > 0.3
-            });
+        if (!date) return res.status(400).json({ success: false, message: 'date query param required (YYYY-MM-DD)' });
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ success: false, message: 'Invalid service ID' });
         }
+
+        const service = await Service.findById(req.params.id);
+        if (!service) return res.status(404).json({ success: false, message: 'Service not found' });
+
+        // Determine the professional ID (works for both professional and gym-physio services)
+        const professionalId = service.professional;
+
+        // Day of week from requested date
+        const requestedDate = new Date(date);
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = dayNames[requestedDate.getDay()];
+
+        // Try to get real schedule
+        let schedule = professionalId ? await Schedule.findOne({ professional: professionalId }) : null;
+
+        let rawSlots = [];
+
+        if (schedule && schedule[dayName]?.isAvailable && schedule[dayName]?.timeSlots?.length > 0) {
+            // Use real schedule slots
+            rawSlots = schedule[dayName].timeSlots.map((slot, i) => ({
+                id: `slot-${slot.startTime.replace(':', '-')}-${i}`,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+            }));
+        } else {
+            // Fallback: generate default 9am–5pm slots every 30 min
+            for (let hour = 9; hour < 17; hour++) {
+                rawSlots.push({
+                    id: `slot-${hour}-00`,
+                    startTime: `${String(hour).padStart(2, '0')}:00`,
+                    endTime: `${String(hour).padStart(2, '0')}:30`,
+                });
+                rawSlots.push({
+                    id: `slot-${hour}-30`,
+                    startTime: `${String(hour).padStart(2, '0')}:30`,
+                    endTime: `${String(hour + 1).padStart(2, '0')}:00`,
+                });
+            }
+        }
+
+        // Get already-booked times for this professional on this date
+        const bookedTimes = new Set();
+        if (professionalId) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            const existingAppointments = await Appointment.find({
+                professional: professionalId,
+                scheduledDate: { $gte: startOfDay, $lte: endOfDay },
+                status: { $in: ['scheduled', 'confirmed', 'in_progress'] },
+            }).select('scheduledTime');
+
+            existingAppointments.forEach(apt => bookedTimes.add(apt.scheduledTime));
+        }
+
+        // Mark slots as available/unavailable
+        const now = new Date();
+        const timeSlots = rawSlots.map(slot => {
+            // Check if slot is in the past
+            const slotDateTime = new Date(`${date}T${slot.startTime}:00`);
+            const isPast = slotDateTime <= now;
+            const isBooked = bookedTimes.has(slot.startTime);
+
+            return {
+                id: slot.id,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                available: !isPast && !isBooked,
+            };
+        });
 
         res.json({ success: true, data: timeSlots });
     } catch (error) {
@@ -257,44 +320,56 @@ router.get('/appointments', protect, async (req, res) => {
         const Appointment = require('../models/Appointment');
         const client = await Client.findOne({ user: req.user._id });
         if (!client) return res.json({ success: true, data: [] });
-        
+
         const appointments = await Appointment.find({ client: client._id })
-            .populate({
-                path: 'professional',
-                populate: {
-                    path: 'user',
-                    select: 'firstName lastName email'
-                }
-            })
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
+            .populate({ path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName email' } })
             .populate('service')
             .sort({ scheduledDate: -1 });
 
-        const data = appointments.map(apt => ({
-            id: apt._id,
-            date: apt.scheduledDate,
-            time: apt.scheduledTime || '10:00',
-            status: apt.status,
-            type: apt.consultationType || 'video',
-            service: apt.service ? {
-                id: apt.service._id,
-                title: apt.service.title,
-                price: apt.service.price
-            } : null,
-            provider: {
-                id: apt.professional?._id,
-                name: apt.professional?.user ? 
-                    `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim() : 
-                    'Professional',
-                type: 'professional',
-                specialty: apt.professional?.specialization?.[0] || '',
-                photo: null
-            },
-            payment: {
-                amount: apt.service?.price || 0,
-                status: apt.paymentStatus || 'pending'
-            },
-            consultationLink: apt.consultationLink || null
-        }));
+        const data = appointments.map(apt => {
+            // Build provider info — could be professional or gym/physio
+            let provider;
+            if (apt.gymPhysio) {
+                const gp = apt.gymPhysio;
+                provider = {
+                    id:        gp._id,
+                    name:      gp.businessName || (gp.user ? `${gp.user.firstName} ${gp.user.lastName}`.trim() : 'Gym/Physio'),
+                    type:      'gym-physio',
+                    specialty: gp.businessType || 'Fitness',
+                    photo:     gp.profilePicture || null,
+                };
+            } else {
+                provider = {
+                    id:        apt.professional?._id,
+                    name:      apt.professional?.user
+                        ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim()
+                        : 'Professional',
+                    type:      'professional',
+                    specialty: apt.professional?.specialization?.[0] || '',
+                    photo:     null,
+                };
+            }
+
+            return {
+                id:      apt._id,
+                date:    apt.scheduledDate,
+                time:    apt.scheduledTime || '10:00',
+                status:  apt.status,
+                type:    apt.appointmentMode || 'in_person',
+                service: apt.service ? {
+                    id:    apt.service._id,
+                    title: apt.service.title,
+                    price: apt.service.price,
+                } : null,
+                provider,
+                payment: {
+                    amount: apt.consultationFee || apt.service?.price || 0,
+                    status: apt.paymentStatus || 'pending',
+                },
+                consultationLink: apt.consultationLink || null,
+            };
+        });
 
         res.json({ success: true, data });
     } catch (error) {
@@ -308,6 +383,7 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
         const Appointment = require('../models/Appointment');
         const Service = require('../models/Service');
         const Professional = require('../models/Professional');
+        const GymPhysio = require('../models/GymPhysio');
 
         // Auto-create client profile if missing
         let client = await Client.findOne({ user: req.user._id });
@@ -325,25 +401,42 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
             consultationType,   // 'video' | 'chat' | 'in-person'
             reason,
             notes,
-            scheduledDate,      // ISO date string from frontend
-            scheduledTime,      // 'HH:MM' from frontend
+            scheduledDate,
+            scheduledTime,
         } = req.body;
 
-        // Resolve service and professional
+        // Resolve service → determine if professional or gym/physio
         let service = null;
         let professional = null;
+        let gymPhysio = null;
+        let providerType = 'professional';
 
         if (providerId) {
             service = await Service.findById(providerId);
             if (service) {
-                professional = await Professional.findById(service.professional);
+                if (service.gymPhysio) {
+                    gymPhysio = await GymPhysio.findById(service.gymPhysio)
+                        .populate('user', 'firstName lastName email');
+                    providerType = 'gym-physio';
+                } else if (service.professional) {
+                    professional = await Professional.findById(service.professional)
+                        .populate('user', 'firstName lastName email');
+                    providerType = 'professional';
+                }
             } else {
-                professional = await Professional.findById(providerId);
+                // Try as direct professional ID
+                professional = await Professional.findById(providerId)
+                    .populate('user', 'firstName lastName email');
+                if (!professional) {
+                    gymPhysio = await GymPhysio.findById(providerId)
+                        .populate('user', 'firstName lastName email');
+                    if (gymPhysio) providerType = 'gym-physio';
+                }
             }
         }
 
-        if (!professional) {
-            return res.status(404).json({ success: false, message: 'Professional not found' });
+        if (!professional && !gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Provider not found' });
         }
 
         // Map consultationType → appointmentMode
@@ -357,12 +450,21 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
         };
         const appointmentMode = modeMap[consultationType] || 'in_person';
 
-        // Parse date/time from timeSlotId (format: "slot-HH-MM") or explicit fields
+        // Map providerType → appointmentType
+        const aptTypeMap = {
+            'professional': 'consultation',
+            'gym-physio':   'fitness',
+        };
+        const serviceCategory = service?.category;
+        const appointmentType = serviceCategory === 'physiotherapy' ? 'physiotherapy'
+            : serviceCategory === 'therapy' ? 'therapy'
+            : aptTypeMap[providerType] || 'consultation';
+
+        // Parse date/time
         let apptDate = scheduledDate ? new Date(scheduledDate) : new Date();
         let apptTime = scheduledTime || '10:00';
 
         if (timeSlotId && timeSlotId.startsWith('slot-')) {
-            // e.g. "slot-9-00" → "09:00"
             const parts = timeSlotId.replace('slot-', '').split('-');
             if (parts.length >= 2) {
                 apptTime = `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
@@ -371,9 +473,10 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
 
         const appointmentData = {
             client:          client._id,
-            professional:    professional._id,
+            professional:    professional?._id || null,
+            gymPhysio:       gymPhysio?._id || null,
             service:         service?._id,
-            appointmentType: 'consultation',
+            appointmentType,
             appointmentMode,
             scheduledDate:   apptDate,
             scheduledTime:   apptTime,
@@ -388,31 +491,46 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
 
         const appointment = await Appointment.create(appointmentData);
 
-        await appointment.populate([
-            { path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } },
-            { path: 'service' }
-        ]);
+        // Populate for response
+        const populatePaths = [{ path: 'service' }];
+        if (professional) populatePaths.push({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } });
+        if (gymPhysio) populatePaths.push({ path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName email' } });
+        await appointment.populate(populatePaths);
+
+        // Build provider info for response
+        let providerInfo;
+        if (providerType === 'gym-physio' && appointment.gymPhysio) {
+            const gp = appointment.gymPhysio;
+            providerInfo = {
+                id:        gp._id,
+                name:      gp.businessName || (gp.user ? `${gp.user.firstName} ${gp.user.lastName}`.trim() : 'Gym/Physio'),
+                type:      'gym-physio',
+                specialty: gp.businessType || 'Fitness',
+                photo:     gp.profilePicture || null,
+            };
+        } else {
+            const pro = appointment.professional;
+            providerInfo = {
+                id:        pro?._id,
+                name:      pro?.user ? `${pro.user.firstName} ${pro.user.lastName}`.trim() : 'Professional',
+                type:      'professional',
+                specialty: pro?.specialization?.[0] || '',
+                photo:     null,
+            };
+        }
 
         const responseData = {
-            id:     appointment._id,
-            date:   appointment.scheduledDate,
-            time:   appointment.scheduledTime,
-            status: appointment.status,
-            type:   appointment.appointmentMode,
+            id:      appointment._id,
+            date:    appointment.scheduledDate,
+            time:    appointment.scheduledTime,
+            status:  appointment.status,
+            type:    appointment.appointmentMode,
             service: appointment.service ? {
                 id:    appointment.service._id,
                 title: appointment.service.title,
                 price: appointment.service.price,
             } : null,
-            provider: {
-                id:        appointment.professional._id,
-                name:      appointment.professional.user
-                    ? `${appointment.professional.user.firstName} ${appointment.professional.user.lastName}`.trim()
-                    : 'Professional',
-                type:      'professional',
-                specialty: appointment.professional.specialization?.[0] || '',
-                photo:     null,
-            },
+            provider: providerInfo,
             payment: {
                 amount: appointment.consultationFee,
                 status: appointment.paymentStatus,

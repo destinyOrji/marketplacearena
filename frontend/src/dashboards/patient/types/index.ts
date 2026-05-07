@@ -31,15 +31,27 @@ export interface AuthState {
 export interface ServiceProvider {
   id: string;
   name: string;
-  type: 'doctor' | 'hospital' | 'ambulance';
+  type: 'doctor' | 'hospital' | 'ambulance' | 'gym-physio' | 'professional';
   specialty?: string;
-  location: string;
+  location?: string;
   rating: number;
   reviewCount: number;
-  availability: boolean;
-  photo: string;
-  images?: string[]; // Add images array
+  availability?: boolean;
+  isAvailable?: boolean;
+  photo?: string;
+  images?: string[];
   price?: number;
+  duration?: number;
+  description?: string;
+  title?: string;
+  providerType?: 'professional' | 'gym-physio';
+  provider?: {
+    id: string;
+    name: string;
+    type: string;
+    specialty?: string;
+    photo?: string | null;
+  };
 }
 
 export interface FilterOptions {
@@ -62,6 +74,8 @@ export interface TimeSlot {
 export interface BookingData {
   providerId: string;
   timeSlotId: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
   consultationType: 'video' | 'chat' | 'in-person';
   reason: string;
   notes?: string;
