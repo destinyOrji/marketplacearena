@@ -174,6 +174,8 @@ const BookConsultation: React.FC = () => {
       const bookingData = {
         providerId: selectedProvider.id,
         timeSlotId: selectedTimeSlot.id,
+        scheduledDate: selectedDate.toISOString(),
+        scheduledTime: selectedTimeSlot.startTime,
         consultationType,
         reason,
         notes,

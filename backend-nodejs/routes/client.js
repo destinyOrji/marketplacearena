@@ -308,84 +308,121 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
         const Appointment = require('../models/Appointment');
         const Service = require('../models/Service');
         const Professional = require('../models/Professional');
-        
-        const client = await Client.findOne({ user: req.user._id });
+
+        // Auto-create client profile if missing
+        let client = await Client.findOne({ user: req.user._id });
         if (!client) {
-            return res.status(404).json({ success: false, message: 'Client profile not found' });
+            const user = await User.findById(req.user._id);
+            client = await Client.create({
+                user: req.user._id,
+                phone: user.phone || '0000000000',
+            });
         }
 
-        const { providerId, timeSlotId, consultationType, reason, notes } = req.body;
+        const {
+            providerId,
+            timeSlotId,
+            consultationType,   // 'video' | 'chat' | 'in-person'
+            reason,
+            notes,
+            scheduledDate,      // ISO date string from frontend
+            scheduledTime,      // 'HH:MM' from frontend
+        } = req.body;
 
-        // Get the service/professional
-        let service, professional;
-        
-        // Check if providerId is a service or professional
-        service = await Service.findById(providerId);
-        if (service) {
-            professional = await Professional.findById(service.professional);
-        } else {
-            professional = await Professional.findById(providerId);
+        // Resolve service and professional
+        let service = null;
+        let professional = null;
+
+        if (providerId) {
+            service = await Service.findById(providerId);
+            if (service) {
+                professional = await Professional.findById(service.professional);
+            } else {
+                professional = await Professional.findById(providerId);
+            }
         }
 
         if (!professional) {
             return res.status(404).json({ success: false, message: 'Professional not found' });
         }
 
-        // Create appointment
+        // Map consultationType → appointmentMode
+        const modeMap = {
+            'video':      'video_call',
+            'chat':       'phone_call',
+            'in-person':  'in_person',
+            'video_call': 'video_call',
+            'phone_call': 'phone_call',
+            'in_person':  'in_person',
+        };
+        const appointmentMode = modeMap[consultationType] || 'in_person';
+
+        // Parse date/time from timeSlotId (format: "slot-HH-MM") or explicit fields
+        let apptDate = scheduledDate ? new Date(scheduledDate) : new Date();
+        let apptTime = scheduledTime || '10:00';
+
+        if (timeSlotId && timeSlotId.startsWith('slot-')) {
+            // e.g. "slot-9-00" → "09:00"
+            const parts = timeSlotId.replace('slot-', '').split('-');
+            if (parts.length >= 2) {
+                apptTime = `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+            }
+        }
+
         const appointmentData = {
-            client: client._id,
-            professional: professional._id,
-            service: service?._id,
-            scheduledDate: new Date(), // Should come from timeSlotId
-            scheduledTime: '10:00', // Should come from timeSlotId
-            consultationType: consultationType || 'video',
-            reason: reason || 'Consultation',
-            notes: notes || '',
-            status: 'pending',
-            paymentStatus: 'pending'
+            client:          client._id,
+            professional:    professional._id,
+            service:         service?._id,
+            appointmentType: 'consultation',
+            appointmentMode,
+            scheduledDate:   apptDate,
+            scheduledTime:   apptTime,
+            duration:        service?.duration || 30,
+            reasonForVisit:  reason || 'General consultation',
+            clientNotes:     notes || '',
+            consultationFee: service?.price || 0,
+            currency:        'NGN',
+            status:          'scheduled',
+            paymentStatus:   'pending',
         };
 
         const appointment = await Appointment.create(appointmentData);
 
-        // Populate for response
         await appointment.populate([
-            {
-                path: 'professional',
-                populate: { path: 'user', select: 'firstName lastName email' }
-            },
+            { path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } },
             { path: 'service' }
         ]);
 
         const responseData = {
-            id: appointment._id,
-            date: appointment.scheduledDate,
-            time: appointment.scheduledTime,
+            id:     appointment._id,
+            date:   appointment.scheduledDate,
+            time:   appointment.scheduledTime,
             status: appointment.status,
-            type: appointment.consultationType,
+            type:   appointment.appointmentMode,
             service: appointment.service ? {
-                id: appointment.service._id,
+                id:    appointment.service._id,
                 title: appointment.service.title,
-                price: appointment.service.price
+                price: appointment.service.price,
             } : null,
             provider: {
-                id: appointment.professional._id,
-                name: appointment.professional.user ? 
-                    `${appointment.professional.user.firstName} ${appointment.professional.user.lastName}`.trim() : 
-                    'Professional',
-                type: 'professional',
+                id:        appointment.professional._id,
+                name:      appointment.professional.user
+                    ? `${appointment.professional.user.firstName} ${appointment.professional.user.lastName}`.trim()
+                    : 'Professional',
+                type:      'professional',
                 specialty: appointment.professional.specialization?.[0] || '',
-                photo: null
+                photo:     null,
             },
             payment: {
-                amount: appointment.service?.price || 0,
-                status: appointment.paymentStatus
-            }
+                amount: appointment.consultationFee,
+                status: appointment.paymentStatus,
+            },
         };
 
-        res.status(201).json({ 
-            success: true, 
+        res.status(201).json({
+            success: true,
             data: responseData,
-            message: 'Appointment booked successfully' 
+            message: 'Appointment booked successfully',
         });
     } catch (error) {
         console.error('Error booking appointment:', error);
@@ -504,7 +541,75 @@ router.get('/medical-records', protect, async (req, res) => {
     res.json({ success: true, data: { data: [], total: 0 } });
 });
 
-// Payments
+// Payments — initialize Paystack payment for an appointment
+router.post('/payments', protect, async (req, res) => {
+    try {
+        const { initializeTransaction } = require('../services/paystackService');
+        const Appointment = require('../models/Appointment');
+
+        const { appointmentId, amount, service } = req.body;
+        const user = await User.findById(req.user._id);
+
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const reference = `APT-${appointmentId || Date.now()}-${Date.now()}`;
+
+        const paystackResponse = await initializeTransaction(
+            user.email,
+            amount,
+            reference,
+            { appointmentId: appointmentId || '', service: service || '' }
+        );
+
+        if (!paystackResponse.status) {
+            return res.status(500).json({ success: false, message: 'Failed to initialize payment' });
+        }
+
+        res.json({
+            statuscode: 0,
+            success: true,
+            data: {
+                id: reference,
+                authorizationUrl: paystackResponse.data.authorization_url,
+                accessCode: paystackResponse.data.access_code,
+                reference: paystackResponse.data.reference,
+            },
+        });
+    } catch (error) {
+        console.error('Payment error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Verify appointment payment
+router.post('/payments/verify/:reference', protect, async (req, res) => {
+    try {
+        const { verifyTransaction } = require('../services/paystackService');
+        const Appointment = require('../models/Appointment');
+
+        const paystackResponse = await verifyTransaction(req.params.reference);
+
+        if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+            return res.status(400).json({ success: false, message: 'Payment verification failed' });
+        }
+
+        const appointmentId = paystackResponse.data.metadata?.appointmentId;
+        if (appointmentId) {
+            await Appointment.findByIdAndUpdate(appointmentId, {
+                paymentStatus: 'paid',
+                transactionId: req.params.reference,
+                paymentMethod: 'paystack',
+            });
+        }
+
+        res.json({ success: true, data: { reference: req.params.reference }, message: 'Payment verified' });
+    } catch (error) {
+        console.error('Payment verify error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get payment history
 router.get('/payments', protect, async (req, res) => {
     res.json({ success: true, data: { data: [], total: 0 } });
 });
