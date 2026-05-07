@@ -198,8 +198,16 @@ const BookConsultation: React.FC = () => {
     } catch (error: any) {
       console.error('Booking error:', error);
       
+      // Handle subscription required
+      if (error.response?.status === 403 && error.response?.data?.code === 'SUBSCRIPTION_REQUIRED') {
+        showErrorToast('You need an active subscription to book appointments. Redirecting...', {
+          autoClose: 4000,
+        });
+        setTimeout(() => {
+          navigate('/patient/subscription');
+        }, 2000);
       // Handle concurrent booking conflict
-      if (error.response?.status === 409 || error.response?.data?.code === 'SLOT_UNAVAILABLE') {
+      } else if (error.response?.status === 409 || error.response?.data?.code === 'SLOT_UNAVAILABLE') {
         showErrorToast('This time slot was just booked by another patient. Please select a different time.', {
           autoClose: 5000,
         });
