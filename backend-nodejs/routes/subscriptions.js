@@ -76,12 +76,19 @@ router.post('/subscribe', protect, async (req, res) => {
             });
         }
 
-        // Get client
-        const client = await Client.findOne({ user: req.user._id });
+        // Get or auto-create client profile
+        let client = await Client.findOne({ user: req.user._id });
         if (!client) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Client profile not found' 
+            // Auto-create a minimal client profile from the user record
+            const user = await User.findById(req.user._id);
+            client = await Client.create({
+                user: req.user._id,
+                phone: user.phone || '0000000000',
+                address: {
+                    city: user.city || '',
+                    state: user.state || '',
+                    country: user.country || 'Nigeria',
+                }
             });
         }
 
