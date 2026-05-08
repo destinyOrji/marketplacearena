@@ -49,7 +49,7 @@ const FleetManagement: React.FC = () => {
       await ambulanceService.toggleVehicleStatus(
         providerId!,
         toggleModal.vehicle.id,
-        toggleModal.newStatus
+        toggleModal.newStatus === 'active'
       );
       setToggleModal({ show: false, vehicle: null, newStatus: '' });
       fetchVehicles();
