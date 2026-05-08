@@ -321,7 +321,18 @@ router.get('/appointments', protect, async (req, res) => {
         const client = await Client.findOne({ user: req.user._id });
         if (!client) return res.json({ success: true, data: [] });
 
-        const appointments = await Appointment.find({ client: client._id })
+        // Map frontend tab names to DB status values
+        const { status } = req.query;
+        let statusFilter = {};
+        if (status === 'upcoming') {
+            statusFilter = { status: { $in: ['scheduled', 'confirmed', 'in_progress'] } };
+        } else if (status === 'completed') {
+            statusFilter = { status: 'completed' };
+        } else if (status === 'cancelled') {
+            statusFilter = { status: { $in: ['cancelled', 'no_show'] } };
+        }
+
+        const appointments = await Appointment.find({ client: client._id, ...statusFilter })
             .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
             .populate({ path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName email' } })
             .populate('service')

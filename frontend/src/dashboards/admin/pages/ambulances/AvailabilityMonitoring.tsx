@@ -43,27 +43,37 @@ const AvailabilityMonitoring: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {providers.map((provider) => (
-          <div key={provider.provider_id} className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{provider.provider_name}</h3>
-              <div className="flex items-center space-x-2">
-                {provider.is_online ? (
-                  <FiCheckCircle className="h-3 w-3 text-green-500" />
-                ) : (
-                  <FiXCircle className="h-3 w-3 text-gray-400" />
-                )}
-                <span className="text-sm text-gray-600">{provider.is_online ? 'Online' : 'Offline'}</span>
+        {providers.map((provider: any) => {
+          const id = provider._id || provider.id || provider.provider_id;
+          const name = provider.serviceName || provider.provider_name || 'Unknown';
+          const isOnline = provider.isAvailable ?? provider.is_online ?? false;
+          const availableVehicles = provider.vehicles?.filter((v: any) => v.isActive)?.length ?? provider.available_vehicles ?? 0;
+          const coverageArea = provider.baseAddress?.city || provider.coverage_area || '—';
+
+          return (
+            <div key={id} className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">{name}</h3>
+                <div className="flex items-center space-x-2">
+                  {isOnline ? (
+                    <FiCheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <FiXCircle className="h-4 w-4 text-gray-400" />
+                  )}
+                  <span className={`text-sm font-medium ${isOnline ? 'text-green-600' : 'text-gray-500'}`}>
+                    {isOnline ? 'Available' : 'Unavailable'}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p><span className="font-medium">Active Vehicles:</span> {availableVehicles}</p>
+                <p><span className="font-medium">Total Bookings:</span> {provider.totalBookings ?? 0}</p>
+                <p><span className="font-medium">Coverage Area:</span> {coverageArea}</p>
+                <p><span className="font-medium">Avg Response:</span> {provider.averageResponseTime ? `${provider.averageResponseTime} min` : '—'}</p>
               </div>
             </div>
-            <div className="space-y-2 text-sm text-gray-600">
-              <p><span className="font-medium">Available Vehicles:</span> {provider.available_vehicles}</p>
-              <p><span className="font-medium">Active Bookings:</span> {provider.active_bookings}</p>
-              <p><span className="font-medium">Coverage Area:</span> {provider.coverage_area}</p>
-              <p><span className="font-medium">Last Active:</span> {new Date(provider.last_active).toLocaleString()}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

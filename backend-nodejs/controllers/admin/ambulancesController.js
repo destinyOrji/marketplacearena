@@ -157,7 +157,28 @@ exports.deleteProvider = async (req, res) => {
 
 // Placeholder methods for other ambulance operations
 exports.getEmergencyBookings = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: [] });
+    try {
+        const EmergencyBooking = require('../../models/EmergencyBooking');
+        const { page = 1, page_size = 20 } = req.query;
+        const skip = (page - 1) * page_size;
+
+        const bookings = await EmergencyBooking.find()
+            .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName email' } })
+            .populate('provider', 'serviceName phone emergencyNumber')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(page_size));
+
+        const total = await EmergencyBooking.countDocuments();
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data: bookings,
+            pagination: { page: parseInt(page), page_size: parseInt(page_size), total, total_pages: Math.ceil(total / page_size) }
+        });
+    } catch (error) {
+        res.json({ statuscode: 0, status: 'success', data: [], pagination: { total: 0 } });
+    }
 };
 
 exports.getProviderVehicles = async (req, res) => {
@@ -182,7 +203,23 @@ exports.getProviderVehicles = async (req, res) => {
 };
 
 exports.toggleVehicleStatus = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', message: 'Vehicle status updated' });
+    try {
+        const { id, vehicleId } = req.params;
+        const { is_active } = req.body;
+
+        const provider = await Ambulance.findById(id);
+        if (!provider) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Provider not found' });
+
+        const vehicle = provider.vehicles.id(vehicleId);
+        if (!vehicle) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Vehicle not found' });
+
+        vehicle.isActive = is_active !== undefined ? is_active : !vehicle.isActive;
+        await provider.save();
+
+        res.json({ statuscode: 0, status: 'success', message: 'Vehicle status updated', data: vehicle });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };
 
 exports.getProviderAvailability = async (req, res) => {
@@ -260,9 +297,15 @@ exports.verifyProvider = async (req, res) => {
 };
 
 exports.rejectProvider = async (req, res) => {
-    res.json({
-        statuscode: 0,
-        status: 'success',
-        message: 'Ambulance provider verification rejected'
-    });
+    try {
+        const provider = await Ambulance.findById(req.params.id);
+        if (!provider) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Provider not found' });
+
+        await Ambulance.findByIdAndUpdate(req.params.id, { isVerified: false });
+        await User.findByIdAndUpdate(provider.user, { verificationStatus: 'rejected', status: 'inactive' });
+
+        res.json({ statuscode: 0, status: 'success', message: 'Ambulance provider verification rejected' });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };

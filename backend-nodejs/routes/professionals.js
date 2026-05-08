@@ -444,7 +444,7 @@ router.get('/appointments', protect, async (req, res) => {
             date: apt.scheduledDate,
             time: apt.scheduledTime || '10:00',
             status: apt.status,
-            type: apt.consultationType || 'video',
+            type: apt.appointmentMode || 'in_person',
             patient: {
                 id: apt.client?._id,
                 name: apt.client?.user ? 
@@ -459,11 +459,11 @@ router.get('/appointments', protect, async (req, res) => {
                 price: apt.service.price
             } : null,
             payment: {
-                amount: apt.service?.price || 0,
+                amount: apt.consultationFee || apt.service?.price || 0,
                 status: apt.paymentStatus || 'pending'
             },
-            reason: apt.reason,
-            notes: apt.notes
+            reason: apt.reasonForVisit || '',
+            notes: apt.clientNotes || ''
         }));
 
         res.json({ success: true, data });

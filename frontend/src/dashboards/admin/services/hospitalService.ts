@@ -1,261 +1,99 @@
-/**
- * Hospital Service
- * Handles all hospital-related API calls
- */
 import axios from 'axios';
 import { authService } from './authService';
 import {
-  Hospital,
-  HospitalListParams,
-  HospitalVacancy,
-  HospitalApplication,
-  HospitalSubscription,
-  HospitalDocument,
-  ApiResponse,
-  PaginationMeta
+  Hospital, HospitalListParams, HospitalVacancy, HospitalApplication,
+  HospitalSubscription, HospitalDocument, ApiResponse, PaginationMeta
 } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
 
 interface PaginatedResponse<T> {
-  statuscode: number;
-  status: string;
-  message: string;
-  data: T[];
-  pagination: PaginationMeta;
+  statuscode: number; status: string; message: string;
+  data: T[]; pagination: PaginationMeta;
 }
 
 class HospitalServiceClass {
   private readonly baseURL = `${API_BASE_URL}/admin/hospitals`;
+  private h() { return { headers: { Authorization: `Bearer ${authService.getAccessToken()}` } }; }
 
-  private getAuthHeaders() {
-    const token = authService.getAccessToken();
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    };
-  }
-
-  /**
-   * Get list of all hospitals with pagination and filters
-   */
   async getHospitals(params: HospitalListParams = {}): Promise<PaginatedResponse<Hospital>> {
-    try {
-      const queryParams = new URLSearchParams();
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
-      if (params.search) queryParams.append('search', params.search);
-      if (params.facility_type) queryParams.append('facility_type', params.facility_type);
-      if (params.verification_status) queryParams.append('verification_status', params.verification_status);
-
-      const response = await axios.get<PaginatedResponse<Hospital>>(
-        `${this.baseURL}/?${queryParams.toString()}`,
-        this.getAuthHeaders()
-      );
-      return response.data;
-    } catch (error: any) {
-      console.error('Failed to fetch hospitals:', error);
-      throw error;
-    }
+    const q = new URLSearchParams();
+    if (params.page) q.append('page', String(params.page));
+    if (params.page_size) q.append('page_size', String(params.page_size));
+    if (params.search) q.append('search', params.search);
+    if (params.facility_type) q.append('facility_type', params.facility_type);
+    if (params.verification_status) q.append('verification_status', params.verification_status);
+    const res = await axios.get<PaginatedResponse<Hospital>>(`${this.baseURL}?${q}`, this.h());
+    return res.data;
   }
 
-  /**
-   * Get hospital details by ID
-   */
-  async getHospitalById(hospitalId: string): Promise<Hospital> {
-    try {
-      const response = await axios.get<ApiResponse<Hospital>>(
-        `${this.baseURL}/${hospitalId}/`,
-        this.getAuthHeaders()
-      );
-      return response.data.data!;
-    } catch (error: any) {
-      console.error('Failed to fetch hospital details:', error);
-      throw error;
-    }
+  async getHospitalById(id: string): Promise<Hospital> {
+    const res = await axios.get<ApiResponse<Hospital>>(`${this.baseURL}/${id}`, this.h());
+    return res.data.data!;
   }
 
-  /**
-   * Update hospital details
-   */
-  async updateHospital(hospitalId: string, data: Partial<Hospital>): Promise<void> {
-    try {
-      await axios.put(
-        `${this.baseURL}/${hospitalId}/update/`,
-        data,
-        this.getAuthHeaders()
-      );
-    } catch (error: any) {
-      console.error('Failed to update hospital:', error);
-      throw error;
-    }
+  async updateHospital(id: string, data: Partial<Hospital>): Promise<void> {
+    await axios.put(`${this.baseURL}/${id}/update`, data, this.h());
   }
 
-  /**
-   * Delete hospital
-   */
-  async deleteHospital(hospitalId: string): Promise<void> {
-    try {
-      await axios.delete(
-        `${this.baseURL}/${hospitalId}/delete/`,
-        this.getAuthHeaders()
-      );
-    } catch (error: any) {
-      console.error('Failed to delete hospital:', error);
-      throw error;
-    }
+  async deleteHospital(id: string): Promise<void> {
+    await axios.delete(`${this.baseURL}/${id}/delete`, this.h());
   }
 
-  /**
-   * Get hospital vacancies
-   */
-  async getHospitalVacancies(hospitalId: string, params: { status?: string } = {}): Promise<HospitalVacancy[]> {
+  async getHospitalVacancies(id: string, params: { status?: string } = {}): Promise<HospitalVacancy[]> {
     try {
-      const queryParams = new URLSearchParams();
-      if (params.status) queryParams.append('status', params.status);
-
-      const response = await axios.get<ApiResponse<HospitalVacancy[]>>(
-        `${this.baseURL}/${hospitalId}/vacancies/?${queryParams.toString()}`,
-        this.getAuthHeaders()
-      );
-      return response.data.data || [];
-    } catch (error: any) {
-      console.error('Failed to fetch hospital vacancies:', error);
-      return [];
-    }
+      const q = new URLSearchParams();
+      if (params.status) q.append('status', params.status);
+      const res = await axios.get<ApiResponse<HospitalVacancy[]>>(`${this.baseURL}/${id}/vacancies?${q}`, this.h());
+      return res.data.data || [];
+    } catch { return []; }
   }
 
-  /**
-   * Toggle vacancy status
-   */
-  async toggleVacancyStatus(hospitalId: string, vacancyId: string, status: string): Promise<void> {
-    try {
-      await axios.patch(
-        `${this.baseURL}/${hospitalId}/vacancies/${vacancyId}/`,
-        { status },
-        this.getAuthHeaders()
-      );
-    } catch (error: any) {
-      console.error('Failed to toggle vacancy status:', error);
-      throw error;
-    }
+  async toggleVacancyStatus(hospitalId: string, vacancyId: string, isActive: boolean): Promise<void> {
+    await axios.patch(`${this.baseURL}/${hospitalId}/vacancies/${vacancyId}`, { is_active: isActive }, this.h());
   }
 
-  /**
-   * Get hospital applications
-   */
-  async getHospitalApplications(hospitalId: string, params: { vacancy_id?: string; status?: string } = {}): Promise<HospitalApplication[]> {
+  async getHospitalApplications(id: string, params: { vacancy_id?: string; status?: string } = {}): Promise<HospitalApplication[]> {
     try {
-      const queryParams = new URLSearchParams();
-      if (params.vacancy_id) queryParams.append('vacancy_id', params.vacancy_id);
-      if (params.status) queryParams.append('status', params.status);
-
-      const response = await axios.get<ApiResponse<HospitalApplication[]>>(
-        `${this.baseURL}/${hospitalId}/applications/?${queryParams.toString()}`,
-        this.getAuthHeaders()
-      );
-      return response.data.data || [];
-    } catch (error: any) {
-      console.error('Failed to fetch hospital applications:', error);
-      return [];
-    }
+      const q = new URLSearchParams();
+      if (params.vacancy_id) q.append('vacancy_id', params.vacancy_id);
+      if (params.status) q.append('status', params.status);
+      const res = await axios.get<ApiResponse<HospitalApplication[]>>(`${this.baseURL}/${id}/applications?${q}`, this.h());
+      return res.data.data || [];
+    } catch { return []; }
   }
 
-  /**
-   * Get hospital subscription
-   */
-  async getHospitalSubscription(hospitalId: string): Promise<HospitalSubscription | null> {
+  async getHospitalSubscription(id: string): Promise<HospitalSubscription | null> {
     try {
-      const response = await axios.get<ApiResponse<HospitalSubscription>>(
-        `${this.baseURL}/${hospitalId}/subscription/`,
-        this.getAuthHeaders()
-      );
-      return response.data.data || null;
-    } catch (error: any) {
-      console.error('Failed to fetch hospital subscription:', error);
-      return null;
-    }
+      const res = await axios.get<ApiResponse<HospitalSubscription>>(`${this.baseURL}/${id}/subscription`, this.h());
+      return res.data.data || null;
+    } catch { return null; }
   }
 
-  /**
-   * Update hospital subscription
-   */
-  async updateHospitalSubscription(hospitalId: string, data: { plan_type: string; billing_cycle: string }): Promise<void> {
-    try {
-      await axios.put(
-        `${this.baseURL}/${hospitalId}/subscription/update/`,
-        data,
-        this.getAuthHeaders()
-      );
-    } catch (error: any) {
-      console.error('Failed to update hospital subscription:', error);
-      throw error;
-    }
+  async updateHospitalSubscription(id: string, data: { plan_type: string; billing_cycle: string }): Promise<void> {
+    await axios.put(`${this.baseURL}/${id}/subscription/update`, data, this.h());
   }
 
-  /**
-   * Get pending verification hospitals
-   */
+  async getHospitalDocuments(id: string): Promise<HospitalDocument[]> {
+    try {
+      const res = await axios.get<ApiResponse<HospitalDocument[]>>(`${this.baseURL}/${id}/documents`, this.h());
+      return res.data.data || [];
+    } catch { return []; }
+  }
+
   async getPendingVerifications(): Promise<Hospital[]> {
     try {
-      const response = await axios.get<ApiResponse<Hospital[]>>(
-        `${this.baseURL}/verification/pending/`,
-        this.getAuthHeaders()
-      );
-      return response.data.data || [];
-    } catch (error: any) {
-      console.error('Failed to fetch pending verifications:', error);
-      return [];
-    }
+      const res = await axios.get<ApiResponse<Hospital[]>>(`${this.baseURL}/verification/pending`, this.h());
+      return res.data.data || [];
+    } catch { return []; }
   }
 
-  /**
-   * Get hospital documents
-   */
-  async getHospitalDocuments(hospitalId: string): Promise<HospitalDocument[]> {
-    try {
-      const response = await axios.get<ApiResponse<HospitalDocument[]>>(
-        `${this.baseURL}/${hospitalId}/documents/`,
-        this.getAuthHeaders()
-      );
-      return response.data.data || [];
-    } catch (error: any) {
-      console.error('Failed to fetch hospital documents:', error);
-      return [];
-    }
+  async verifyHospital(id: string): Promise<void> {
+    await axios.post(`${this.baseURL}/${id}/verify`, {}, this.h());
   }
 
-  /**
-   * Verify hospital
-   */
-  async verifyHospital(hospitalId: string): Promise<void> {
-    try {
-      await axios.post(
-        `${this.baseURL}/${hospitalId}/verify/`,
-        {},
-        this.getAuthHeaders()
-      );
-    } catch (error: any) {
-      console.error('Failed to verify hospital:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reject hospital verification
-   */
-  async rejectHospital(hospitalId: string, reason: string): Promise<void> {
-    try {
-      await axios.post(
-        `${this.baseURL}/${hospitalId}/reject/`,
-        { reason },
-        this.getAuthHeaders()
-      );
-    } catch (error: any) {
-      console.error('Failed to reject hospital:', error);
-      throw error;
-    }
+  async rejectHospital(id: string, reason: string): Promise<void> {
+    await axios.post(`${this.baseURL}/${id}/reject`, { reason }, this.h());
   }
 }
 

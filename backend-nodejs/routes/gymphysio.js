@@ -51,23 +51,23 @@ router.get('/dashboard-stats', protect, async (req, res) => {
 
         // Get real counts from DB
         const activeServices = gymPhysio
-            ? await Service.countDocuments({ professional: gymPhysio._id, status: 'active' })
+            ? await Service.countDocuments({ gymPhysio: gymPhysio._id, status: 'active' })
             : 0;
 
         const totalServices = gymPhysio
-            ? await Service.countDocuments({ professional: gymPhysio._id })
+            ? await Service.countDocuments({ gymPhysio: gymPhysio._id })
             : 0;
 
         const upcomingAppointments = gymPhysio
             ? await Appointment.countDocuments({
-                professional: gymPhysio._id,
+                gymPhysio: gymPhysio._id,
                 status: { $in: ['scheduled', 'confirmed'] },
                 scheduledDate: { $gte: new Date() }
               })
             : 0;
 
         const completedAppointments = gymPhysio
-            ? await Appointment.countDocuments({ professional: gymPhysio._id, status: 'completed' })
+            ? await Appointment.countDocuments({ gymPhysio: gymPhysio._id, status: 'completed' })
             : 0;
 
         const totalBookings = gymPhysio ? (gymPhysio.totalBookings || completedAppointments) : 0;
@@ -267,13 +267,13 @@ router.get('/appointments', protect, async (req, res) => {
     try {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
         if (!gymPhysio) return res.json({ success: true, data: [] });
-        
-        const appointments = await Appointment.find({ professional: gymPhysio._id })
+
+        const appointments = await Appointment.find({ gymPhysio: gymPhysio._id })
             .populate({
                 path: 'client',
                 populate: {
                     path: 'user',
-                    select: 'firstName lastName email'
+                    select: 'firstName lastName email phone'
                 }
             })
             .populate('service')
@@ -284,32 +284,77 @@ router.get('/appointments', protect, async (req, res) => {
             date: apt.scheduledDate,
             time: apt.scheduledTime || '10:00',
             status: apt.status,
-            type: apt.consultationType || 'in-person',
+            type: apt.appointmentMode || 'in_person',
             patient: {
                 id: apt.client?._id,
-                name: apt.client?.user ? 
-                    `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim() : 
-                    'Client',
-                email: apt.client?.user?.email,
-                photo: null
+                name: apt.client?.user
+                    ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
+                    : 'Client',
+                email: apt.client?.user?.email || '',
+                phone: apt.client?.user?.phone || apt.client?.phone || '',
+                photo: null,
             },
             service: apt.service ? {
                 id: apt.service._id,
                 title: apt.service.title,
-                price: apt.service.price
+                price: apt.service.price,
             } : null,
             payment: {
-                amount: apt.service?.price || 0,
-                status: apt.paymentStatus || 'pending'
+                amount: apt.consultationFee || apt.service?.price || 0,
+                status: apt.paymentStatus || 'pending',
             },
-            reason: apt.reason,
-            notes: apt.notes
+            reason: apt.reasonForVisit || '',
+            notes: apt.clientNotes || '',
         }));
 
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error fetching appointments:', error);
         res.json({ success: true, data: [] });
+    }
+});
+
+router.put('/appointments/:id/confirm', protect, async (req, res) => {
+    try {
+        const apt = await Appointment.findByIdAndUpdate(
+            req.params.id,
+            { status: 'confirmed', professionalNotes: req.body.notes },
+            { new: true }
+        );
+        res.json({ success: true, data: apt, message: 'Appointment confirmed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/appointments/:id/cancel', protect, async (req, res) => {
+    try {
+        const apt = await Appointment.findByIdAndUpdate(
+            req.params.id,
+            { status: 'cancelled', cancellationReason: req.body.reason, cancelledBy: 'professional' },
+            { new: true }
+        );
+        res.json({ success: true, data: apt, message: 'Appointment cancelled' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/appointments/:id/complete', protect, async (req, res) => {
+    try {
+        const apt = await Appointment.findByIdAndUpdate(
+            req.params.id,
+            { status: 'completed', completedAt: new Date() },
+            { new: true }
+        );
+        // Update gym-physio stats
+        await GymPhysio.findOneAndUpdate(
+            { user: req.user._id },
+            { $inc: { completedBookings: 1 } }
+        );
+        res.json({ success: true, data: apt, message: 'Appointment completed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

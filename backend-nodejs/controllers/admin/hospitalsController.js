@@ -170,19 +170,66 @@ exports.getHospitalVacancies = async (req, res) => {
 };
 
 exports.toggleVacancyStatus = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', message: 'Vacancy status updated' });
+    try {
+        const Job = require('../../models/Job');
+        const { vacancyId } = req.params;
+        const { is_active } = req.body;
+        const job = await Job.findByIdAndUpdate(vacancyId, { status: is_active ? 'active' : 'closed' }, { new: true });
+        if (!job) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Vacancy not found' });
+        res.json({ statuscode: 0, status: 'success', message: 'Vacancy status updated', data: job });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };
 
 exports.getHospitalApplications = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: [] });
+    try {
+        const JobApplication = require('../../models/JobApplication');
+        const Job = require('../../models/Job');
+        const hospital = await Hospital.findById(req.params.id);
+        if (!hospital) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital not found' });
+
+        const jobs = await Job.find({ hospital: hospital._id }).select('_id');
+        const jobIds = jobs.map(j => j._id);
+        const applications = await JobApplication.find({ job: { $in: jobIds } })
+            .populate({ path: 'job', select: 'title department' })
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
+            .sort({ createdAt: -1 });
+
+        res.json({ statuscode: 0, status: 'success', data: applications });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };
 
 exports.getHospitalSubscription = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: null });
+    try {
+        const Subscription = require('../../models/Subscription');
+        const hospital = await Hospital.findById(req.params.id);
+        if (!hospital) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital not found' });
+
+        const subscription = await Subscription.findOne({ user: hospital.user }).sort({ createdAt: -1 });
+        res.json({ statuscode: 0, status: 'success', data: subscription || null });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };
 
 exports.updateHospitalSubscription = async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', message: 'Subscription updated' });
+    try {
+        const Subscription = require('../../models/Subscription');
+        const hospital = await Hospital.findById(req.params.id);
+        if (!hospital) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital not found' });
+
+        const subscription = await Subscription.findOneAndUpdate(
+            { user: hospital.user },
+            { $set: req.body },
+            { new: true, upsert: false }
+        );
+        res.json({ statuscode: 0, status: 'success', message: 'Subscription updated', data: subscription });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };
 
 exports.getPendingVerifications = async (req, res) => {
@@ -238,9 +285,15 @@ exports.verifyHospital = async (req, res) => {
 };
 
 exports.rejectHospital = async (req, res) => {
-    res.json({
-        statuscode: 0,
-        status: 'success',
-        message: 'Hospital verification rejected'
-    });
+    try {
+        const hospital = await Hospital.findById(req.params.id);
+        if (!hospital) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital not found' });
+
+        await Hospital.findByIdAndUpdate(req.params.id, { isVerified: false });
+        await User.findByIdAndUpdate(hospital.user, { verificationStatus: 'rejected', status: 'inactive' });
+
+        res.json({ statuscode: 0, status: 'success', message: 'Hospital verification rejected' });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 };

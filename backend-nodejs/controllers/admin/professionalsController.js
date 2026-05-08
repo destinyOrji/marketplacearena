@@ -392,11 +392,29 @@ exports.getProfessionalSchedules = async (req, res) => {
 // Get professional earnings
 exports.getProfessionalEarnings = async (req, res) => {
     try {
-        const appointments = await Appointment.find({ professional: req.params.id, status: 'completed' });
-        const totalEarnings = appointments.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
-        res.json({ statuscode: 0, status: 'success', data: { totalEarnings, appointments } });
+        const appointments = await Appointment.find({ professional: req.params.id, status: 'completed' })
+            .populate('service', 'title price')
+            .sort({ updatedAt: -1 });
+        const totalEarnings = appointments.reduce((sum, apt) => sum + (apt.consultationFee || apt.service?.price || 0), 0);
+        const platformFees = totalEarnings * 0.1;
+        res.json({
+            statuscode: 0, status: 'success',
+            data: {
+                totalEarnings,
+                platformFees,
+                netEarnings: totalEarnings - platformFees,
+                completedAppointments: appointments.length,
+                appointments: appointments.map(apt => ({
+                    id: apt._id,
+                    date: apt.scheduledDate,
+                    service: apt.service?.title || 'Consultation',
+                    amount: apt.consultationFee || apt.service?.price || 0,
+                    status: apt.paymentStatus
+                }))
+            }
+        });
     } catch (error) {
-        res.json({ statuscode: 0, status: 'success', data: { totalEarnings: 0, appointments: [] } });
+        res.json({ statuscode: 0, status: 'success', data: { totalEarnings: 0, platformFees: 0, netEarnings: 0, completedAppointments: 0, appointments: [] } });
     }
 };
 
@@ -435,25 +453,33 @@ exports.getPendingVerifications = async (req, res) => {
     }
 };
 
-// Get professional documents (placeholder)
+// Get professional documents
 exports.getProfessionalDocuments = async (req, res) => {
     try {
+        const professional = await Professional.findById(req.params.id);
+        if (!professional) {
+            return res.status(404).json({ statuscode: 1, status: 'error', message: 'Professional not found' });
+        }
+
+        // Build document list from stored fields
         const documents = [];
+        if (professional.licenseDocument) {
+            documents.push({ type: 'license', name: 'License Document', url: professional.licenseDocument });
+        }
+        if (professional.identityDocument) {
+            documents.push({ type: 'identity', name: 'Identity Document', url: professional.identityDocument });
+        }
+        if (professional.certifications && professional.certifications.length > 0) {
+            professional.certifications.forEach((cert, i) => {
+                if (cert.certificateUrl) {
+                    documents.push({ type: 'certification', name: cert.name || `Certification ${i + 1}`, url: cert.certificateUrl });
+                }
+            });
+        }
 
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            data: documents
-        });
-
+        res.json({ statuscode: 0, status: 'success', data: documents });
     } catch (error) {
-        console.error('Get professional documents error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to get professional documents',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 };
 
@@ -497,33 +523,21 @@ exports.verifyProfessional = async (req, res) => {
 exports.rejectProfessional = async (req, res) => {
     try {
         const { id } = req.params;
-        const { reason } = req.body;
 
         const professional = await Professional.findById(id);
         if (!professional) {
-            return res.status(404).json({
-                statuscode: 1,
-                status: 'error',
-                message: 'Professional not found'
-            });
+            return res.status(404).json({ statuscode: 1, status: 'error', message: 'Professional not found' });
         }
 
-        // In a full implementation, you might want to store rejection reason
-        // and send notification to the professional
-
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            message: 'Professional verification rejected'
+        await Professional.findByIdAndUpdate(id, { isVerified: false });
+        await User.findByIdAndUpdate(professional.user, {
+            verificationStatus: 'rejected',
+            status: 'inactive'
         });
 
+        res.json({ statuscode: 0, status: 'success', message: 'Professional verification rejected' });
     } catch (error) {
         console.error('Reject professional error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to reject professional',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: 'Failed to reject professional', error: error.message });
     }
 };

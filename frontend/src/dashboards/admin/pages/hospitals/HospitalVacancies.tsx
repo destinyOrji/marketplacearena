@@ -59,8 +59,8 @@ const HospitalVacancies: React.FC = () => {
     setActionLoading(vacancy._id || vacancy.id);
     try {
       await axios.patch(
-        `${API_BASE_URL}/hospitals/vacancies/${vacancy._id || vacancy.id}/status`,
-        { status: 'active' },
+        `${API_BASE_URL}/admin/hospitals/${vacancy.hospitalId}/vacancies/${vacancy._id || vacancy.id}`,
+        { is_active: true },
         getHeaders()
       );
       setVacancies(prev => prev.map(v =>
@@ -77,15 +77,15 @@ const HospitalVacancies: React.FC = () => {
     setActionLoading(vacancy._id || vacancy.id);
     try {
       await axios.patch(
-        `${API_BASE_URL}/hospitals/vacancies/${vacancy._id || vacancy.id}/status`,
-        { status: 'closed' },
+        `${API_BASE_URL}/admin/hospitals/${vacancy.hospitalId}/vacancies/${vacancy._id || vacancy.id}`,
+        { is_active: false },
         getHeaders()
       );
       setVacancies(prev => prev.map(v =>
         (v._id || v.id) === (vacancy._id || vacancy.id) ? { ...v, status: 'closed' } : v
       ));
     } catch (error) {
-      alert('Failed to reject vacancy');
+      alert('Failed to close vacancy');
     } finally {
       setActionLoading(null);
     }
