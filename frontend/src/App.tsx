@@ -9,6 +9,7 @@ import ContactPage from './pages/ContactPage';
 import ProfessionalPage from './pages/ProfessionalPage';
 import HospitalPage from './pages/HospitalPage';
 import AmbulancePage from './pages/AmbulancePage';
+import GymPhysioPage from './pages/GymPhysioPage';
 import OurTeamPage from './pages/OurTeamPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
@@ -92,6 +93,7 @@ function App() {
             <Route path="/professionals" element={<ProfessionalPage />} />
             <Route path="/hospitals" element={<HospitalPage />} />
             <Route path="/ambulance" element={<AmbulancePage />} />
+            <Route path="/gym-physio" element={<GymPhysioPage />} />
             <Route path="/our-team" element={<OurTeamPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
