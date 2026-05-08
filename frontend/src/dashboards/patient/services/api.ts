@@ -95,23 +95,23 @@ export const paymentsApi = {
 // Feedback API
 export const feedbackApi = {
   getFeedback: () =>
-    apiClient.get<ApiResponse<any[]>>('/feedback'),
+    apiClient.get<ApiResponse<any[]>>('/client/feedback'),
   submitFeedback: (data: FeedbackSubmission) =>
-    apiClient.post<ApiResponse<any>>('/feedback', data),
+    apiClient.post<ApiResponse<any>>('/client/feedback', data),
   updateFeedback: (id: string, data: Partial<FeedbackSubmission>) =>
-    apiClient.put<ApiResponse<any>>(`/feedback/${id}`, data),
+    apiClient.put<ApiResponse<any>>(`/client/feedback/${id}`, data),
   deleteFeedback: (id: string) =>
-    apiClient.delete<ApiResponse<null>>(`/feedback/${id}`),
+    apiClient.delete<ApiResponse<null>>(`/client/feedback/${id}`),
 };
 
 // Medical Records API
 export const medicalRecordsApi = {
   getRecords: (params?: any) =>
-    apiClient.get<ApiResponse<PaginatedResponse<MedicalRecord>>>('/medical-records', { params }),
+    apiClient.get<ApiResponse<PaginatedResponse<MedicalRecord>>>('/client/medical-records', { params }),
   getRecordById: (id: string) =>
-    apiClient.get<ApiResponse<MedicalRecord>>(`/medical-records/${id}`),
+    apiClient.get<ApiResponse<MedicalRecord>>(`/client/medical-records/${id}`),
   downloadRecord: (id: string) =>
-    apiClient.get<Blob>(`/medical-records/${id}/download`, {
+    apiClient.get<Blob>(`/client/medical-records/${id}/download`, {
       responseType: 'blob',
     }),
 };

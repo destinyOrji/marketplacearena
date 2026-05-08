@@ -849,4 +849,22 @@ router.put('/profile/password', protect, async (req, res) => {
     }
 });
 
+// Change password
+router.post('/change-password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Both passwords are required' });
+        }
+        const user = await User.findById(req.user._id);
+        const isValid = await user.comparePassword(currentPassword);
+        if (!isValid) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+        user.password = newPassword;
+        await user.save();
+        res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;

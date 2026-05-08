@@ -42,10 +42,6 @@ const sidebarMenu: SidebarMenuItem[] = [
     icon: FiUsers,
     children: [
       { id: 'all-patients', label: 'All Patients', icon: FiUsers, path: '/admin/patients' },
-      { id: 'patient-profiles', label: 'Patient Profiles', icon: FiUsers, path: '/admin/patients/profiles' },
-      { id: 'appointments', label: 'Appointments', icon: FiActivity, path: '/admin/patients/appointments' },
-      { id: 'medical-records', label: 'Medical Records', icon: FiActivity, path: '/admin/patients/records' },
-      { id: 'emergency-bookings', label: 'Emergency Bookings', icon: FiTruck, path: '/admin/patients/emergencies' }
     ]
   },
   {
@@ -54,11 +50,7 @@ const sidebarMenu: SidebarMenuItem[] = [
     icon: FiUserCheck,
     children: [
       { id: 'all-professionals', label: 'All Professionals', icon: FiUserCheck, path: '/admin/professionals' },
-      { id: 'professional-profiles', label: 'Profiles', icon: FiUserCheck, path: '/admin/professionals/profiles' },
-      { id: 'services', label: 'Services', icon: FiActivity, path: '/admin/services' },
-      { id: 'applications', label: 'Job Applications', icon: FiActivity, path: '/admin/professionals/applications' },
-      { id: 'schedules', label: 'Schedules', icon: FiActivity, path: '/admin/professionals/schedules' },
-      { id: 'earnings', label: 'Earnings', icon: FiActivity, path: '/admin/professionals/earnings' },
+      { id: 'services', label: 'All Services', icon: FiActivity, path: '/admin/services' },
       { id: 'verification', label: 'Verification', icon: FiActivity, path: '/admin/professionals/verification' }
     ]
   },
@@ -68,10 +60,7 @@ const sidebarMenu: SidebarMenuItem[] = [
     icon: FiActivity,
     children: [
       { id: 'all-hospitals', label: 'All Hospitals', icon: FiActivity, path: '/admin/hospitals' },
-      { id: 'hospital-profiles', label: 'Profiles', icon: FiActivity, path: '/admin/hospitals/profiles' },
       { id: 'vacancies', label: 'Job Vacancies', icon: FiActivity, path: '/admin/hospitals/vacancies' },
-      { id: 'hospital-applications', label: 'Applications', icon: FiActivity, path: '/admin/hospitals/applications' },
-      { id: 'subscriptions', label: 'Subscriptions', icon: FiActivity, path: '/admin/hospitals/subscriptions' },
       { id: 'hospital-verification', label: 'Verification', icon: FiActivity, path: '/admin/hospitals/verification' }
     ]
   },
@@ -81,9 +70,7 @@ const sidebarMenu: SidebarMenuItem[] = [
     icon: FiTruck,
     children: [
       { id: 'all-providers', label: 'All Providers', icon: FiTruck, path: '/admin/ambulances' },
-      { id: 'provider-profiles', label: 'Profiles', icon: FiTruck, path: '/admin/ambulances/profiles' },
       { id: 'ambulance-bookings', label: 'Emergency Bookings', icon: FiTruck, path: '/admin/ambulances/bookings' },
-      { id: 'fleet', label: 'Fleet Management', icon: FiTruck, path: '/admin/ambulances/fleet' },
       { id: 'availability', label: 'Availability', icon: FiTruck, path: '/admin/ambulances/availability' },
       { id: 'ambulance-verification', label: 'Verification', icon: FiTruck, path: '/admin/ambulances/verification' }
     ]

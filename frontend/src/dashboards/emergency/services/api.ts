@@ -295,16 +295,21 @@ export const analyticsApi = {
 
 export const notificationsApi = {
   getNotifications: async (): Promise<Notification[]> => {
-    const response = await apiClient.get('/ambulance/notifications');
-    return response.data;
+    try {
+      const response = await apiClient.get('/users/notifications');
+      const payload = response.data?.data ?? response.data;
+      return Array.isArray(payload) ? payload : [];
+    } catch {
+      return [];
+    }
   },
 
   markAsRead: async (id: string): Promise<void> => {
-    await apiClient.put(`/ambulance/notifications/${id}/read`);
+    await apiClient.put(`/users/notifications/${id}/read`);
   },
 
   markAllAsRead: async (): Promise<void> => {
-    await apiClient.put('/ambulance/notifications/read-all');
+    await apiClient.put('/users/notifications/read-all');
   },
 };
 
