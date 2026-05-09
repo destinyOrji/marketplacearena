@@ -22,7 +22,7 @@ const DashboardLayout: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-semibold text-orange-600">Gym & Physio</span>
+          <span className="font-semibold text-blue-600">Gym & Physio</span>
         </div>
 
         {/* Page content - no extra top padding on desktop */}
@@ -37,3 +37,4 @@ const DashboardLayout: React.FC = () => {
 };
 
 export default DashboardLayout;
+

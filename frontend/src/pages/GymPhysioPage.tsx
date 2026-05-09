@@ -10,7 +10,7 @@ function GymPhysioPage() {
       <main className="flex-1">
 
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-green-900 to-green-700 text-white">
+        <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Left — Text */}
@@ -23,7 +23,7 @@ function GymPhysioPage() {
                 </p>
                 <a
                   href="/register/gym-physio"
-                  className="inline-flex items-center bg-white text-green-900 hover:bg-gray-100 font-semibold px-8 py-4 rounded-lg transition-colors duration-200 shadow-lg"
+                  className="inline-flex items-center bg-white text-blue-900 hover:bg-gray-100 font-semibold px-8 py-4 rounded-lg transition-colors duration-200 shadow-lg"
                 >
                   Get started for free
                   <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,7 +241,7 @@ function GymPhysioPage() {
         </div>
 
         {/* CTA Section */}
-        <div className="bg-gradient-to-r from-green-900 to-green-700 text-white py-16 sm:py-20">
+        <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white py-16 sm:py-20">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Ready to Grow Your Fitness Business?
@@ -251,7 +251,7 @@ function GymPhysioPage() {
             </p>
             <a
               href="/register/gym-physio"
-              className="inline-flex items-center bg-white text-green-900 hover:bg-gray-100 font-semibold px-8 py-4 rounded-lg transition-colors duration-200 shadow-lg"
+              className="inline-flex items-center bg-white text-blue-900 hover:bg-gray-100 font-semibold px-8 py-4 rounded-lg transition-colors duration-200 shadow-lg"
             >
               Join as Gym / Physio
               <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

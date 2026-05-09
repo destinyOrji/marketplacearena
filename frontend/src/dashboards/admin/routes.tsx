@@ -51,6 +51,9 @@ const AmbulanceVerificationPage = lazy(() => import('./pages/ambulances/Ambulanc
 const AllGymPhysioPage = lazy(() => import('./pages/gym-physio/AllGymPhysio'));
 const GymPhysioDetailPage = lazy(() => import('./pages/gym-physio/GymPhysioDetail'));
 const GymPhysioVerificationPage = lazy(() => import('./pages/gym-physio/GymPhysioVerification'));
+const GymPhysioServicesPage = lazy(() => import('./pages/gym-physio/GymPhysioServices'));
+const GymPhysioAppointmentsPage = lazy(() => import('./pages/gym-physio/GymPhysioAppointments'));
+const GymPhysioEarningsPage = lazy(() => import('./pages/gym-physio/GymPhysioEarnings'));
 
 // Settings pages
 const SettingsPage = lazy(() => import('./pages/settings/Settings'));
@@ -60,6 +63,9 @@ const SystemSettingsPage = lazy(() => import('./pages/settings/SystemSettings'))
 const PaymentSettingsPage = lazy(() => import('./pages/settings/PaymentSettings'));
 const EmailTemplatesPage = lazy(() => import('./pages/settings/EmailTemplates'));
 const AuditLogsPage = lazy(() => import('./pages/settings/AuditLogs'));
+
+// Pending approvals
+const PendingApprovalsPage = lazy(() => import('./pages/PendingApprovals'));
 
 const AdminRoutes: React.FC = () => {
   return (
@@ -76,6 +82,7 @@ const AdminRoutes: React.FC = () => {
               <DashboardLayout>
                 <Routes>
                   <Route path="/overview" element={<OverviewPage />} />
+                  <Route path="/pending-approvals" element={<PendingApprovalsPage />} />
                   <Route path="/" element={<Navigate to="/admin/overview" replace />} />
                   
                   {/* Patient Management Routes */}
@@ -123,6 +130,9 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/gym-physio" element={<AllGymPhysioPage />} />
                   <Route path="/gym-physio/verification" element={<GymPhysioVerificationPage />} />
                   <Route path="/gym-physio/:id" element={<GymPhysioDetailPage />} />
+                  <Route path="/gym-physio/:id/services" element={<GymPhysioServicesPage />} />
+                  <Route path="/gym-physio/:id/appointments" element={<GymPhysioAppointmentsPage />} />
+                  <Route path="/gym-physio/:id/earnings" element={<GymPhysioEarningsPage />} />
                   
                   {/* Settings Routes */}
                   <Route path="/settings" element={<SettingsPage />} />

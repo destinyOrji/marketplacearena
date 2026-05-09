@@ -13,7 +13,8 @@ import {
   FiSettings,
   FiChevronDown,
   FiChevronRight,
-  FiX
+  FiX,
+  FiAlertCircle
 } from 'react-icons/fi';
 
 export interface SidebarMenuItem {
@@ -35,6 +36,12 @@ const sidebarMenu: SidebarMenuItem[] = [
     label: 'Overview',
     icon: FiHome,
     path: '/admin/overview'
+  },
+  {
+    id: 'pending-approvals',
+    label: 'Pending Approvals',
+    icon: FiAlertCircle,
+    path: '/admin/pending-approvals'
   },
   {
     id: 'patients',

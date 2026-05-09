@@ -315,9 +315,9 @@ const BookConsultation: React.FC = () => {
                           {provider.rating} ({provider.reviewCount})
                         </span>
                       </div>
-                      {provider.price && (
+                      {provider.price && provider.price > 0 && (
                         <p className="text-center text-blue-600 font-semibold mt-2">
-                          ${provider.price}
+                          ₦{provider.price.toLocaleString()}
                         </p>
                       )}
                     </div>
@@ -582,14 +582,15 @@ const BookConsultation: React.FC = () => {
                 )}
 
                 {/* Price */}
-                {selectedProvider.price && (
+                {selectedProvider.price && selectedProvider.price > 0 && (
                   <div className="bg-blue-50 rounded-lg p-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-medium">Total Amount</span>
                       <span className="text-2xl font-bold text-blue-600">
-                        ${selectedProvider.price}
+                        ₦{(selectedProvider.price).toLocaleString()}
                       </span>
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">Payment will be processed via Paystack after booking</p>
                   </div>
                 )}
               </div>

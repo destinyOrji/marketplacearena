@@ -71,44 +71,66 @@ router.get('/services', adminAuth, async (req, res) => {
         const services = await Service.find(query)
             .populate({
                 path: 'professional',
-                populate: {
-                    path: 'user',
-                    select: 'firstName lastName email'
-                }
+                populate: { path: 'user', select: 'firstName lastName email' }
+            })
+            .populate({
+                path: 'gymPhysio',
+                populate: { path: 'user', select: 'firstName lastName email' }
             })
             .skip(skip)
             .limit(parseInt(page_size))
             .sort({ createdAt: -1 });
 
         const total = await Service.countDocuments(query);
+        const pendingCount = await Service.countDocuments({ status: 'pending' });
 
-        const data = services.map(service => ({
-            id: service._id,
-            title: service.title,
-            description: service.description,
-            category: service.category,
-            price: service.price,
-            duration: service.duration,
-            status: service.status,
-            images: service.images,
-            rating: service.rating,
-            reviewCount: service.reviewCount,
-            bookingCount: service.bookingCount,
-            professional: {
-                id: service.professional._id,
-                name: service.professional.user ? 
-                    `${service.professional.user.firstName} ${service.professional.user.lastName}`.trim() : 
-                    'Professional',
-                email: service.professional.user?.email
-            },
-            createdAt: service.createdAt,
-            updatedAt: service.updatedAt
-        }));
+        const data = services.map(service => {
+            // Determine provider (professional or gym-physio)
+            let provider = null;
+            if (service.professional) {
+                provider = {
+                    id: service.professional._id,
+                    name: service.professional.user
+                        ? `${service.professional.user.firstName} ${service.professional.user.lastName}`.trim()
+                        : 'Professional',
+                    email: service.professional.user?.email,
+                    type: 'professional'
+                };
+            } else if (service.gymPhysio) {
+                provider = {
+                    id: service.gymPhysio._id,
+                    name: service.gymPhysio.businessName || (service.gymPhysio.user
+                        ? `${service.gymPhysio.user.firstName} ${service.gymPhysio.user.lastName}`.trim()
+                        : 'Gym/Physio'),
+                    email: service.gymPhysio.user?.email,
+                    type: 'gym-physio'
+                };
+            }
+
+            return {
+                id: service._id,
+                title: service.title,
+                description: service.description,
+                category: service.category,
+                price: service.price,
+                duration: service.duration,
+                status: service.status,
+                approvalNote: service.approvalNote || '',
+                images: service.images,
+                rating: service.rating,
+                reviewCount: service.reviewCount,
+                bookingCount: service.bookingCount,
+                professional: provider,  // keep field name for backward compat
+                createdAt: service.createdAt,
+                updatedAt: service.updatedAt
+            };
+        });
 
         res.json({
             statuscode: 0,
             status: 'success',
             data,
+            pendingCount,
             pagination: {
                 page: parseInt(page),
                 page_size: parseInt(page_size),
@@ -118,15 +140,42 @@ router.get('/services', adminAuth, async (req, res) => {
         });
     } catch (error) {
         console.error('Get all services error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to get services',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: 'Failed to get services', error: error.message });
     }
 });
 
+// Approve a service
+router.post('/services/:id/approve', adminAuth, async (req, res) => {
+    try {
+        const Service = require('../models/Service');
+        const service = await Service.findByIdAndUpdate(
+            req.params.id,
+            { status: 'active', approvedBy: req.user._id, approvedAt: new Date(), approvalNote: '' },
+            { new: true }
+        );
+        if (!service) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Service not found' });
+        res.json({ statuscode: 0, status: 'success', message: 'Service approved and is now live', data: service });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+});
+
+// Reject a service
+router.post('/services/:id/reject', adminAuth, async (req, res) => {
+    try {
+        const Service = require('../models/Service');
+        const { reason } = req.body;
+        const service = await Service.findByIdAndUpdate(
+            req.params.id,
+            { status: 'inactive', approvalNote: reason || 'Rejected by admin' },
+            { new: true }
+        );
+        if (!service) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Service not found' });
+        res.json({ statuscode: 0, status: 'success', message: 'Service rejected', data: service });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+});
 // Hospitals Management Routes
 router.get('/hospitals', adminAuth, adminHospitalsController.getHospitals);
 // Static routes MUST come before /:id
@@ -166,5 +215,9 @@ router.put('/gym-physio/:id/update', adminAuth, adminGymPhysioController.updateG
 router.delete('/gym-physio/:id/delete', adminAuth, adminGymPhysioController.deleteGymPhysio);
 router.post('/gym-physio/:id/verify', adminAuth, adminGymPhysioController.verifyGymPhysio);
 router.post('/gym-physio/:id/reject', adminAuth, adminGymPhysioController.rejectGymPhysio);
+router.get('/gym-physio/:id/services', adminAuth, adminGymPhysioController.getGymPhysioServices);
+router.patch('/gym-physio/:id/services/:serviceId', adminAuth, adminGymPhysioController.toggleGymPhysioServiceStatus);
+router.get('/gym-physio/:id/appointments', adminAuth, adminGymPhysioController.getGymPhysioAppointments);
+router.get('/gym-physio/:id/earnings', adminAuth, adminGymPhysioController.getGymPhysioEarnings);
 
 module.exports = router;

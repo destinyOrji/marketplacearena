@@ -178,6 +178,30 @@ const GymPhysioDetail: React.FC = () => {
         {/* Stats sidebar */}
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="space-y-2">
+              <button
+                onClick={() => navigate(`/admin/gym-physio/${id}/services`)}
+                className="w-full text-left px-4 py-3 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium text-sm transition-colors"
+              >
+                🏋️ View Services
+              </button>
+              <button
+                onClick={() => navigate(`/admin/gym-physio/${id}/appointments`)}
+                className="w-full text-left px-4 py-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-sm transition-colors"
+              >
+                📅 View Appointments
+              </button>
+              <button
+                onClick={() => navigate(`/admin/gym-physio/${id}/earnings`)}
+                className="w-full text-left px-4 py-3 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 font-medium text-sm transition-colors"
+              >
+                💰 View Earnings
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Statistics</h2>
             <div className="space-y-4">
               {[

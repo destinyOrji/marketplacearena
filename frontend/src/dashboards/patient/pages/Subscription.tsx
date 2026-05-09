@@ -59,6 +59,17 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({
 }) => {
   const initializePayment = usePaystackPayment(config);
 
+  // Auto-open Paystack popup as soon as this component mounts
+  React.useEffect(() => {
+    if (!disabled) {
+      initializePayment({
+        onSuccess: (ref: any) => onSuccess(ref.reference || ref.trxref),
+        onClose,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <button
       disabled={disabled}

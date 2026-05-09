@@ -39,7 +39,18 @@ const serviceSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['active', 'inactive', 'pending'],
-        default: 'active'
+        default: 'pending'   // requires admin approval before going live
+    },
+    approvalNote: {
+        type: String,        // admin rejection reason
+        default: ''
+    },
+    approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    approvedAt: {
+        type: Date
     },
     images: [{ type: String }],
     tags: [{ type: String }],

@@ -40,6 +40,17 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({
     },
   });
 
+  // Auto-open Paystack popup as soon as this component mounts with valid data
+  React.useEffect(() => {
+    if (email && reference && !loading) {
+      initializePayment({
+        onSuccess: (res: any) => onSuccess(res.reference || res.trxref),
+        onClose,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <button
       type="button"

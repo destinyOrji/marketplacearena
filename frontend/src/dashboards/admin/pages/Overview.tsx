@@ -83,6 +83,7 @@ const Overview: React.FC = () => {
   const todayAppointments = s.appointments?.today ?? 0;
   const pendingVerifications = s.pendingVerifications?.total ?? s.pending_verifications ?? 0;
   const recentRegistrations = s.recentRegistrations ?? 0;
+  const pendingServices = s.pendingServices ?? 0;
 
   return (
     <div>
@@ -91,6 +92,33 @@ const Overview: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-900">Welcome back, {adminName} 👋</h1>
         <p className="text-gray-600 mt-1">Here's what's happening with your platform today.</p>
       </div>
+
+      {/* Pending approvals alert */}
+      {(pendingVerifications > 0 || pendingServices > 0) && (
+        <div className="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg p-4 flex flex-wrap items-center gap-4">
+          <FiAlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-yellow-800 font-medium">Action required</p>
+            <p className="text-yellow-700 text-sm mt-0.5">
+              {pendingVerifications > 0 && `${pendingVerifications} provider${pendingVerifications > 1 ? 's' : ''} awaiting verification`}
+              {pendingVerifications > 0 && pendingServices > 0 && ' · '}
+              {pendingServices > 0 && `${pendingServices} service${pendingServices > 1 ? 's' : ''} awaiting approval`}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {pendingVerifications > 0 && (
+              <a href="/admin/professionals/verification" className="px-3 py-1.5 bg-yellow-600 text-white text-xs rounded-lg hover:bg-yellow-700">
+                Review Providers
+              </a>
+            )}
+            {pendingServices > 0 && (
+              <a href="/admin/services" className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700">
+                Review Services
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Row 1 - User Counts */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -105,6 +133,7 @@ const Overview: React.FC = () => {
         <StatsCard title="Total Appointments" value={totalAppointments} icon={FiCalendar} iconBgColor="bg-indigo-100" iconColor="text-indigo-600" />
         <StatsCard title="Today's Appointments" value={todayAppointments} icon={FiCalendar} iconBgColor="bg-cyan-100" iconColor="text-cyan-600" />
         <StatsCard title="Pending Verifications" value={pendingVerifications} icon={FiCheckCircle} iconBgColor="bg-yellow-100" iconColor="text-yellow-600" />
+        <StatsCard title="Pending Services" value={pendingServices} icon={FiAlertCircle} iconBgColor="bg-orange-100" iconColor="text-orange-600" />
         <StatsCard title="New This Month" value={recentRegistrations} icon={FiUsers} iconBgColor="bg-pink-100" iconColor="text-pink-600" />
       </div>
 

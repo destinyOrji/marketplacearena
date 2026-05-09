@@ -13,7 +13,7 @@ exports.getStats = async (req, res) => {
             totalUsers, totalPatients, totalProfessionals,
             totalHospitals, totalAmbulances, totalGymPhysio,
             pendingProfessionals, pendingHospitals, pendingAmbulances, pendingGymPhysio,
-            totalAppointments, todayAppointments, recentRegistrations
+            totalAppointments, todayAppointments, recentRegistrations, pendingServices
         ] = await Promise.all([
             User.countDocuments(),
             User.countDocuments({ role: 'client' }),
@@ -32,7 +32,8 @@ exports.getStats = async (req, res) => {
                     $lt: new Date(new Date().setHours(23, 59, 59, 999))
                 }
             }),
-            User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } })
+            User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }),
+            require('../../models/Service').countDocuments({ status: 'pending' })
         ]);
 
         res.json({
@@ -52,6 +53,7 @@ exports.getStats = async (req, res) => {
                     gymPhysio: pendingGymPhysio,
                     total: pendingProfessionals + pendingHospitals + pendingAmbulances + pendingGymPhysio
                 },
+                pendingServices,
                 appointments: {
                     total: totalAppointments,
                     today: todayAppointments

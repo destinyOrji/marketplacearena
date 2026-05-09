@@ -31,8 +31,8 @@ app.use(helmet({
 // Rate limiting to prevent brute force attacks
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.',
+    max: 200, // Increased limit
+    message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
 });
@@ -43,8 +43,8 @@ app.use('/api/', limiter);
 // Stricter rate limit for auth routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 attempts per windowMs
-    message: 'Too many login attempts, please try again after 15 minutes.',
+    max: 50,
+    message: { success: false, message: 'Too many login attempts, please try again after 15 minutes.' },
     skipSuccessfulRequests: true,
 });
 

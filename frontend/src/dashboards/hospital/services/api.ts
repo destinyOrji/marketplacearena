@@ -37,6 +37,17 @@ class HospitalApiService {
       }
       return config;
     });
+
+    // Handle non-JSON error responses (e.g. rate limiter plain text)
+    this.api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && typeof error.response.data === 'string') {
+          error.response.data = { message: error.response.data };
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   // Hospital Profile
