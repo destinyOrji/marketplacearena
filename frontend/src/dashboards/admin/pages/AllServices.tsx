@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheckCircle, FiXCircle, FiToggleLeft, FiToggleRight, FiExternalLink } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiEye } from 'react-icons/fi';
 import DataTable, { Column } from '../components/DataTable';
 import { authService } from '../services/authService';
 import axios from 'axios';
@@ -131,17 +131,17 @@ const AllServices: React.FC = () => {
           onClick={() => {
             const path = s.professional?.type === 'gym-physio'
               ? `/admin/gym-physio/${s.professional.id}`
-              : `/admin/professionals/${s.professional.id}`;
+              : `/admin/professionals/${s.professional?.id}`;
             navigate(path);
           }}
           className="text-left group"
         >
           <p className="text-sm font-medium text-blue-600 group-hover:underline flex items-center gap-1">
-            {s.professional.name} <FiExternalLink className="h-3 w-3" />
+            {s.professional?.name} <FiEye className="h-3 w-3" />
           </p>
-          <p className="text-xs text-gray-400">{s.professional.email}</p>
-          <span className={`text-xs px-1.5 py-0.5 rounded-full ${s.professional.type === 'gym-physio' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-            {s.professional.type === 'gym-physio' ? 'Gym/Physio' : 'Professional'}
+          <p className="text-xs text-gray-400">{s.professional?.email}</p>
+          <span className={`text-xs px-1.5 py-0.5 rounded-full ${s.professional?.type === 'gym-physio' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+            {s.professional?.type === 'gym-physio' ? 'Gym/Physio' : 'Professional'}
           </span>
         </button>
       ) : <span className="text-gray-400 text-sm">—</span>,
@@ -215,8 +215,8 @@ const AllServices: React.FC = () => {
                 }`}
               >
                 {s.status === 'active'
-                  ? <><FiToggleRight className="h-4 w-4" /> Deactivate</>
-                  : <><FiToggleLeft className="h-4 w-4" /> Activate</>
+                  ? <><span className="text-xs">⏸</span> Deactivate</>
+                  : <><span className="text-xs">▶</span> Activate</>
                 }
               </button>
             )}

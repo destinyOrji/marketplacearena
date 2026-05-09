@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiChevronLeft, FiToggleLeft, FiToggleRight } from 'react-icons/fi';
+import { FiChevronLeft, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import axios from 'axios';
 
@@ -125,7 +125,7 @@ const GymPhysioServices: React.FC = () => {
                         disabled={actionLoading === sid}
                         className={`flex items-center gap-1 text-sm font-medium ${isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'} disabled:opacity-50`}
                       >
-                        {isActive ? <FiToggleRight className="h-5 w-5" /> : <FiToggleLeft className="h-5 w-5" />}
+                        {isActive ? <FiXCircle className="h-5 w-5" /> : <FiCheckCircle className="h-5 w-5" />}
                         {actionLoading === sid ? '...' : isActive ? 'Deactivate' : 'Activate'}
                       </button>
                     </td>
