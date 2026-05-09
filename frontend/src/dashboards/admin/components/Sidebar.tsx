@@ -94,7 +94,19 @@ const sidebarMenu: SidebarMenuItem[] = [
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+
+  // Auto-expand the section that contains the current path
+  const getInitialExpanded = () => {
+    const set = new Set<string>();
+    sidebarMenu.forEach(item => {
+      if (item.children?.some(child => child.path && location.pathname.startsWith(child.path))) {
+        set.add(item.id);
+      }
+    });
+    return set;
+  };
+
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(getInitialExpanded);
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev => {
