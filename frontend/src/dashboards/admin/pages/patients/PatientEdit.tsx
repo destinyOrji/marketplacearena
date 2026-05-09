@@ -35,13 +35,15 @@ const PatientEdit: React.FC = () => {
       setLoading(true);
       const data = await patientService.getPatientById(patientId!);
       setFormData({
-        first_name: data.first_name,
-        last_name: data.last_name,
-        phone: data.phone || '',
-        address: data.address || '',
-        city: data.city || '',
-        state: data.state || '',
-        is_active: data.is_active
+        first_name: (data as any).firstName || (data as any).first_name || '',
+        last_name: (data as any).lastName || (data as any).last_name || '',
+        phone: (data as any).phone || '',
+        address: typeof (data as any).address === 'object'
+          ? (data as any).address?.street || ''
+          : (data as any).address || '',
+        city: (data as any).address?.city || (data as any).city || '',
+        state: (data as any).address?.state || (data as any).state || '',
+        is_active: (data as any).status === 'active' || (data as any).is_active !== false,
       });
     } catch (error) {
       console.error('Failed to fetch patient details:', error);

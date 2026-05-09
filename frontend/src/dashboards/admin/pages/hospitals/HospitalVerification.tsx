@@ -128,25 +128,25 @@ const HospitalVerification: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {hospital.hospital_name}
+                      {(hospital as any).hospitalName || (hospital as any).hospital_name || 'Hospital'}
                     </h3>
-                    <p className="text-sm text-gray-600 mb-2">{hospital.facility_type}</p>
+                    <p className="text-sm text-gray-600 mb-2">{(hospital as any).hospitalType || (hospital as any).facility_type || ''}</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                      <div><span className="font-medium">Email:</span> {(hospital as any).email || ''}</div>
+                      <div><span className="font-medium">Phone:</span> {(hospital as any).phone || ''}</div>
                       <div>
-                        <span className="font-medium">Email:</span> {hospital.email}
+                        <span className="font-medium">Location:</span>{' '}
+                        {[(hospital as any).address?.city, (hospital as any).address?.state].filter(Boolean).join(', ') || '—'}
                       </div>
                       <div>
-                        <span className="font-medium">Phone:</span> {hospital.phone}
-                      </div>
-                      <div>
-                        <span className="font-medium">Location:</span> {hospital.city}, {hospital.state}
-                      </div>
-                      <div>
-                        <span className="font-medium">Registration:</span> {hospital.registration_number}
+                        <span className="font-medium">Registration:</span>{' '}
+                        {(hospital as any).registrationNumber || (hospital as any).registration_number || '—'}
                       </div>
                       <div className="col-span-2">
                         <span className="font-medium">Registered:</span>{' '}
-                        {new Date(hospital.created_at).toLocaleDateString()}
+                        {(hospital as any).createdAt || (hospital as any).created_at
+                          ? new Date((hospital as any).createdAt || (hospital as any).created_at).toLocaleDateString()
+                          : '—'}
                       </div>
                     </div>
                   </div>
@@ -200,7 +200,7 @@ const HospitalVerification: React.FC = () => {
           setSelectedHospital(null);
           setDocuments([]);
         }}
-        title={`Documents - ${selectedHospital?.hospital_name}`}
+        title={`Documents - ${(selectedHospital as any)?.hospitalName || (selectedHospital as any)?.hospital_name || 'Hospital'}`}
       >
         <div className="space-y-4">
           {documents.length === 0 ? (
@@ -270,7 +270,7 @@ const HospitalVerification: React.FC = () => {
         <div className="space-y-4">
           <p className="text-gray-700">
             Are you sure you want to verify hospital{' '}
-            <strong>{selectedHospital?.hospital_name}</strong>? This will grant them full access to
+            <strong>{(selectedHospital as any)?.hospitalName || (selectedHospital as any)?.hospital_name}</strong>? This will grant them full access to
             the platform and allow them to post job vacancies.
           </p>
           <div className="flex justify-end space-x-3">
@@ -302,7 +302,7 @@ const HospitalVerification: React.FC = () => {
         <div className="space-y-4">
           <p className="text-gray-700">
             Please provide a reason for rejecting hospital{' '}
-            <strong>{selectedHospital?.hospital_name}</strong>. This will be sent to the hospital
+            <strong>{(selectedHospital as any)?.hospitalName || (selectedHospital as any)?.hospital_name}</strong>. This will be sent to the hospital
             administrator.
           </p>
           <textarea

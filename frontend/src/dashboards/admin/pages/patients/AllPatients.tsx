@@ -46,7 +46,7 @@ const AllPatients: React.FC = () => {
         currentPage: response.pagination.page,
         totalPages: response.pagination.total_pages,
         pageSize: response.pagination.page_size,
-        totalItems: response.pagination.total_count
+        totalItems: response.pagination.total || response.pagination.total_count || 0
       });
     } catch (error) {
       console.error('Failed to fetch patients:', error);
@@ -97,10 +97,10 @@ const AllPatients: React.FC = () => {
       sortable: true
     },
     {
-      key: 'first_name',
+      key: 'firstName' as any,
       label: 'Name',
       sortable: true,
-      render: (patient) => `${patient.first_name} ${patient.last_name}`
+      render: (patient: any) => `${patient.firstName || patient.first_name || ''} ${patient.lastName || patient.last_name || ''}`
     },
     {
       key: 'email',
@@ -113,26 +113,26 @@ const AllPatients: React.FC = () => {
       sortable: false
     },
     {
-      key: 'created_at',
+      key: 'createdAt' as any,
       label: 'Registration Date',
       sortable: true,
-      render: (patient) => new Date(patient.created_at).toLocaleDateString()
+      render: (patient: any) => {
+        const d = patient.createdAt || patient.created_at;
+        return d ? new Date(d).toLocaleDateString() : '—';
+      }
     },
     {
-      key: 'is_active',
+      key: 'status' as any,
       label: 'Status',
       sortable: true,
-      render: (patient) => (
-        <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            patient.is_active
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
-          {patient.is_active ? 'Active' : 'Inactive'}
-        </span>
-      )
+      render: (patient: any) => {
+        const active = patient.status === 'active' || patient.is_active !== false;
+        return (
+          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {active ? 'Active' : 'Inactive'}
+          </span>
+        );
+      }
     }
   ];
 

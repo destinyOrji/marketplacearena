@@ -31,72 +31,47 @@ interface SidebarProps {
 }
 
 const sidebarMenu: SidebarMenuItem[] = [
+  { id: 'overview', label: 'Overview', icon: FiHome, path: '/admin/overview' },
+  { id: 'pending-approvals', label: 'Pending Approvals', icon: FiAlertCircle, path: '/admin/pending-approvals' },
   {
-    id: 'overview',
-    label: 'Overview',
-    icon: FiHome,
-    path: '/admin/overview'
-  },
-  {
-    id: 'pending-approvals',
-    label: 'Pending Approvals',
-    icon: FiAlertCircle,
-    path: '/admin/pending-approvals'
-  },
-  {
-    id: 'patients',
-    label: 'Patients',
-    icon: FiUsers,
+    id: 'patients', label: 'Patients', icon: FiUsers,
     children: [
       { id: 'all-patients', label: 'All Patients', icon: FiUsers, path: '/admin/patients' },
     ]
   },
   {
-    id: 'professionals',
-    label: 'Professionals',
-    icon: FiUserCheck,
+    id: 'professionals', label: 'Professionals', icon: FiUserCheck,
     children: [
       { id: 'all-professionals', label: 'All Professionals', icon: FiUserCheck, path: '/admin/professionals' },
       { id: 'services', label: 'All Services', icon: FiActivity, path: '/admin/services' },
-      { id: 'verification', label: 'Verification', icon: FiActivity, path: '/admin/professionals/verification' }
+      { id: 'verification', label: 'Verification', icon: FiActivity, path: '/admin/professionals/verification' },
     ]
   },
   {
-    id: 'hospitals',
-    label: 'Hospitals',
-    icon: FiActivity,
+    id: 'hospitals', label: 'Hospitals', icon: FiActivity,
     children: [
       { id: 'all-hospitals', label: 'All Hospitals', icon: FiActivity, path: '/admin/hospitals' },
       { id: 'vacancies', label: 'Job Vacancies', icon: FiActivity, path: '/admin/hospitals/vacancies' },
-      { id: 'hospital-verification', label: 'Verification', icon: FiActivity, path: '/admin/hospitals/verification' }
+      { id: 'hospital-verification', label: 'Verification', icon: FiActivity, path: '/admin/hospitals/verification' },
     ]
   },
   {
-    id: 'ambulances',
-    label: 'Ambulances',
-    icon: FiTruck,
+    id: 'ambulances', label: 'Ambulances', icon: FiTruck,
     children: [
       { id: 'all-providers', label: 'All Providers', icon: FiTruck, path: '/admin/ambulances' },
       { id: 'ambulance-bookings', label: 'Emergency Bookings', icon: FiTruck, path: '/admin/ambulances/bookings' },
       { id: 'availability', label: 'Availability', icon: FiTruck, path: '/admin/ambulances/availability' },
-      { id: 'ambulance-verification', label: 'Verification', icon: FiTruck, path: '/admin/ambulances/verification' }
+      { id: 'ambulance-verification', label: 'Verification', icon: FiTruck, path: '/admin/ambulances/verification' },
     ]
   },
   {
-    id: 'gym-physio',
-    label: 'Gym & Physio',
-    icon: FiActivity,
+    id: 'gym-physio', label: 'Gym & Physio', icon: FiActivity,
     children: [
       { id: 'all-gym-physio', label: 'All Providers', icon: FiActivity, path: '/admin/gym-physio' },
-      { id: 'gym-physio-verification', label: 'Verification', icon: FiActivity, path: '/admin/gym-physio/verification' }
+      { id: 'gym-physio-verification', label: 'Verification', icon: FiActivity, path: '/admin/gym-physio/verification' },
     ]
   },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: FiSettings,
-    path: '/admin/settings'
-  }
+  { id: 'settings', label: 'Settings', icon: FiSettings, path: '/admin/settings' },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {

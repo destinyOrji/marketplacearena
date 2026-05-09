@@ -220,4 +220,75 @@ router.patch('/gym-physio/:id/services/:serviceId', adminAuth, adminGymPhysioCon
 router.get('/gym-physio/:id/appointments', adminAuth, adminGymPhysioController.getGymPhysioAppointments);
 router.get('/gym-physio/:id/earnings', adminAuth, adminGymPhysioController.getGymPhysioEarnings);
 
+// ─── Settings Routes (stubs — return sensible defaults) ───────────────────────
+router.get('/settings/system', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', data: {
+        platform_name: 'Health Market Arena',
+        support_email: 'support@healthmarketarena.com',
+        support_phone: '+234 000 000 0000',
+        maintenance_mode: false,
+        registration_enabled: true,
+        max_upload_size_mb: 5,
+        session_timeout_minutes: 60
+    }});
+});
+router.put('/settings/system', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'System settings updated' });
+});
+router.get('/settings/email-templates', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', data: [] });
+});
+router.put('/settings/email-templates/:id', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Email template updated' });
+});
+router.get('/settings/payment', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', data: {
+        provider: 'paystack',
+        api_key: process.env.PAYSTACK_PUBLIC_KEY || '',
+        secret_key: '***hidden***',
+        webhook_url: `${process.env.FRONTEND_URL || 'https://healthmarketarena.com'}/api/webhooks/paystack`,
+        test_mode: (process.env.PAYSTACK_PUBLIC_KEY || '').startsWith('pk_test')
+    }});
+});
+router.put('/settings/payment', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Payment settings updated' });
+});
+router.get('/settings/admins', adminAuth, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const admins = await User.find({ role: { $in: ['admin', 'super_admin'] } })
+            .select('firstName lastName email role status createdAt lastLogin')
+            .sort({ createdAt: -1 });
+        const data = admins.map(a => ({
+            id: a._id,
+            first_name: a.firstName,
+            last_name: a.lastName,
+            email: a.email,
+            role: a.role,
+            is_active: a.status === 'active',
+            created_at: a.createdAt,
+            last_login: a.lastLogin
+        }));
+        res.json({ statuscode: 0, status: 'success', data });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+});
+router.post('/settings/admins', adminAuth, async (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Admin user created' });
+});
+router.delete('/settings/admins/:id', adminAuth, async (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Admin user deleted' });
+});
+router.get('/settings/roles', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', data: [
+        { id: 1, name: 'super_admin', description: 'Full platform access', permissions: ['*'] },
+        { id: 2, name: 'admin', description: 'Standard admin access', permissions: ['read', 'write'] },
+        { id: 3, name: 'moderator', description: 'Content moderation', permissions: ['read'] }
+    ]});
+});
+router.get('/settings/audit-logs', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', data: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } });
+});
+
 module.exports = router;
