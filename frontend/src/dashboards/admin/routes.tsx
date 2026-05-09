@@ -64,6 +64,28 @@ const PaymentSettingsPage = lazy(() => import('./pages/settings/PaymentSettings'
 const EmailTemplatesPage = lazy(() => import('./pages/settings/EmailTemplates'));
 const AuditLogsPage = lazy(() => import('./pages/settings/AuditLogs'));
 
+// Patient aggregate pages
+const AllAppointmentsPage = lazy(() => import('./pages/patients/AllAppointments'));
+const AllMedicalRecordsPage = lazy(() => import('./pages/patients/AllMedicalRecords'));
+const AllEmergencyBookingsPage = lazy(() => import('./pages/patients/AllEmergencyBookings'));
+
+// Professional aggregate pages
+const AllApplicationsPage = lazy(() => import('./pages/professionals/AllApplications'));
+const AllSchedulesPage = lazy(() => import('./pages/professionals/AllSchedules'));
+const AllEarningsPage = lazy(() => import('./pages/professionals/AllEarnings'));
+
+// Hospital aggregate pages
+const AllHospitalApplicationsPage = lazy(() => import('./pages/hospitals/AllHospitalApplications'));
+const AllHospitalSubscriptionsPage = lazy(() => import('./pages/hospitals/AllHospitalSubscriptions'));
+
+// Ambulance aggregate pages
+const AllFleetPage = lazy(() => import('./pages/ambulances/AllFleet'));
+
+// Gym aggregate pages
+const AllGymServicesPage = lazy(() => import('./pages/gym-physio/AllGymServices'));
+const AllGymAppointmentsPage = lazy(() => import('./pages/gym-physio/AllGymAppointments'));
+const AllGymEarningsPage = lazy(() => import('./pages/gym-physio/AllGymEarnings'));
+
 // Pending approvals
 const PendingApprovalsPage = lazy(() => import('./pages/PendingApprovals'));
 
@@ -87,6 +109,9 @@ const AdminRoutes: React.FC = () => {
                   
                   {/* Patient Management Routes */}
                   <Route path="/patients" element={<AllPatientsPage />} />
+                  <Route path="/patients/all-appointments" element={<AllAppointmentsPage />} />
+                  <Route path="/patients/all-records" element={<AllMedicalRecordsPage />} />
+                  <Route path="/patients/all-emergencies" element={<AllEmergencyBookingsPage />} />
                   <Route path="/patients/:patientId" element={<PatientDetailPage />} />
                   <Route path="/patients/:patientId/edit" element={<PatientEditPage />} />
                   <Route path="/patients/:patientId/appointments" element={<PatientAppointmentsPage />} />
@@ -100,6 +125,9 @@ const AdminRoutes: React.FC = () => {
                   {/* ⚠️ Static routes MUST come before /:professionalId */}
                   <Route path="/professionals" element={<AllProfessionalsPage />} />
                   <Route path="/professionals/verification" element={<ProfessionalVerificationPage />} />
+                  <Route path="/professionals/all-applications" element={<AllApplicationsPage />} />
+                  <Route path="/professionals/all-schedules" element={<AllSchedulesPage />} />
+                  <Route path="/professionals/all-earnings" element={<AllEarningsPage />} />
                   <Route path="/professionals/:professionalId" element={<ProfessionalDetailPage />} />
                   <Route path="/professionals/:professionalId/services" element={<ProfessionalServicesPage />} />
                   <Route path="/professionals/:professionalId/applications" element={<ProfessionalApplicationsPage />} />
@@ -111,6 +139,8 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/hospitals" element={<AllHospitalsPage />} />
                   <Route path="/hospitals/vacancies" element={<HospitalVacanciesPage />} />
                   <Route path="/hospitals/verification" element={<HospitalVerificationPage />} />
+                  <Route path="/hospitals/all-applications" element={<AllHospitalApplicationsPage />} />
+                  <Route path="/hospitals/all-subscriptions" element={<AllHospitalSubscriptionsPage />} />
                   <Route path="/hospitals/:hospitalId" element={<HospitalDetailPage />} />
                   <Route path="/hospitals/:hospitalId/vacancies" element={<HospitalVacanciesPage />} />
                   <Route path="/hospitals/:hospitalId/applications" element={<HospitalApplicationsPage />} />
@@ -122,6 +152,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/ambulances/bookings" element={<EmergencyBookingsPage />} />
                   <Route path="/ambulances/availability" element={<AvailabilityMonitoringPage />} />
                   <Route path="/ambulances/verification" element={<AmbulanceVerificationPage />} />
+                  <Route path="/ambulances/all-fleet" element={<AllFleetPage />} />
                   <Route path="/ambulances/:providerId" element={<ProviderDetailPage />} />
                   <Route path="/ambulances/:providerId/fleet" element={<FleetManagementPage />} />
                   
@@ -129,6 +160,9 @@ const AdminRoutes: React.FC = () => {
                   {/* ⚠️ Static routes MUST come before /:id */}
                   <Route path="/gym-physio" element={<AllGymPhysioPage />} />
                   <Route path="/gym-physio/verification" element={<GymPhysioVerificationPage />} />
+                  <Route path="/gym-physio/all-services" element={<AllGymServicesPage />} />
+                  <Route path="/gym-physio/all-appointments" element={<AllGymAppointmentsPage />} />
+                  <Route path="/gym-physio/all-earnings" element={<AllGymEarningsPage />} />
                   <Route path="/gym-physio/:id" element={<GymPhysioDetailPage />} />
                   <Route path="/gym-physio/:id/services" element={<GymPhysioServicesPage />} />
                   <Route path="/gym-physio/:id/appointments" element={<GymPhysioAppointmentsPage />} />

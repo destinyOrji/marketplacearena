@@ -33,52 +33,70 @@ interface SidebarProps {
 const sidebarMenu: SidebarMenuItem[] = [
   { id: 'overview', label: 'Overview', icon: FiHome, path: '/admin/overview' },
   { id: 'pending-approvals', label: 'Pending Approvals', icon: FiAlertCircle, path: '/admin/pending-approvals' },
+
   {
     id: 'patients', label: 'Patients', icon: FiUsers,
     children: [
-      { id: 'all-patients', label: 'All Patients', icon: FiUsers, path: '/admin/patients' },
+      { id: 'all-patients',              label: 'All Patients',          icon: FiUsers,    path: '/admin/patients' },
+      { id: 'patient-appointments',      label: 'Appointments',          icon: FiActivity, path: '/admin/patients/all-appointments' },
+      { id: 'patient-medical-records',   label: 'Medical Records',       icon: FiActivity, path: '/admin/patients/all-records' },
+      { id: 'patient-emergency',         label: 'Emergency Bookings',    icon: FiActivity, path: '/admin/patients/all-emergencies' },
     ]
   },
+
   {
     id: 'professionals', label: 'Professionals', icon: FiUserCheck,
     children: [
-      { id: 'all-professionals', label: 'All Professionals', icon: FiUserCheck, path: '/admin/professionals' },
-      { id: 'prof-verification', label: 'Verification', icon: FiUserCheck, path: '/admin/professionals/verification' },
-      { id: 'services', label: 'All Services', icon: FiActivity, path: '/admin/services' },
+      { id: 'all-professionals',         label: 'All Professionals',     icon: FiUserCheck, path: '/admin/professionals' },
+      { id: 'prof-verification',         label: 'Verification',          icon: FiUserCheck, path: '/admin/professionals/verification' },
+      { id: 'all-services',              label: 'All Services',          icon: FiActivity,  path: '/admin/services' },
+      { id: 'prof-applications',         label: 'Job Applications',      icon: FiActivity,  path: '/admin/professionals/all-applications' },
+      { id: 'prof-schedules',            label: 'Schedules',             icon: FiActivity,  path: '/admin/professionals/all-schedules' },
+      { id: 'prof-earnings',             label: 'Earnings',              icon: FiActivity,  path: '/admin/professionals/all-earnings' },
     ]
   },
+
   {
     id: 'hospitals', label: 'Hospitals', icon: FiActivity,
     children: [
-      { id: 'all-hospitals', label: 'All Hospitals', icon: FiActivity, path: '/admin/hospitals' },
-      { id: 'hospital-verification', label: 'Verification', icon: FiActivity, path: '/admin/hospitals/verification' },
-      { id: 'vacancies', label: 'Job Vacancies', icon: FiActivity, path: '/admin/hospitals/vacancies' },
+      { id: 'all-hospitals',             label: 'All Hospitals',         icon: FiActivity, path: '/admin/hospitals' },
+      { id: 'hospital-verification',     label: 'Verification',          icon: FiActivity, path: '/admin/hospitals/verification' },
+      { id: 'hospital-vacancies',        label: 'Job Vacancies',         icon: FiActivity, path: '/admin/hospitals/vacancies' },
+      { id: 'hospital-applications',     label: 'Applications',          icon: FiActivity, path: '/admin/hospitals/all-applications' },
+      { id: 'hospital-subscriptions',    label: 'Subscriptions',         icon: FiActivity, path: '/admin/hospitals/all-subscriptions' },
     ]
   },
+
   {
     id: 'ambulances', label: 'Ambulances', icon: FiTruck,
     children: [
-      { id: 'all-providers', label: 'All Providers', icon: FiTruck, path: '/admin/ambulances' },
-      { id: 'ambulance-verification', label: 'Verification', icon: FiTruck, path: '/admin/ambulances/verification' },
-      { id: 'ambulance-bookings', label: 'Emergency Bookings', icon: FiTruck, path: '/admin/ambulances/bookings' },
-      { id: 'availability', label: 'Availability Monitor', icon: FiTruck, path: '/admin/ambulances/availability' },
+      { id: 'all-ambulances',            label: 'All Providers',         icon: FiTruck, path: '/admin/ambulances' },
+      { id: 'ambulance-verification',    label: 'Verification',          icon: FiTruck, path: '/admin/ambulances/verification' },
+      { id: 'ambulance-bookings',        label: 'Emergency Bookings',    icon: FiTruck, path: '/admin/ambulances/bookings' },
+      { id: 'ambulance-availability',    label: 'Availability',          icon: FiTruck, path: '/admin/ambulances/availability' },
+      { id: 'ambulance-fleet',           label: 'Fleet Management',      icon: FiTruck, path: '/admin/ambulances/all-fleet' },
     ]
   },
+
   {
     id: 'gym-physio', label: 'Gym & Physio', icon: FiActivity,
     children: [
-      { id: 'all-gym-physio', label: 'All Providers', icon: FiActivity, path: '/admin/gym-physio' },
-      { id: 'gym-physio-verification', label: 'Verification', icon: FiActivity, path: '/admin/gym-physio/verification' },
+      { id: 'all-gym-physio',            label: 'All Providers',         icon: FiActivity, path: '/admin/gym-physio' },
+      { id: 'gym-physio-verification',   label: 'Verification',          icon: FiActivity, path: '/admin/gym-physio/verification' },
+      { id: 'gym-services',              label: 'Services',              icon: FiActivity, path: '/admin/gym-physio/all-services' },
+      { id: 'gym-appointments',          label: 'Appointments',          icon: FiActivity, path: '/admin/gym-physio/all-appointments' },
+      { id: 'gym-earnings',              label: 'Earnings',              icon: FiActivity, path: '/admin/gym-physio/all-earnings' },
     ]
   },
+
   {
     id: 'settings', label: 'Settings', icon: FiSettings,
     children: [
-      { id: 'settings-main', label: 'System Settings', icon: FiSettings, path: '/admin/settings' },
-      { id: 'settings-users', label: 'Admin Users', icon: FiUsers, path: '/admin/settings/users' },
-      { id: 'settings-roles', label: 'Roles & Permissions', icon: FiSettings, path: '/admin/settings/roles' },
-      { id: 'settings-payment', label: 'Payment Settings', icon: FiSettings, path: '/admin/settings/payments' },
-      { id: 'settings-audit', label: 'Audit Logs', icon: FiSettings, path: '/admin/settings/audit-logs' },
+      { id: 'settings-main',    label: 'System Settings',    icon: FiSettings, path: '/admin/settings' },
+      { id: 'settings-users',   label: 'Admin Users',        icon: FiUsers,    path: '/admin/settings/users' },
+      { id: 'settings-roles',   label: 'Roles & Permissions',icon: FiSettings, path: '/admin/settings/roles' },
+      { id: 'settings-payment', label: 'Payment Settings',   icon: FiSettings, path: '/admin/settings/payments' },
+      { id: 'settings-audit',   label: 'Audit Logs',         icon: FiSettings, path: '/admin/settings/audit-logs' },
     ]
   },
 ];
