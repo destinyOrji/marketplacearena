@@ -13,11 +13,12 @@ const ScheduleAvailability = lazy(() => import('./pages/ScheduleAvailability'));
 const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 // Loading component
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
   </div>
 );
 
@@ -38,6 +39,7 @@ const GymPhysioRoutes: React.FC = () => {
           <Route path="/payments" element={<PaymentsEarnings />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
         <Route path="*" element={<Navigate to="/gym-physio/dashboard" replace />} />
       </Routes>

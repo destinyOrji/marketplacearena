@@ -15,6 +15,7 @@ const ScheduleAvailability = lazy(() => import('./pages/ScheduleAvailability'));
 const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -42,6 +43,7 @@ const ProfessionalRoutes: React.FC = () => {
           <Route path="/payments" element={<PaymentsEarnings />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
         <Route path="*" element={<Navigate to="/professional/dashboard" replace />} />
       </Routes>

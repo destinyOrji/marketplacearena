@@ -16,6 +16,7 @@ import Applications from './pages/Applications';
 import ApplicationDetail from './pages/ApplicationDetail';
 import Billing from './pages/Billing';
 import Subscription from './pages/Subscription';
+import Notifications from './pages/Notifications';
 
 // Loading component
 const LoadingFallback = () => (
@@ -43,6 +44,7 @@ const HospitalRoutes: React.FC = () => {
               <Route path="/applications/:id" element={<ApplicationDetail />} />
               <Route path="/billing" element={<Billing />} />
               <Route path="/subscription" element={<Subscription />} />
+              <Route path="/notifications" element={<Notifications />} />
             </Route>
             <Route path="*" element={<Navigate to="/hospital/dashboard" replace />} />
           </Routes>

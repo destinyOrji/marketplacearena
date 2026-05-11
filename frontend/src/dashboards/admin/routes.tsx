@@ -88,6 +88,7 @@ const AllGymEarningsPage = lazy(() => import('./pages/gym-physio/AllGymEarnings'
 
 // Pending approvals
 const PendingApprovalsPage = lazy(() => import('./pages/PendingApprovals'));
+const NotificationsPage = lazy(() => import('./pages/Notifications'));
 
 const AdminRoutes: React.FC = () => {
   return (
@@ -176,6 +177,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/settings/payments" element={<PaymentSettingsPage />} />
                   <Route path="/settings/email-templates" element={<EmailTemplatesPage />} />
                   <Route path="/settings/audit-logs" element={<AuditLogsPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>
