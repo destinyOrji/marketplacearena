@@ -46,10 +46,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-5 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-orange-600">Gym & Physio</h2>
+            <h2 className="text-xl font-bold text-blue-600">Gym & Physio</h2>
             {gymPhysio && (
               <div className="mt-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-semibold text-sm">
                     {gymPhysio.businessName?.charAt(0).toUpperCase() || 'G'}
                   </span>
@@ -72,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className={() =>
                   `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                     isActiveRoute(item.path)
-                      ? 'bg-orange-50 text-orange-700 font-medium'
+                      ? 'bg-blue-50 text-blue-700 font-medium'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`
                 }
