@@ -1,396 +1,325 @@
-// Appointments Page - Manage appointments
+// Appointments Page — with Accept/Reject + patient notification
 
 import React, { useState, useEffect } from 'react';
 import { Appointment } from '../types';
 import { appointmentsApi } from '../services/api';
 import { toast } from 'react-toastify';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
+import apiClient from '../services/apiClient';
+
+const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
+  scheduled:  { badge: 'bg-blue-100 text-blue-700 border-blue-200',   dot: 'bg-blue-500' },
+  pending:    { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  confirmed:  { badge: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
+  completed:  { badge: 'bg-gray-100 text-gray-700 border-gray-200',    dot: 'bg-gray-400' },
+  cancelled:  { badge: 'bg-red-100 text-red-700 border-red-200',       dot: 'bg-red-500' },
+};
+
+const STATUS_TABS = [
+  { value: 'all',       label: 'All' },
+  { value: 'scheduled', label: 'New' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
 
 const Appointments: React.FC = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('month');
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
+  useEffect(() => { fetchAppointments(); }, []);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       const data = await appointmentsApi.getAppointments();
-      // Normalize data - backend may return different field names
-      const normalized = data.map((apt: any) => ({
+      const normalized = (data as any[]).map((apt: any) => ({
         ...apt,
         id: apt._id || apt.id,
         date: apt.scheduledDate || apt.date,
         time: apt.scheduledTime || apt.time || '00:00',
-        status: apt.status || 'pending',
-        type: apt.appointmentType || apt.type || 'in-person',
+        status: apt.status || 'scheduled',
+        type: apt.appointmentMode || apt.type || 'in_person',
         patient: apt.patient || {
-          id: apt.client?._id || apt.clientId || '',
-          name: apt.client?.user ? `${apt.client.user.firstName} ${apt.client.user.lastName}` : apt.patientName || 'Patient',
-          photo: apt.client?.profilePhoto || null,
+          id: apt.client?._id || '',
+          name: apt.client?.user
+            ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
+            : 'Patient',
+          email: apt.client?.user?.email || '',
+          photo: null,
         },
-        service: apt.service || {
-          id: apt.serviceId || '',
-          title: apt.serviceName || apt.serviceTitle || 'Consultation',
-          price: apt.price || 0,
-        },
-        payment: apt.payment || {
-          amount: apt.price || apt.amount || 0,
-          status: apt.paymentStatus || 'pending',
-        },
+        service: apt.service || { id: '', title: apt.serviceName || 'Consultation', price: 0 },
+        payment: apt.payment || { amount: apt.consultationFee || 0, status: apt.paymentStatus || 'pending' },
+        reason: apt.reasonForVisit || apt.reason || '',
+        notes: apt.clientNotes || apt.notes || '',
       }));
       setAppointments(normalized);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load appointments');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredAppointments = appointments.filter((apt) =>
+  const filtered = appointments.filter(apt =>
     statusFilter === 'all' || apt.status === statusFilter
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const counts = STATUS_TABS.reduce((acc, tab) => {
+    acc[tab.value] = tab.value === 'all'
+      ? appointments.length
+      : appointments.filter(a => a.status === tab.value).length;
+    return acc;
+  }, {} as Record<string, number>);
 
-  const handleViewDetails = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setShowDetailsModal(true);
-  };
-
-  // Check if appointment is within 24 hours
-  const isUpcoming = (appointment: Appointment) => {
-    const appointmentTime = new Date(appointment.date).getTime();
-    const now = new Date().getTime();
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-    return appointmentTime - now <= twentyFourHours && appointmentTime > now;
-  };
-
-  // Calendar view helpers
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  const getAppointmentsForDay = (day: Date) => {
-    return filteredAppointments.filter((apt) => isSameDay(new Date(apt.date), day));
+  const getTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      video_call: '📹 Video Call', phone_call: '📞 Phone Call',
+      in_person: '🏥 In-Person', 'in-person': '🏥 In-Person',
+      video: '📹 Video', chat: '💬 Chat',
+    };
+    return map[type] || type;
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Appointments</h1>
-        <p className="text-gray-600">View and manage your scheduled appointments</p>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Review and manage your patient appointments</p>
       </div>
 
-      {/* Filters and View Controls */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4 justify-between">
-          {/* Status Filter */}
-          <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter appointments by status">
-            {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  statusFilter === status
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                aria-pressed={statusFilter === status}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex gap-2" role="group" aria-label="Calendar view mode">
-            {['day', 'week', 'month'].map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  viewMode === mode
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-                aria-pressed={viewMode === mode}
-              >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Upcoming Appointments Alert */}
-      {filteredAppointments.some(isUpcoming) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <svg className="w-6 h-6 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      {/* New bookings alert */}
+      {counts['scheduled'] > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <div>
-              <h3 className="font-semibold text-yellow-900 mb-1">Upcoming Appointments</h3>
-              <p className="text-sm text-yellow-800">
-                You have {filteredAppointments.filter(isUpcoming).length} appointment(s) within the next 24 hours
-              </p>
-            </div>
           </div>
+          <div>
+            <p className="text-sm font-semibold text-blue-900">
+              {counts['scheduled']} new booking{counts['scheduled'] !== 1 ? 's' : ''} awaiting your response
+            </p>
+            <p className="text-xs text-blue-600">Accept or reject to notify the patient</p>
+          </div>
+          <button onClick={() => setStatusFilter('scheduled')}
+            className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white border border-blue-200 px-3 py-1.5 rounded-lg">
+            View New
+          </button>
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      {/* Tabs */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="flex overflow-x-auto border-b border-gray-200">
+          {STATUS_TABS.map(tab => (
+            <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
+              className={`flex-shrink-0 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                statusFilter === tab.value
+                  ? 'border-blue-600 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}>
+              {tab.label}
+              {counts[tab.value] > 0 && (
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                  statusFilter === tab.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>{counts[tab.value]}</span>
+              )}
+            </button>
+          ))}
         </div>
-      ) : viewMode === 'month' ? (
-        /* Calendar View */
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">
-              {format(currentDate, 'MMMM yyyy')}
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setCurrentDate(new Date())}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
+
+        {/* List */}
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
           </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {/* Day Headers */}
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
-                {day}
-              </div>
-            ))}
-
-            {/* Calendar Days */}
-            {daysInMonth.map((day) => {
-              const dayAppointments = getAppointmentsForDay(day);
+        ) : filtered.length === 0 ? (
+          <div className="p-16 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">No appointments</h3>
+            <p className="text-sm text-gray-500">
+              {statusFilter === 'all' ? 'No appointments yet' : `No ${statusFilter} appointments`}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filtered.map(apt => {
+              const style = STATUS_STYLES[apt.status] || STATUS_STYLES.scheduled;
+              const initials = apt.patient.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
               return (
-                <div
-                  key={day.toString()}
-                  className={`min-h-[100px] border border-gray-200 rounded-lg p-2 ${
-                    isToday(day) ? 'bg-blue-50 border-blue-300' : 'bg-white'
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-900 mb-1">
-                    {format(day, 'd')}
-                  </div>
-                  <div className="space-y-1">
-                    {dayAppointments.slice(0, 2).map((apt) => (
-                      <button
-                        key={apt.id}
-                        onClick={() => handleViewDetails(apt)}
-                        className={`w-full text-left text-xs p-1 rounded border ${getStatusColor(apt.status)} hover:opacity-80`}
-                      >
-                        <div className="font-medium truncate">{apt.time}</div>
-                        <div className="truncate">{apt.patient.name}</div>
-                      </button>
-                    ))}
-                    {dayAppointments.length > 2 && (
-                      <div className="text-xs text-gray-500 text-center">
-                        +{dayAppointments.length - 2} more
+                <div key={apt.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    {/* Avatar */}
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <span className="text-white text-sm font-bold">{initials}</span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-base font-bold text-gray-900">{apt.patient.name}</p>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${style.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                              {apt.status === 'scheduled' ? 'New Booking' : apt.status}
+                            </span>
+                          </div>
+                          {apt.patient.email && (
+                            <p className="text-xs text-gray-400">{apt.patient.email}</p>
+                          )}
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {(apt.status === 'scheduled' || apt.status === 'pending') && (
+                            <>
+                              <button onClick={() => setSelectedAppointment(apt)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Accept
+                              </button>
+                              <button onClick={() => setSelectedAppointment({ ...apt, _action: 'reject' })}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 border border-red-200 transition-colors">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {apt.status === 'confirmed' && (
+                            <button onClick={() => setSelectedAppointment(apt)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                              View Details
+                            </button>
+                          )}
+                          {(apt.status === 'completed' || apt.status === 'cancelled') && (
+                            <button onClick={() => setSelectedAppointment(apt)}
+                              className="text-xs text-gray-500 hover:text-gray-700 underline">
+                              View
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
+
+                      {/* Details row */}
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          <span className="font-medium text-blue-600">{apt.service?.title || 'Consultation'}</span>
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {apt.date ? format(new Date(apt.date), 'MMM d, yyyy') : '—'} at {apt.time}
+                        </span>
+                        <span className="text-xs text-gray-400">{getTypeLabel(apt.type)}</span>
+                        {apt.payment?.amount > 0 && (
+                          <span className="text-xs font-semibold text-green-600">
+                            ₦{apt.payment.amount.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {apt.reason && (
+                        <p className="text-xs text-gray-500 mt-1.5 italic">"{apt.reason}"</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-      ) : (
-        /* List View */
-        <div className="space-y-4">
-          {filteredAppointments.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments</h3>
-              <p className="text-gray-600">
-                {statusFilter === 'all'
-                  ? 'You have no scheduled appointments'
-                  : `No ${statusFilter} appointments`}
-              </p>
-            </div>
-          ) : (
-            filteredAppointments.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {appointment.patient.name}
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}>
-                        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                      </span>
-                      {isUpcoming(appointment) && (
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-                          Upcoming
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-gray-600 mb-2">{appointment.service.title}</p>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        {format(new Date(appointment.date), 'MMM dd, yyyy')}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {appointment.time}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        {appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-semibold text-gray-900">
-                      ${appointment.payment.amount}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {appointment.payment.status === 'completed' ? 'Paid' : 'Pending'}
-                    </p>
-                  </div>
-                </div>
+        )}
+      </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleViewDetails(appointment)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                  >
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* Appointment Details Modal */}
-      {showDetailsModal && selectedAppointment && (
-        <AppointmentDetailsModal
+      {/* Details / Accept / Reject Modal */}
+      {selectedAppointment && (
+        <AppointmentModal
           appointment={selectedAppointment}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedAppointment(null);
-          }}
-          onUpdate={fetchAppointments}
+          onClose={() => setSelectedAppointment(null)}
+          onUpdate={() => { fetchAppointments(); setSelectedAppointment(null); }}
         />
       )}
     </div>
   );
 };
 
-// Appointment Details Modal Component
-interface AppointmentDetailsModalProps {
-  appointment: Appointment;
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
+interface ModalProps {
+  appointment: any;
   onClose: () => void;
   onUpdate: () => void;
 }
 
-const AppointmentDetailsModal: React.FC<AppointmentDetailsModalProps> = ({
-  appointment,
-  onClose,
-  onUpdate,
-}) => {
+const AppointmentModal: React.FC<ModalProps> = ({ appointment, onClose, onUpdate }) => {
   const [notes, setNotes] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
   const [loading, setLoading] = useState(false);
+  const isRejectMode = appointment._action === 'reject';
 
-  const handleConfirm = async () => {
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const handleAccept = async () => {
     setLoading(true);
     try {
       await appointmentsApi.confirmAppointment(appointment.id, notes);
-      toast.success('Appointment confirmed');
+      // Send notification to patient
+      await apiClient.post(`/professionals/appointments/${appointment.id}/notify-patient`, {
+        message: notes
+          ? `Your appointment has been confirmed. Note from your provider: ${notes}`
+          : 'Your appointment has been confirmed by the healthcare provider.',
+        type: 'appointment_confirmed',
+      }).catch(() => {}); // non-fatal
+      toast.success('Appointment accepted — patient notified!');
       onUpdate();
-      onClose();
-    } catch (error) {
-      toast.error('Failed to confirm appointment');
+    } catch {
+      toast.error('Failed to accept appointment');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = async () => {
-    if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
-    
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
     setLoading(true);
     try {
-      await appointmentsApi.cancelAppointment(appointment.id, 'Cancelled by professional');
-      toast.success('Appointment cancelled');
+      await appointmentsApi.cancelAppointment(appointment.id, rejectReason);
+      // Send notification to patient
+      await apiClient.post(`/professionals/appointments/${appointment.id}/notify-patient`, {
+        message: `Your appointment request has been declined. Reason: ${rejectReason}`,
+        type: 'appointment_rejected',
+      }).catch(() => {});
+      toast.success('Appointment rejected — patient notified');
       onUpdate();
-      onClose();
-    } catch (error) {
-      toast.error('Failed to cancel appointment');
+    } catch {
+      toast.error('Failed to reject appointment');
     } finally {
       setLoading(false);
     }
@@ -402,154 +331,165 @@ const AppointmentDetailsModal: React.FC<AppointmentDetailsModalProps> = ({
       await appointmentsApi.completeAppointment(appointment.id);
       toast.success('Appointment marked as completed');
       onUpdate();
-      onClose();
-    } catch (error) {
+    } catch {
       toast.error('Failed to complete appointment');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCancel = async () => {
+    if (!window.confirm('Cancel this appointment?')) return;
+    setLoading(true);
+    try {
+      await appointmentsApi.cancelAppointment(appointment.id, 'Cancelled by professional');
+      toast.success('Appointment cancelled');
+      onUpdate();
+    } catch {
+      toast.error('Failed to cancel appointment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initials = appointment.patient.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Appointment Details</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">
+            {isRejectMode ? 'Reject Appointment' : 'Appointment Details'}
+          </h2>
+          <button onClick={onClose} disabled={loading}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Patient Info */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Patient Information</h3>
-            <div className="flex items-center gap-3">
-              {appointment.patient.photo ? (
-                <img
-                  src={appointment.patient.photo}
-                  alt={`${appointment.patient.name} profile picture`}
-                  className="w-12 h-12 rounded-full"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold">
-                    {appointment.patient.name.charAt(0)}
-                  </span>
-                </div>
-              )}
-              <div>
-                <p className="font-medium text-gray-900">{appointment.patient.name}</p>
-                <p className="text-sm text-gray-600">Patient ID: {appointment.patient.id}</p>
-              </div>
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+          {/* Patient */}
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold">{initials}</span>
             </div>
-          </div>
-
-          {/* Appointment Details */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">Appointment Details</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Service:</span>
-                <span className="font-medium text-gray-900">{appointment.service.title}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="font-medium text-gray-900">
-                  {format(new Date(appointment.date), 'MMMM dd, yyyy')}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Time:</span>
-                <span className="font-medium text-gray-900">{appointment.time}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Type:</span>
-                <span className="font-medium text-gray-900">
-                  {appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status:</span>
-                <span className="font-medium text-gray-900">
-                  {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Payment:</span>
-                <span className="font-medium text-gray-900">
-                  ${appointment.payment.amount} ({appointment.payment.status})
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes (for confirmation) */}
-          {appointment.status === 'pending' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Appointment Notes (Optional)
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Add any notes or special instructions..."
-              />
+              <p className="font-bold text-gray-900">{appointment.patient.name}</p>
+              {appointment.patient.email && (
+                <p className="text-xs text-gray-500">{appointment.patient.email}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="space-y-2 text-sm">
+            {[
+              { label: 'Service', value: appointment.service?.title || 'Consultation' },
+              { label: 'Date', value: appointment.date ? format(new Date(appointment.date), 'EEEE, MMMM d, yyyy') : '—' },
+              { label: 'Time', value: appointment.time },
+              { label: 'Type', value: appointment.type?.replace(/_/g, ' ') },
+              { label: 'Status', value: appointment.status },
+              { label: 'Fee', value: appointment.payment?.amount > 0 ? `₦${appointment.payment.amount.toLocaleString()}` : 'Free' },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex justify-between py-1.5 border-b border-gray-100 last:border-0">
+                <span className="text-gray-500">{label}</span>
+                <span className="font-medium text-gray-900 capitalize">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {appointment.reason && (
+            <div className="bg-blue-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-blue-700 mb-1">Reason for Visit</p>
+              <p className="text-sm text-blue-900">{appointment.reason}</p>
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
-            {appointment.status === 'pending' && (
-              <>
-                <button
-                  onClick={handleConfirm}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? 'Processing...' : 'Confirm Appointment'}
-                </button>
-                <button
-                  onClick={handleCancel}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </>
-            )}
-            {appointment.status === 'confirmed' && (
-              <>
-                <button
-                  onClick={handleComplete}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                >
-                  Mark as Completed
-                </button>
-                <button
-                  onClick={handleCancel}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </>
-            )}
-            {(appointment.status === 'completed' || appointment.status === 'cancelled') && (
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Close
+          {/* Accept notes */}
+          {!isRejectMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                Message to Patient <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                disabled={loading}
+                placeholder="Add any instructions or notes for the patient..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none disabled:bg-gray-50" />
+            </div>
+          )}
+
+          {/* Reject reason */}
+          {isRejectMode && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                Reason for Rejection <span className="text-red-500">*</span>
+              </label>
+              <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3}
+                disabled={loading}
+                placeholder="Please explain why you are rejecting this appointment..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none disabled:bg-gray-50" />
+              <p className="text-xs text-gray-400 mt-1">This reason will be sent to the patient.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50 rounded-b-2xl">
+          <button onClick={onClose} disabled={loading}
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            Cancel
+          </button>
+
+          {isRejectMode && (
+            <button onClick={handleReject} disabled={loading || !rejectReason.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors">
+              {loading ? (
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              Reject & Notify Patient
+            </button>
+          )}
+
+          {!isRejectMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
+            <button onClick={handleAccept} disabled={loading}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
+              {loading ? (
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              Accept & Notify Patient
+            </button>
+          )}
+
+          {!isRejectMode && appointment.status === 'confirmed' && (
+            <>
+              <button onClick={handleComplete} disabled={loading}
+                className="flex-1 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                Mark Completed
               </button>
-            )}
-          </div>
+              <button onClick={handleCancel} disabled={loading}
+                className="px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors">
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

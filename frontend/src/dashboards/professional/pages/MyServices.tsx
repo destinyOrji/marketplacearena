@@ -1,4 +1,4 @@
-// My Services Page - Manage service listings
+// My Services Page — redesigned
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Service } from '../types';
@@ -19,326 +19,231 @@ const MyServices: React.FC = () => {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
-  // Fetch services on mount
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  useEffect(() => { fetchServices(); }, []);
 
   const fetchServices = async () => {
     try {
       setLoading(true);
       const data = await servicesApi.getServices();
       setServices(data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load services');
-      console.error('Error fetching services:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter and search services
   const filteredServices = useMemo(() => {
-    return services.filter((service) => {
-      const matchesSearch = 
-        service.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        service.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        service.category.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || service.status === statusFilter;
-
+    return services.filter((s) => {
+      const matchesSearch =
+        s.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        s.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        s.category.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [services, debouncedSearchQuery, statusFilter]);
 
+  // Stats
+  const stats = useMemo(() => ({
+    total: services.length,
+    active: services.filter(s => s.status === 'active').length,
+    pending: services.filter(s => s.status === 'pending').length,
+    totalBookings: services.reduce((sum, s) => sum + (s.bookingCount || 0), 0),
+  }), [services]);
+
   const handleEdit = (id: string) => {
     const service = services.find(s => s.id === id);
-    if (service) {
-      setEditingService(service);
-      setModalMode('edit');
-      setShowModal(true);
-    }
+    if (service) { setEditingService(service); setModalMode('edit'); setShowModal(true); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
-      return;
-    }
-
+    if (!window.confirm('Delete this service? This cannot be undone.')) return;
     try {
       await servicesApi.deleteService(id);
       setServices(services.filter(s => s.id !== id));
-      toast.success('Service deleted successfully');
-    } catch (error) {
-      toast.error('Failed to delete service');
-      console.error('Error deleting service:', error);
-    }
+      toast.success('Service deleted');
+    } catch { toast.error('Failed to delete service'); }
   };
 
   const handleToggleStatus = async (id: string) => {
     const service = services.find(s => s.id === id);
     if (!service) return;
-
     const newStatus = service.status === 'active' ? 'inactive' : 'active';
-
     try {
       const updated = await servicesApi.updateService(id, { status: newStatus });
       setServices(services.map(s => s.id === id ? updated : s));
-      toast.success(`Service ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
-      toast.error('Failed to update service status');
-      console.error('Error toggling service status:', error);
-    }
-  };
-
-  const handleCreateService = () => {
-    setEditingService(null);
-    setModalMode('create');
-    setShowModal(true);
+      toast.success(`Service ${newStatus === 'active' ? 'activated' : 'paused'}`);
+    } catch { toast.error('Failed to update service'); }
   };
 
   const handleSubmitService = async (data: Partial<Service>, images: File[]) => {
     try {
-      console.log('=== Service Submission ===');
-      console.log('Form data:', data);
-      console.log('Images to upload:', images.length);
-      
-      // Upload images first if there are any
       let imageUrls: string[] = [];
-      if (images && images.length > 0) {
-        console.log('Uploading images...');
-        const uploadPromises = images.map(async (image) => {
-          try {
-            console.log('Uploading image:', image.name);
-            const url = await profileApi.uploadPhoto(image);
-            console.log('Image uploaded, URL:', url);
-            return url;
-          } catch (error) {
-            console.error('Error uploading image:', error);
-            return null;
-          }
-        });
-        
-        const uploadedUrls = await Promise.all(uploadPromises);
-        imageUrls = uploadedUrls.filter((url): url is string => url !== null && url !== '');
-        console.log('All images uploaded:', imageUrls);
+      if (images.length > 0) {
+        const uploads = await Promise.all(images.map(img => profileApi.uploadPhoto(img).catch(() => null)));
+        imageUrls = uploads.filter((u): u is string => !!u);
       }
-      
-      // Add uploaded image URLs to service data
-      const serviceData = {
-        ...data,
-        images: imageUrls.length > 0 ? imageUrls : data.images || []
-      };
-      
-      console.log('Final service data:', serviceData);
-      
+      const serviceData = { ...data, images: imageUrls.length > 0 ? imageUrls : data.images || [] };
+
       if (modalMode === 'create') {
         const newService = await servicesApi.createService(serviceData);
-        console.log('Service created:', newService);
         setServices([...services, newService]);
-        toast.success('Service created successfully');
+        toast.success('Service created — pending admin approval');
       } else if (editingService) {
         const updated = await servicesApi.updateService(editingService.id, serviceData);
         setServices(services.map(s => s.id === editingService.id ? updated : s));
-        toast.success('Service updated successfully');
+        toast.success('Service updated');
       }
       setShowModal(false);
       setEditingService(null);
     } catch (error: any) {
-      console.error('Service submission error:', error);
       throw new Error(error.response?.data?.message || 'Failed to save service');
     }
   };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingService(null);
-  };
+  const STATUS_TABS = [
+    { value: 'all',      label: 'All',     count: stats.total },
+    { value: 'active',   label: 'Active',  count: stats.active },
+    { value: 'pending',  label: 'Pending', count: stats.pending },
+    { value: 'inactive', label: 'Paused',  count: services.filter(s => s.status === 'inactive').length },
+  ] as const;
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Services</h1>
-        <p className="text-gray-600">Manage your service listings and advertisements</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Manage your service listings and pricing</p>
+        </div>
+        <button onClick={() => { setEditingService(null); setModalMode('create'); setShowModal(true); }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Service
+        </button>
       </div>
 
-      {/* Actions Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1">
-            <div className="relative">
-              <label htmlFor="services-search" className="sr-only">Search services</label>
-              <input
-                id="services-search"
-                type="text"
-                placeholder="Search services..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                aria-label="Search services by title, description, or category"
-              />
-              <svg
-                className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Services', value: stats.total, icon: '📋', color: 'bg-blue-50 text-blue-600' },
+          { label: 'Active',         value: stats.active, icon: '✅', color: 'bg-green-50 text-green-600' },
+          { label: 'Pending Review', value: stats.pending, icon: '⏳', color: 'bg-amber-50 text-amber-600' },
+          { label: 'Total Bookings', value: stats.totalBookings, icon: '📅', color: 'bg-purple-50 text-purple-600' },
+        ].map(stat => (
+          <div key={stat.label} className="bg-white rounded-2xl border border-gray-200 p-4">
+            <div className={`w-9 h-9 rounded-xl ${stat.color} flex items-center justify-center text-lg mb-2`}>
+              {stat.icon}
             </div>
+            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
           </div>
+        ))}
+      </div>
 
-          {/* Status Filter */}
-          <div className="w-full lg:w-48">
-            <label htmlFor="status-filter" className="sr-only">Filter by status</label>
-            <select
-              id="status-filter"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              aria-label="Filter services by status"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex gap-2" role="group" aria-label="View mode toggle">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${
-                viewMode === 'grid'
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              aria-label="Grid view"
-              aria-pressed={viewMode === 'grid'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                />
-              </svg>
+      {/* Filters */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        {/* Status tabs */}
+        <div className="flex border-b border-gray-200 overflow-x-auto">
+          {STATUS_TABS.map(tab => (
+            <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
+              className={`flex-shrink-0 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                statusFilter === tab.value
+                  ? 'border-blue-600 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}>
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                  statusFilter === tab.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>{tab.count}</span>
+              )}
             </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg ${
-                viewMode === 'list'
-                  ? 'bg-blue-100 text-blue-600'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              aria-label="List view"
-              aria-pressed={viewMode === 'list'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
+          ))}
+        </div>
 
-          {/* Create Service Button */}
-          <button
-            onClick={handleCreateService}
-            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        {/* Search + view toggle */}
+        <div className="p-4 flex gap-3 items-center">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            Create Service
-          </button>
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search services..."
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
+          </div>
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+            <button onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              aria-label="Grid view">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            </button>
+            <button onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              aria-label="List view">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Services List */}
+      {/* Services */}
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
         </div>
       ) : filteredServices.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-            />
-          </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center">
+          <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+          <h3 className="text-base font-semibold text-gray-900 mb-1">
             {searchQuery || statusFilter !== 'all' ? 'No services found' : 'No services yet'}
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="text-sm text-gray-500 mb-5">
             {searchQuery || statusFilter !== 'all'
               ? 'Try adjusting your search or filters'
               : 'Create your first service to start receiving bookings'}
           </p>
           {!searchQuery && statusFilter === 'all' && (
-            <button
-              onClick={handleCreateService}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-            >
+            <button onClick={() => { setEditingService(null); setModalMode('create'); setShowModal(true); }}
+              className="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
               Create Your First Service
             </button>
           )}
         </div>
       ) : (
-        <div
-          className={
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
-              : 'space-y-4'
-          }
-        >
-          {filteredServices.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onToggleStatus={handleToggleStatus}
-            />
-          ))}
-        </div>
+        <>
+          <div className={viewMode === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5'
+            : 'space-y-4'}>
+            {filteredServices.map(service => (
+              <ServiceCard key={service.id} service={service}
+                onEdit={handleEdit} onDelete={handleDelete} onToggleStatus={handleToggleStatus} />
+            ))}
+          </div>
+          <p className="text-center text-sm text-gray-400">
+            Showing {filteredServices.length} of {services.length} service{services.length !== 1 ? 's' : ''}
+          </p>
+        </>
       )}
 
-      {/* Results Count */}
-      {!loading && filteredServices.length > 0 && (
-        <div className="mt-6 text-center text-sm text-gray-600">
-          Showing {filteredServices.length} of {services.length} service{services.length !== 1 ? 's' : ''}
-        </div>
-      )}
-
-      {/* Service Form Modal */}
-      <ServiceFormModal
-        isOpen={showModal}
-        onClose={handleCloseModal}
+      <ServiceFormModal isOpen={showModal}
+        onClose={() => { setShowModal(false); setEditingService(null); }}
         onSubmit={handleSubmitService}
         service={editingService}
-        mode={modalMode}
-      />
+        mode={modalMode} />
     </div>
   );
 };

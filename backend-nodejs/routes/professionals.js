@@ -511,6 +511,55 @@ router.put('/appointments/:id/reschedule', protect, async (req, res) => {
     }
 });
 
+// Notify patient when professional accepts or rejects appointment
+router.post('/appointments/:id/notify-patient', protect, async (req, res) => {
+    try {
+        const Notification = require('../models/Notification');
+        const Client = require('../models/Client');
+
+        const apt = await Appointment.findById(req.params.id)
+            .populate({ path: 'client', populate: { path: 'user', select: '_id firstName lastName' } })
+            .populate('service', 'title');
+
+        if (!apt) return res.status(404).json({ success: false, message: 'Appointment not found' });
+
+        const patientUserId = apt.client?.user?._id;
+        if (!patientUserId) return res.status(400).json({ success: false, message: 'Patient user not found' });
+
+        const professional = await Professional.findOne({ user: req.user._id }).populate('user', 'firstName lastName');
+        const providerName = professional?.user
+            ? `${professional.user.firstName} ${professional.user.lastName}`
+            : 'Your healthcare provider';
+
+        const { message, type } = req.body;
+        const notifType = type === 'appointment_rejected' ? 'application_status' : 'appointment';
+        const title = type === 'appointment_rejected'
+            ? 'Appointment Request Declined'
+            : 'Appointment Confirmed';
+
+        await Notification.create({
+            user: patientUserId,
+            title,
+            message: message || (type === 'appointment_rejected'
+                ? `Your appointment with ${providerName} has been declined.`
+                : `Your appointment with ${providerName} has been confirmed.`),
+            type: notifType,
+            data: {
+                appointmentId: apt._id,
+                serviceTitle: apt.service?.title || 'Consultation',
+                providerName,
+                scheduledDate: apt.scheduledDate,
+                scheduledTime: apt.scheduledTime,
+            }
+        });
+
+        res.json({ success: true, message: 'Patient notified' });
+    } catch (error) {
+        console.error('Notify patient error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Schedule
 router.get('/schedule', protect, async (req, res) => {
     try {

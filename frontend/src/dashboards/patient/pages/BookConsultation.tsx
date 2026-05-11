@@ -66,8 +66,8 @@ const BookConsultation: React.FC = () => {
   const fetchProviders = async () => {
     setLoading(true);
     try {
-      const response = await servicesApi.getServices({ type: ['doctor', 'hospital'] });
-      const providersData = response.data?.data ?? response.data ?? [];
+      const response = await servicesApi.getServices();
+      const providersData = (response.data?.data as any)?.data ?? response.data?.data ?? response.data ?? [];
       setProviders(Array.isArray(providersData) ? providersData : []);
     } catch (error) {
       showErrorToast('Failed to load providers');
@@ -80,7 +80,22 @@ const BookConsultation: React.FC = () => {
     setLoading(true);
     try {
       const response = await servicesApi.getServiceById(id);
-      setSelectedProvider(response.data?.data ?? response.data);
+      const raw = response.data?.data ?? response.data;
+      // Normalize: backend returns { id, title, price, provider: { name, specialty, ... } }
+      // Map to ServiceProvider shape the UI expects
+      const normalized: any = {
+        id: (raw as any).id || (raw as any)._id,
+        name: (raw as any).provider?.name || (raw as any).title || 'Provider',
+        specialty: (raw as any).provider?.specialty || (raw as any).category || '',
+        photo: (raw as any).provider?.photo || (raw as any).photo || null,
+        rating: (raw as any).rating || 0,
+        reviewCount: (raw as any).reviewCount || 0,
+        price: (raw as any).price || 0,
+        duration: (raw as any).duration || 30,
+        description: (raw as any).description || '',
+        providerType: (raw as any).providerType || 'professional',
+      };
+      setSelectedProvider(normalized);
     } catch (error) {
       showErrorToast('Failed to load provider details');
     } finally {
@@ -296,32 +311,41 @@ const BookConsultation: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {providers.map((provider) => (
+                  {providers.map((provider: any) => {
+                    const name = (provider as any).name || (provider as any).provider?.name || (provider as any).title || 'Provider';
+                    const specialty = (provider as any).specialty || (provider as any).provider?.specialty || (provider as any).category || '';
+                    const photo = (provider as any).photo || (provider as any).provider?.photo || null;
+                    const rating = (provider as any).rating || 0;
+                    const reviewCount = (provider as any).reviewCount || 0;
+                    const price = (provider as any).price || 0;
+                    const pid = (provider as any).id || (provider as any)._id;
+                    return (
                     <div
-                      key={provider.id}
-                      onClick={() => handleProviderSelect(provider)}
-                      className="border rounded-lg p-4 cursor-pointer hover:border-blue-600 hover:shadow-lg transition-all"
+                      key={pid}
+                      onClick={() => handleProviderSelect({ ...provider, id: pid, name, specialty, photo, rating, reviewCount, price } as any)}
+                      className="border rounded-xl p-4 cursor-pointer hover:border-blue-600 hover:shadow-lg transition-all bg-white"
                     >
-                      <img
-                        src={provider.photo || '/placeholder-doctor.png'}
-                        alt={provider.name}
-                        className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
-                      />
-                      <h3 className="font-semibold text-center">{provider.name}</h3>
-                      <p className="text-sm text-gray-600 text-center">{provider.specialty}</p>
-                      <div className="flex items-center justify-center mt-2">
-                        <span className="text-yellow-500">★</span>
-                        <span className="text-sm ml-1">
-                          {provider.rating} ({provider.reviewCount})
-                        </span>
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-3">
+                        {photo ? (
+                          <img src={photo} alt={name} className="w-16 h-16 rounded-full object-cover" />
+                        ) : (
+                          <span className="text-white text-xl font-bold">{name.charAt(0)}</span>
+                        )}
                       </div>
-                      {provider.price && provider.price > 0 && (
-                        <p className="text-center text-blue-600 font-semibold mt-2">
-                          ₦{provider.price.toLocaleString()}
-                        </p>
+                      <h3 className="font-semibold text-center text-gray-900">{name}</h3>
+                      <p className="text-sm text-gray-500 text-center capitalize">{specialty}</p>
+                      {rating > 0 && (
+                        <div className="flex items-center justify-center mt-2 gap-1">
+                          <span className="text-yellow-400">★</span>
+                          <span className="text-sm text-gray-700">{rating.toFixed(1)} ({reviewCount})</span>
+                        </div>
+                      )}
+                      {price > 0 && (
+                        <p className="text-center text-blue-600 font-bold mt-2">₦{price.toLocaleString()}</p>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
