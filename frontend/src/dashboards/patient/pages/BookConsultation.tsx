@@ -4,23 +4,74 @@ import { DashboardLayout, PaymentModal } from '../components';
 import { servicesApi, appointmentsApi } from '../services/api';
 import { ServiceProvider, TimeSlot } from '../types';
 import { showSuccessToast, showErrorToast, showWarningToast, showInfoToast } from '../utils/toast';
-import { format, addDays, startOfDay, isSameDay, parseISO } from 'date-fns';
+import { format, addDays, startOfDay, isSameDay } from 'date-fns';
 
+// ─── Provider Avatar ──────────────────────────────────────────────────────────
+const Avatar: React.FC<{ name: string; photo?: string | null; size?: string }> = ({
+  name, photo, size = 'w-14 h-14',
+}) => {
+  const [err, setErr] = useState(false);
+  const initials = (name || 'P').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  if (photo && photo.startsWith('http') && !err) {
+    return <img src={photo} alt={name} className={`${size} rounded-2xl object-cover flex-shrink-0`} onError={() => setErr(true)} />;
+  }
+  return (
+    <div className={`${size} rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm`}>
+      <span className="text-white font-bold text-lg">{initials}</span>
+    </div>
+  );
+};
+
+// ─── Step indicator ───────────────────────────────────────────────────────────
+const STEPS = [
+  { key: 'provider', label: 'Provider', icon: '👤' },
+  { key: 'datetime', label: 'Date & Time', icon: '📅' },
+  { key: 'details',  label: 'Details',    icon: '📝' },
+  { key: 'summary',  label: 'Confirm',    icon: '✅' },
+];
+
+const StepBar: React.FC<{ current: string }> = ({ current }) => {
+  const idx = STEPS.findIndex(s => s.key === current);
+  return (
+    <div className="flex items-center mb-8">
+      {STEPS.map((s, i) => (
+        <React.Fragment key={s.key}>
+          <div className="flex flex-col items-center">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+              i < idx ? 'bg-green-500 text-white shadow-sm' :
+              i === idx ? 'bg-blue-600 text-white shadow-md ring-4 ring-blue-100' :
+              'bg-gray-100 text-gray-400'
+            }`}>
+              {i < idx ? '✓' : i + 1}
+            </div>
+            <span className={`mt-1.5 text-xs font-medium hidden sm:block ${i === idx ? 'text-blue-600' : i < idx ? 'text-green-600' : 'text-gray-400'}`}>
+              {s.label}
+            </span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div className={`flex-1 h-1 mx-2 rounded-full transition-all ${i < idx ? 'bg-green-400' : 'bg-gray-200'}`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 const BookConsultation: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const preSelectedProviderId = searchParams.get('providerId');
 
-  // State management
   const [step, setStep] = useState<'provider' | 'datetime' | 'details' | 'summary'>(
     preSelectedProviderId ? 'datetime' : 'provider'
   );
-  const [providers, setProviders] = useState<ServiceProvider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<ServiceProvider | null>(null);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [consultationType, setConsultationType] = useState<'video' | 'chat' | 'in-person'>('video');
+  const [consultationType, setConsultationType] = useState<'video' | 'chat' | 'in-person'>('in-person');
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,634 +80,427 @@ const BookConsultation: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [confirmedAppointment, setConfirmedAppointment] = useState<any>(null);
 
-  // Generate next 30 days for calendar
-  const generateCalendarDays = () => {
-    const days = [];
-    for (let i = 0; i < 30; i++) {
-      days.push(addDays(startOfDay(new Date()), i));
-    }
-    return days;
-  };
+  const calendarDays = Array.from({ length: 30 }, (_, i) => addDays(startOfDay(new Date()), i));
 
-  const calendarDays = generateCalendarDays();
-
-  // Fetch providers if not pre-selected
   useEffect(() => {
-    if (!preSelectedProviderId) {
-      fetchProviders();
-    } else {
-      fetchProviderById(preSelectedProviderId);
-    }
+    if (!preSelectedProviderId) fetchProviders();
+    else fetchProviderById(preSelectedProviderId);
   }, [preSelectedProviderId]);
 
-  // Fetch time slots when date is selected
   useEffect(() => {
     if (selectedProvider && selectedDate) {
       fetchTimeSlots();
-      
-      // Set up polling for real-time updates every 15 seconds (silent mode)
-      const pollInterval = setInterval(() => {
-        fetchTimeSlots(true); // Silent polling to avoid loading spinner
-      }, 15000);
-      
-      return () => clearInterval(pollInterval);
+      const poll = setInterval(() => fetchTimeSlots(true), 15000);
+      return () => clearInterval(poll);
     }
   }, [selectedProvider, selectedDate]);
 
   const fetchProviders = async () => {
     setLoading(true);
     try {
-      const response = await servicesApi.getServices();
-      const providersData = (response.data?.data as any)?.data ?? response.data?.data ?? response.data ?? [];
-      setProviders(Array.isArray(providersData) ? providersData : []);
-    } catch (error) {
-      showErrorToast('Failed to load providers');
-    } finally {
-      setLoading(false);
-    }
+      const res = await servicesApi.getServices();
+      const data = (res.data?.data as any)?.data ?? res.data?.data ?? res.data ?? [];
+      setProviders(Array.isArray(data) ? data : []);
+    } catch { showErrorToast('Failed to load providers'); }
+    finally { setLoading(false); }
   };
 
   const fetchProviderById = async (id: string) => {
     setLoading(true);
     try {
-      const response = await servicesApi.getServiceById(id);
-      const raw = response.data?.data ?? response.data;
-      // Normalize: backend returns { id, title, price, provider: { name, specialty, ... } }
-      // Map to ServiceProvider shape the UI expects
-      const normalized: any = {
+      const res = await servicesApi.getServiceById(id);
+      const raw = res.data?.data ?? res.data;
+      setSelectedProvider({
         id: (raw as any).id || (raw as any)._id,
         name: (raw as any).provider?.name || (raw as any).title || 'Provider',
         specialty: (raw as any).provider?.specialty || (raw as any).category || '',
-        photo: (raw as any).provider?.photo || (raw as any).photo || null,
+        photo: (raw as any).provider?.photo || null,
         rating: (raw as any).rating || 0,
         reviewCount: (raw as any).reviewCount || 0,
         price: (raw as any).price || 0,
         duration: (raw as any).duration || 30,
         description: (raw as any).description || '',
-        providerType: (raw as any).providerType || 'professional',
-      };
-      setSelectedProvider(normalized);
-    } catch (error) {
-      showErrorToast('Failed to load provider details');
-    } finally {
-      setLoading(false);
-    }
+      });
+    } catch { showErrorToast('Failed to load provider details'); }
+    finally { setLoading(false); }
   };
 
-  const fetchTimeSlots = async (silent: boolean = false) => {
+  const fetchTimeSlots = async (silent = false) => {
     if (!selectedProvider || !selectedDate) return;
-
-    if (!silent) {
-      setLoadingSlots(true);
-    } else {
-      setUpdatingSlots(true);
-    }
-    
+    if (!silent) setLoadingSlots(true); else setUpdatingSlots(true);
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const response = await servicesApi.getAvailability(selectedProvider.id, dateStr);
-      const newSlots = response.data?.data ?? response.data ?? [];
-      
-      // Check if previously selected slot is still available
+      const res = await servicesApi.getAvailability(selectedProvider.id, dateStr);
+      const newSlots = res.data?.data ?? res.data ?? [];
       if (selectedTimeSlot) {
-        const stillAvailable = newSlots.find(
-          (slot: TimeSlot) => slot.id === selectedTimeSlot.id && slot.available
-        );
-        
-        if (!stillAvailable) {
-          showWarningToast('Your selected time slot is no longer available. Please select another.', {
-            toastId: 'slot-unavailable', // Prevent duplicate toasts
-          });
-          setSelectedTimeSlot(null);
-        }
+        const still = newSlots.find((s: TimeSlot) => s.id === selectedTimeSlot.id && s.available);
+        if (!still) { showWarningToast('Selected slot no longer available', { toastId: 'slot-unavailable' }); setSelectedTimeSlot(null); }
       }
-      
       setTimeSlots(newSlots);
-    } catch (error) {
-      if (!silent) {
-        showErrorToast('Failed to load available time slots');
-      }
-      setTimeSlots([]);
-    } finally {
-      if (!silent) {
-        setLoadingSlots(false);
-      } else {
-        setUpdatingSlots(false);
-      }
-    }
-  };
-
-  const handleProviderSelect = (provider: ServiceProvider) => {
-    setSelectedProvider(provider);
-    setStep('datetime');
-  };
-
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-    setSelectedTimeSlot(null);
-  };
-
-  const handleTimeSlotSelect = (slot: TimeSlot) => {
-    if (slot.available) {
-      setSelectedTimeSlot(slot);
-    }
-  };
-
-  const handleContinueToDetails = () => {
-    if (!selectedTimeSlot) {
-      showErrorToast('Please select a time slot');
-      return;
-    }
-    setStep('details');
-  };
-
-  const handleContinueToSummary = () => {
-    if (!reason.trim()) {
-      showErrorToast('Please provide a reason for your visit');
-      return;
-    }
-    setStep('summary');
+    } catch { if (!silent) { showErrorToast('Failed to load time slots'); setTimeSlots([]); } }
+    finally { if (!silent) setLoadingSlots(false); else setUpdatingSlots(false); }
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedProvider || !selectedTimeSlot || !selectedDate) {
-      showErrorToast('Missing booking information');
-      return;
-    }
-
+    if (!selectedProvider || !selectedTimeSlot || !selectedDate) return;
     setLoading(true);
     try {
-      const bookingData = {
+      const res = await appointmentsApi.createAppointment({
         providerId: selectedProvider.id,
         timeSlotId: selectedTimeSlot.id,
         scheduledDate: selectedDate.toISOString(),
         scheduledTime: selectedTimeSlot.startTime,
-        consultationType,
-        reason,
-        notes,
-      };
-
-      const response = await appointmentsApi.createAppointment(bookingData);
-      const appointmentData = response.data?.data ?? response.data;
-      
-      setConfirmedAppointment(appointmentData);
-      showSuccessToast('Booking confirmed! Confirmation sent via email and SMS.');
-      
-      // Check if payment is required
-      if (selectedProvider.price && selectedProvider.price > 0) {
-        // Show payment modal
-        setShowPaymentModal(true);
+        consultationType, reason, notes,
+      });
+      const appt = (res.data?.data as any) ?? res.data;
+      setConfirmedAppointment(appt);
+      showSuccessToast('Booking confirmed!');
+      const fee = (appt as any)?.payment?.amount || selectedProvider.price || 0;
+      if (fee > 0) setShowPaymentModal(true);
+      else setTimeout(() => navigate('/patient/appointments'), 1500);
+    } catch (err: any) {
+      if (err.response?.status === 403) {
+        showErrorToast('Subscription required. Redirecting...', { autoClose: 3000 });
+        setTimeout(() => navigate('/patient/subscription'), 2000);
+      } else if (err.response?.status === 409) {
+        showErrorToast('Slot just booked. Please pick another time.');
+        fetchTimeSlots(); setSelectedTimeSlot(null); setStep('datetime');
       } else {
-        // Free consultation, go directly to appointments
-        setTimeout(() => {
-          navigate('/patient/appointments');
-        }, 1500);
+        showErrorToast(err.response?.data?.message || 'Booking failed. Please try again.');
       }
-    } catch (error: any) {
-      console.error('Booking error:', error);
-      
-      // Handle subscription required
-      if (error.response?.status === 403 && error.response?.data?.code === 'SUBSCRIPTION_REQUIRED') {
-        showErrorToast('You need an active subscription to book appointments. Redirecting...', {
-          autoClose: 4000,
-        });
-        setTimeout(() => {
-          navigate('/patient/subscription');
-        }, 2000);
-      // Handle concurrent booking conflict
-      } else if (error.response?.status === 409 || error.response?.data?.code === 'SLOT_UNAVAILABLE') {
-        showErrorToast('This time slot was just booked by another patient. Please select a different time.', {
-          autoClose: 5000,
-        });
-        // Refresh time slots immediately
-        fetchTimeSlots();
-        setSelectedTimeSlot(null);
-        setStep('datetime');
-      } else {
-        const errorMessage = error.response?.data?.message || 'Failed to create booking. Please try again.';
-        showErrorToast(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePaymentSuccess = (paymentId: string) => {
-    setShowPaymentModal(false);
-    showSuccessToast('Payment completed successfully!');
-    setTimeout(() => {
-      navigate('/patient/appointments');
-    }, 1500);
-  };
-
-  const handlePaymentClose = () => {
-    setShowPaymentModal(false);
-    // Still navigate to appointments even if payment modal is closed
-    // The appointment is already created
-    showInfoToast('You can complete payment later from the Payments page.');
-    setTimeout(() => {
-      navigate('/patient/appointments');
-    }, 2000);
+    } finally { setLoading(false); }
   };
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Book Consultation</h1>
-          <p className="text-gray-600 mt-2">Schedule an appointment with a healthcare professional</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Book a Consultation</h1>
+          <p className="text-sm text-gray-500 mt-1">Schedule an appointment with a healthcare professional</p>
         </div>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between overflow-x-auto pb-2">
-            {[
-              { key: 'provider', label: 'Provider' },
-              { key: 'datetime', label: 'Date & Time' },
-              { key: 'details', label: 'Details' },
-              { key: 'summary', label: 'Summary' },
-            ].map((s, index) => (
-              <div key={s.key} className="flex items-center flex-1 min-w-0">
-                <div className="flex items-center flex-shrink-0">
-                  <div
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium ${
-                      step === s.key
-                        ? 'bg-blue-600 text-white'
-                        : index < ['provider', 'datetime', 'details', 'summary'].indexOf(step)
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-200 text-gray-600'
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-medium text-gray-700 hidden sm:block">{s.label}</span>
-                </div>
-                {index < 3 && <div className="flex-1 h-1 bg-gray-200 mx-1 sm:mx-4" />}
+        <StepBar current={step} />
+
+        {/* ── Step 1: Provider ── */}
+        {step === 'provider' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-5">Choose a Provider</h2>
+            {loading ? (
+              <div className="flex flex-col items-center py-16 gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+                <p className="text-sm text-gray-500">Loading providers...</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Step Content */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          {/* Step 1: Provider Selection */}
-          {step === 'provider' && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Select a Healthcare Provider</h2>
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-600 mt-4">Loading providers...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {providers.map((provider: any) => {
-                    const name = (provider as any).name || (provider as any).provider?.name || (provider as any).title || 'Provider';
-                    const specialty = (provider as any).specialty || (provider as any).provider?.specialty || (provider as any).category || '';
-                    const photo = (provider as any).photo || (provider as any).provider?.photo || null;
-                    const rating = (provider as any).rating || 0;
-                    const reviewCount = (provider as any).reviewCount || 0;
-                    const price = (provider as any).price || 0;
-                    const pid = (provider as any).id || (provider as any)._id;
-                    return (
-                    <div
-                      key={pid}
-                      onClick={() => handleProviderSelect({ ...provider, id: pid, name, specialty, photo, rating, reviewCount, price } as any)}
-                      className="border rounded-xl p-4 cursor-pointer hover:border-blue-600 hover:shadow-lg transition-all bg-white"
-                    >
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-3">
-                        {photo ? (
-                          <img src={photo} alt={name} className="w-16 h-16 rounded-full object-cover" />
-                        ) : (
-                          <span className="text-white text-xl font-bold">{name.charAt(0)}</span>
+            ) : providers.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="text-5xl mb-3">🏥</div>
+                <p className="text-gray-500">No providers available at the moment</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {providers.map((p: any) => {
+                  const name = p.name || p.provider?.name || p.title || 'Provider';
+                  const specialty = p.specialty || p.provider?.specialty || p.category || '';
+                  const photo = p.photo || p.provider?.photo || null;
+                  const price = p.price || 0;
+                  const pid = p.id || p._id;
+                  return (
+                    <button key={pid} type="button"
+                      onClick={() => { setSelectedProvider({ ...p, id: pid, name, specialty, photo, price }); setStep('datetime'); }}
+                      className="flex items-center gap-4 p-4 border-2 border-gray-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group">
+                      <Avatar name={name} photo={photo} />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-900 group-hover:text-blue-700 truncate">{name}</p>
+                        <p className="text-xs text-gray-500 capitalize mt-0.5 truncate">{specialty}</p>
+                        {price > 0 && (
+                          <p className="text-sm font-bold text-blue-600 mt-1">₦{price.toLocaleString()}</p>
                         )}
                       </div>
-                      <h3 className="font-semibold text-center text-gray-900">{name}</h3>
-                      <p className="text-sm text-gray-500 text-center capitalize">{specialty}</p>
-                      {rating > 0 && (
-                        <div className="flex items-center justify-center mt-2 gap-1">
-                          <span className="text-yellow-400">★</span>
-                          <span className="text-sm text-gray-700">{rating.toFixed(1)} ({reviewCount})</span>
-                        </div>
-                      )}
-                      {price > 0 && (
-                        <p className="text-center text-blue-600 font-bold mt-2">₦{price.toLocaleString()}</p>
-                      )}
-                    </div>
+                      <svg className="w-5 h-5 text-gray-300 group-hover:text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 2: Date & Time ── */}
+        {step === 'datetime' && selectedProvider && (
+          <div className="space-y-4">
+            {/* Provider card */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar name={selectedProvider.name} photo={selectedProvider.photo} size="w-12 h-12" />
+                <div>
+                  <p className="font-bold text-gray-900">{selectedProvider.name}</p>
+                  <p className="text-xs text-gray-500 capitalize">{selectedProvider.specialty}</p>
+                </div>
+              </div>
+              <button onClick={() => setStep('provider')}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                Change
+              </button>
+            </div>
+
+            {/* Calendar */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="font-bold text-gray-900 mb-4">Select a Date</h3>
+              <div className="overflow-x-auto pb-1">
+                <div className="flex gap-2 min-w-max">
+                  {calendarDays.map(day => {
+                    const isSelected = selectedDate && isSameDay(day, selectedDate);
+                    const isPast = day < startOfDay(new Date());
+                    return (
+                      <button key={day.toISOString()} type="button"
+                        onClick={() => !isPast && setSelectedDate(day)}
+                        disabled={isPast}
+                        className={`flex flex-col items-center w-14 py-3 rounded-xl transition-all ${
+                          isSelected ? 'bg-blue-600 text-white shadow-md' :
+                          isPast ? 'bg-gray-50 text-gray-300 cursor-not-allowed' :
+                          'bg-gray-50 hover:bg-blue-50 hover:border-blue-300 border border-transparent text-gray-700'
+                        }`}>
+                        <span className="text-xs font-medium">{format(day, 'EEE')}</span>
+                        <span className="text-lg font-bold mt-0.5">{format(day, 'd')}</span>
+                        <span className="text-xs">{format(day, 'MMM')}</span>
+                      </button>
                     );
                   })}
                 </div>
-              )}
+              </div>
             </div>
-          )}
 
-          {/* Step 2: Date & Time Selection */}
-          {step === 'datetime' && selectedProvider && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Select Date & Time</h2>
-                <button
-                  onClick={() => setStep('provider')}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  Change Provider
-                </button>
-              </div>
-
-              {/* Selected Provider Info */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-6 flex items-center">
-                <img
-                  src={selectedProvider.photo || '/placeholder-doctor.png'}
-                  alt={selectedProvider.name}
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-                <div className="ml-4">
-                  <h3 className="font-semibold">{selectedProvider.name}</h3>
-                  <p className="text-sm text-gray-600">{selectedProvider.specialty}</p>
-                </div>
-              </div>
-
-              {/* Calendar */}
-              <div className="mb-6">
-                <h3 className="font-medium mb-3">Select Date</h3>
-                <div className="overflow-x-auto pb-2">
-                  <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-[320px]">
-                    {calendarDays.map((day) => {
-                      const isSelected = selectedDate && isSameDay(day, selectedDate);
-                      const isPast = day < startOfDay(new Date());
-                      return (
-                        <button
-                          key={day.toISOString()}
-                          onClick={() => !isPast && handleDateSelect(day)}
-                          disabled={isPast}
-                          className={`p-1 sm:p-3 rounded-lg text-center ${
-                            isSelected
-                              ? 'bg-blue-600 text-white'
-                              : isPast
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'bg-gray-50 hover:bg-blue-50 text-gray-900'
-                          }`}
-                        >
-                          <div className="text-xs">{format(day, 'EEE')}</div>
-                          <div className="text-sm sm:text-lg font-semibold">{format(day, 'd')}</div>
-                          <div className="text-xs hidden sm:block">{format(day, 'MMM')}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Time Slots */}
-              {selectedDate && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium">Select Time Slot</h3>
-                    {updatingSlots && (
-                      <span className="text-sm text-blue-600 flex items-center">
-                        <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Updating availability...
-                      </span>
-                    )}
-                  </div>
-                  {loadingSlots ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="text-gray-600 mt-2">Loading available slots...</p>
-                    </div>
-                  ) : timeSlots.length === 0 ? (
-                    <p className="text-center text-gray-600 py-8">
-                      No available time slots for this date
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {timeSlots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          onClick={() => handleTimeSlotSelect(slot)}
-                          disabled={!slot.available}
-                          className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                            selectedTimeSlot?.id === slot.id
-                              ? 'bg-blue-600 text-white'
-                              : slot.available
-                              ? 'bg-gray-50 hover:bg-blue-50 text-gray-900'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {slot.startTime}
-                        </button>
-                      ))}
-                    </div>
+            {/* Time slots */}
+            {selectedDate && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900">Available Times</h3>
+                  {updatingSlots && (
+                    <span className="text-xs text-blue-600 flex items-center gap-1">
+                      <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Refreshing...
+                    </span>
                   )}
                 </div>
-              )}
+                {loadingSlots ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  </div>
+                ) : timeSlots.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="text-3xl mb-2">🕐</div>
+                    <p className="text-sm">No available slots for this date</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {timeSlots.map(slot => (
+                      <button key={slot.id} type="button"
+                        onClick={() => slot.available && setSelectedTimeSlot(slot)}
+                        disabled={!slot.available}
+                        className={`py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                          selectedTimeSlot?.id === slot.id
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : slot.available
+                            ? 'bg-gray-50 border border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50'
+                            : 'bg-gray-100 text-gray-300 cursor-not-allowed line-through'
+                        }`}>
+                        {slot.startTime}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={handleContinueToDetails}
-                  disabled={!selectedTimeSlot}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  Continue
-                </button>
+            <div className="flex justify-end">
+              <button type="button" onClick={() => { if (!selectedTimeSlot) { showErrorToast('Please select a time slot'); return; } setStep('details'); }}
+                disabled={!selectedTimeSlot}
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors">
+                Continue →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Details ── */}
+        {step === 'details' && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Consultation Details</h2>
+              <button onClick={() => setStep('datetime')} className="text-sm text-blue-600 hover:text-blue-700 font-medium">← Back</button>
+            </div>
+
+            {/* Consultation type */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-3">How would you like to consult?</label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 'video',      label: 'Video Call', icon: '📹', desc: 'Face-to-face online' },
+                  { value: 'chat',       label: 'Phone',      icon: '📞', desc: 'Voice call' },
+                  { value: 'in-person',  label: 'In-Person',  icon: '🏥', desc: 'Visit the clinic' },
+                ].map(t => (
+                  <button key={t.value} type="button" onClick={() => setConsultationType(t.value as any)}
+                    className={`p-4 rounded-2xl border-2 text-center transition-all ${
+                      consultationType === t.value
+                        ? 'border-blue-600 bg-blue-50 shadow-sm'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                    }`}>
+                    <div className="text-2xl mb-1">{t.icon}</div>
+                    <div className="text-sm font-bold text-gray-900">{t.label}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{t.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
-          )}
 
-          {/* Step 3: Consultation Details */}
-          {step === 'details' && (
+            {/* Reason */}
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Consultation Details</h2>
-                <button
-                  onClick={() => setStep('datetime')}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  Back
-                </button>
-              </div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Reason for Visit <span className="text-red-500">*</span>
+              </label>
+              <input type="text" value={reason} onChange={e => setReason(e.target.value)}
+                placeholder="e.g., Annual checkup, Flu symptoms, Follow-up..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+            </div>
 
-              {/* Consultation Type */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Consultation Type
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {[
-                    { value: 'video', label: 'Video Call', icon: '📹' },
-                    { value: 'chat', label: 'Chat', icon: '💬' },
-                    { value: 'in-person', label: 'In-Person', icon: '🏥' },
-                  ].map((type) => (
-                    <button
-                      key={type.value}
-                      onClick={() => setConsultationType(type.value as any)}
-                      className={`p-4 rounded-lg border-2 text-center ${
-                        consultationType === type.value
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      }`}
-                    >
-                      <div className="text-3xl mb-2">{type.icon}</div>
-                      <div className="font-medium">{type.label}</div>
-                    </button>
-                  ))}
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                Additional Notes <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                placeholder="Any symptoms, medications, or information you'd like to share..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm resize-none" />
+            </div>
+
+            <div className="flex justify-end">
+              <button type="button" onClick={() => { if (!reason.trim()) { showErrorToast('Please provide a reason for your visit'); return; } setStep('summary'); }}
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+                Review Booking →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 4: Summary ── */}
+        {step === 'summary' && selectedProvider && selectedDate && selectedTimeSlot && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Booking Summary</h2>
+                  <p className="text-blue-100 text-sm mt-0.5">Review your appointment details</p>
                 </div>
+                <button onClick={() => setStep('details')} className="text-blue-200 hover:text-white text-sm font-medium">Edit</button>
               </div>
 
-              {/* Reason for Visit */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reason for Visit <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g., Annual checkup, Flu symptoms, Follow-up"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                />
-              </div>
-
-              {/* Additional Notes */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Notes (Optional)
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any additional information you'd like to share..."
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  onClick={handleContinueToSummary}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Continue to Summary
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Booking Summary */}
-          {step === 'summary' && selectedProvider && selectedDate && selectedTimeSlot && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Booking Summary</h2>
-                <button
-                  onClick={() => setStep('details')}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  Edit
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Provider Info */}
-                <div className="border-b pb-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Healthcare Provider</h3>
-                  <div className="flex items-center">
-                    <img
-                      src={selectedProvider.photo || '/placeholder-doctor.png'}
-                      alt={selectedProvider.name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                    <div className="ml-4">
-                      <p className="font-semibold">{selectedProvider.name}</p>
-                      <p className="text-sm text-gray-600">{selectedProvider.specialty}</p>
-                    </div>
+              <div className="p-6 space-y-5">
+                {/* Provider */}
+                <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
+                  <Avatar name={selectedProvider.name} photo={selectedProvider.photo} size="w-14 h-14" />
+                  <div>
+                    <p className="font-bold text-gray-900">{selectedProvider.name}</p>
+                    <p className="text-sm text-gray-500 capitalize">{selectedProvider.specialty}</p>
                   </div>
                 </div>
 
-                {/* Date & Time */}
-                <div className="border-b pb-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Date & Time</h3>
-                  <p className="font-semibold">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
-                  <p className="text-gray-600">
-                    {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}
-                  </p>
+                {/* Details grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { icon: '📅', label: 'Date', value: format(selectedDate, 'EEEE, MMM d, yyyy') },
+                    { icon: '🕐', label: 'Time', value: `${selectedTimeSlot.startTime}${selectedTimeSlot.endTime ? ` – ${selectedTimeSlot.endTime}` : ''}` },
+                    { icon: consultationType === 'video' ? '📹' : consultationType === 'chat' ? '📞' : '🏥',
+                      label: 'Mode',
+                      value: consultationType === 'video' ? 'Video Call' : consultationType === 'chat' ? 'Phone Call' : 'In-Person' },
+                    { icon: '💬', label: 'Reason', value: reason },
+                  ].map(({ icon, label, value }) => (
+                    <div key={label} className="bg-gray-50 rounded-xl p-3">
+                      <p className="text-xs text-gray-500 mb-1">{icon} {label}</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Consultation Type */}
-                <div className="border-b pb-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Consultation Type</h3>
-                  <p className="font-semibold capitalize">{consultationType.replace('-', ' ')}</p>
-                </div>
-
-                {/* Reason */}
-                <div className="border-b pb-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Reason for Visit</h3>
-                  <p className="text-gray-900">{reason}</p>
-                </div>
-
-                {/* Notes */}
                 {notes && (
-                  <div className="border-b pb-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Additional Notes</h3>
-                    <p className="text-gray-900">{notes}</p>
+                  <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                    <p className="text-xs text-blue-600 font-medium mb-1">📋 Notes</p>
+                    <p className="text-sm text-gray-700">{notes}</p>
                   </div>
                 )}
 
                 {/* Price */}
-                {selectedProvider.price && selectedProvider.price > 0 && (
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-medium">Total Amount</span>
-                      <span className="text-2xl font-bold text-blue-600">
-                        ₦{(selectedProvider.price).toLocaleString()}
-                      </span>
+                {selectedProvider.price > 0 && (
+                  <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-100">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Consultation Fee</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Secured via Paystack</p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Payment will be processed via Paystack after booking</p>
+                    <p className="text-2xl font-bold text-blue-600">₦{selectedProvider.price.toLocaleString()}</p>
                   </div>
                 )}
               </div>
-
-              <div className="mt-8 flex justify-end space-x-4">
-                <button
-                  onClick={() => navigate('/patient/browse-services')}
-                  disabled={loading}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmBooking}
-                  disabled={loading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : selectedProvider.price && selectedProvider.price > 0 ? (
-                    'Confirm & Pay'
-                  ) : (
-                    'Confirm Booking'
-                  )}
-                </button>
-              </div>
             </div>
-          )}
-        </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => navigate('/patient/browse-services')} disabled={loading}
+                className="flex-1 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                Cancel
+              </button>
+              <button type="button" onClick={handleConfirmBooking} disabled={loading}
+                className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 shadow-sm">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Processing...
+                  </>
+                ) : selectedProvider.price > 0 ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    Confirm & Pay ₦{selectedProvider.price.toLocaleString()}
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Confirm Booking
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Payment Modal */}
         {showPaymentModal && selectedProvider && confirmedAppointment && (
           <PaymentModal
             isOpen={showPaymentModal}
-            amount={selectedProvider.price || 0}
+            amount={(confirmedAppointment as any)?.payment?.amount || selectedProvider.price || 0}
             service={`Consultation with ${selectedProvider.name}`}
-            appointmentId={confirmedAppointment.id}
-            onClose={handlePaymentClose}
-            onSuccess={handlePaymentSuccess}
+            appointmentId={(confirmedAppointment as any).id || (confirmedAppointment as any)._id}
+            onClose={() => {
+              setShowPaymentModal(false);
+              showInfoToast('You can complete payment later from the Payments page.');
+              setTimeout(() => navigate('/patient/appointments'), 2000);
+            }}
+            onSuccess={(ref: string) => {
+              setShowPaymentModal(false);
+              showSuccessToast('Payment successful!');
+              setTimeout(() => navigate('/patient/appointments'), 1500);
+            }}
           />
         )}
       </div>

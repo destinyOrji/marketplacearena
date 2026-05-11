@@ -118,42 +118,107 @@ const DashboardHome: React.FC = () => {
       </div>
 
       {/* Upcoming Appointments */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h2>
-          <Link to="/patient/appointments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">View all →</Link>
+          <Link to="/patient/appointments" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+            View all →
+          </Link>
         </div>
+
         {loading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
         ) : appointments.length === 0 ? (
-          <div className="text-center py-10">
+          <div className="text-center py-12">
             <span className="text-5xl">📅</span>
-            <p className="text-gray-500 mt-3">No upcoming appointments</p>
+            <p className="text-gray-500 mt-3 text-sm">No upcoming appointments</p>
             <button onClick={() => navigate('/patient/browse-services')}
-              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm">
+              className="mt-4 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
               Book Now
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {appointments.map((appt: any, i: number) => (
-              <div key={appt.id || appt._id || i}
-                className="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50">
-                <div>
-                  <p className="font-medium text-gray-900">{appt.provider?.name || appt.professionalName || 'Healthcare Provider'}</p>
-                  <p className="text-sm text-gray-500">{appt.date || appt.scheduledDate} {appt.time && `at ${appt.time}`}</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  appt.type === 'video' ? 'bg-blue-100 text-blue-700' :
-                  appt.type === 'chat' ? 'bg-green-100 text-green-700' :
-                  'bg-purple-100 text-purple-700'
-                }`}>
-                  {appt.type || appt.appointmentType || 'In-person'}
-                </span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Provider', 'Service', 'Date', 'Time', 'Mode', 'Status', 'Fee'].map(h => (
+                    <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {appointments.map((appt: any, i: number) => {
+                  const status = appt.status || 'scheduled';
+                  const mode = appt.type || appt.appointmentMode || 'in_person';
+                  const modeLabel: Record<string, string> = {
+                    video_call: '📹 Video', video: '📹 Video',
+                    phone_call: '📞 Phone', chat: '📞 Phone',
+                    in_person: '🏥 In-Person', 'in-person': '🏥 In-Person',
+                  };
+                  const statusStyle: Record<string, string> = {
+                    scheduled:  'bg-blue-100 text-blue-700',
+                    confirmed:  'bg-green-100 text-green-700',
+                    pending:    'bg-amber-100 text-amber-700',
+                    cancelled:  'bg-red-100 text-red-700',
+                    completed:  'bg-gray-100 text-gray-600',
+                  };
+                  const rawDate = appt.date || appt.scheduledDate;
+                  const formattedDate = rawDate
+                    ? new Date(rawDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : '—';
+                  const fee = appt.payment?.amount || appt.consultationFee || 0;
+
+                  return (
+                    <tr key={appt.id || appt._id || i} className="hover:bg-gray-50 transition-colors">
+                      {/* Provider */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white text-xs font-bold">
+                              {(appt.provider?.name || appt.professionalName || 'P').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                            {appt.provider?.name || appt.professionalName || 'Healthcare Provider'}
+                          </span>
+                        </div>
+                      </td>
+                      {/* Service */}
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                        {appt.service?.title || appt.reasonForVisit || 'Consultation'}
+                      </td>
+                      {/* Date */}
+                      <td className="px-5 py-3.5 text-sm text-gray-700 whitespace-nowrap">
+                        {formattedDate}
+                      </td>
+                      {/* Time */}
+                      <td className="px-5 py-3.5 text-sm text-gray-700 whitespace-nowrap">
+                        {appt.time || appt.scheduledTime || '—'}
+                      </td>
+                      {/* Mode */}
+                      <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                        {modeLabel[mode] || mode}
+                      </td>
+                      {/* Status */}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${statusStyle[status] || 'bg-gray-100 text-gray-600'}`}>
+                          {status}
+                        </span>
+                      </td>
+                      {/* Fee */}
+                      <td className="px-5 py-3.5 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                        {fee > 0 ? `₦${fee.toLocaleString()}` : 'Free'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

@@ -2,579 +2,328 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../components';
 import { appointmentsApi } from '../services/api';
-import { Appointment } from '../types';
-import { format } from 'date-fns';
-import { showSuccessToast, showErrorToast, showInfoToast } from '../utils/toast';
+import { format, formatDistanceToNow, isPast } from 'date-fns';
+import { showSuccessToast, showErrorToast } from '../utils/toast';
 
-type AppointmentTab = 'upcoming' | 'completed' | 'cancelled';
+type Tab = 'upcoming' | 'completed' | 'cancelled';
 
-interface RescheduleModalProps {
-  isOpen: boolean;
-  appointment: Appointment | null;
-  onClose: () => void;
-  onConfirm: (appointmentId: string, newDate: Date, newTime: string) => void;
-}
+const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
+  scheduled:  { badge: 'bg-blue-100 text-blue-700 border-blue-200',   dot: 'bg-blue-500' },
+  confirmed:  { badge: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
+  pending:    { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  completed:  { badge: 'bg-gray-100 text-gray-600 border-gray-200',    dot: 'bg-gray-400' },
+  cancelled:  { badge: 'bg-red-100 text-red-600 border-red-200',       dot: 'bg-red-500' },
+  no_show:    { badge: 'bg-red-100 text-red-600 border-red-200',       dot: 'bg-red-400' },
+};
 
-const RescheduleModal: React.FC<RescheduleModalProps> = ({
-  isOpen,
-  appointment,
-  onClose,
-  onConfirm,
-}) => {
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+const MODE_ICONS: Record<string, string> = {
+  video_call: '📹', video: '📹',
+  phone_call: '📞', chat: '📞',
+  in_person: '🏥', 'in-person': '🏥',
+};
+const MODE_LABELS: Record<string, string> = {
+  video_call: 'Video Call', video: 'Video Call',
+  phone_call: 'Phone Call', chat: 'Phone Call',
+  in_person: 'In-Person', 'in-person': 'In-Person',
+};
 
-  if (!isOpen || !appointment) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedDate && selectedTime) {
-      onConfirm(appointment.id, new Date(selectedDate), selectedTime);
-    }
-  };
-
+// Avatar with initials fallback
+const Avatar: React.FC<{ name: string; photo?: string | null; size?: string }> = ({ name, photo, size = 'w-12 h-12' }) => {
+  const [err, setErr] = useState(false);
+  const initials = (name || 'P').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'P';
+  if (photo && photo.startsWith('http') && !err) {
+    return <img src={photo} alt={name} className={`${size} rounded-2xl object-cover flex-shrink-0`} onError={() => setErr(true)} />;
+  }
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">Reschedule Appointment</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Date
-            </label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Time
-            </label>
-            <input
-              type="time"
-              value={selectedTime}
-              onChange={(e) => setSelectedTime(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Confirm
-            </button>
-          </div>
-        </form>
-      </div>
+    <div className={`${size} rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm`}>
+      <span className="text-white font-bold text-sm">{initials}</span>
     </div>
   );
 };
 
-interface CancelModalProps {
-  isOpen: boolean;
-  appointment: Appointment | null;
-  onClose: () => void;
-  onConfirm: (appointmentId: string, reason: string) => void;
-}
-
-const CancelModal: React.FC<CancelModalProps> = ({
-  isOpen,
-  appointment,
-  onClose,
-  onConfirm,
-}) => {
-  const [reason, setReason] = useState('');
-
-  if (!isOpen || !appointment) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onConfirm(appointment.id, reason);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">Cancel Appointment</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <p className="text-gray-600 mb-4">
-          Are you sure you want to cancel your appointment with {appointment.provider.name}?
-        </p>
-
-        <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Reason for cancellation (optional)
-            </label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Please provide a reason..."
-            />
-          </div>
-
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Keep Appointment
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Cancel Appointment
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+const TABS: { value: Tab; label: string; icon: string }[] = [
+  { value: 'upcoming',  label: 'Upcoming',  icon: '📅' },
+  { value: 'completed', label: 'Completed', icon: '✅' },
+  { value: 'cancelled', label: 'Cancelled', icon: '❌' },
+];
 
 const MyAppointments: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<AppointmentTab>('upcoming');
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>('upcoming');
+  const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [rescheduleModal, setRescheduleModal] = useState<{
-    isOpen: boolean;
-    appointment: Appointment | null;
-  }>({ isOpen: false, appointment: null });
-  const [cancelModal, setCancelModal] = useState<{
-    isOpen: boolean;
-    appointment: Appointment | null;
-  }>({ isOpen: false, appointment: null });
-  const [actionLoading, setActionLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [cancelModal, setCancelModal] = useState<any | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
-  useEffect(() => {
-    fetchAppointments();
-  }, [activeTab]);
+  useEffect(() => { fetchAppointments(); }, [activeTab]);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      setError(null);
-
-      const response = await appointmentsApi.getAppointments({ status: activeTab });
-      const apptData = response.data?.data ?? response.data ?? [];
-      setAppointments(Array.isArray(apptData) ? apptData : []);
-    } catch (err: any) {
-      console.error('Error fetching appointments:', err);
-      setError('Failed to load appointments. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      const res = await appointmentsApi.getAppointments({ status: activeTab });
+      const data = (res.data?.data as any) ?? res.data ?? [];
+      setAppointments(Array.isArray(data) ? data : []);
+    } catch { showErrorToast('Failed to load appointments'); }
+    finally { setLoading(false); }
   };
 
-  const handleJoinConsultation = (appointment: Appointment) => {
-    if (appointment.consultationLink) {
-      window.open(appointment.consultationLink, '_blank');
-    } else {
-      showErrorToast('Consultation link not available yet');
-    }
-  };
-
-  const handleReschedule = (appointment: Appointment) => {
-    setRescheduleModal({ isOpen: true, appointment });
-  };
-
-  const handleConfirmReschedule = async (
-    appointmentId: string,
-    newDate: Date,
-    newTime: string
-  ) => {
+  const handleCancel = async () => {
+    if (!cancelModal) return;
+    setActionLoading(cancelModal.id);
     try {
-      setActionLoading(true);
-      await appointmentsApi.rescheduleAppointment(appointmentId, {
-        date: newDate.toISOString(),
-        time: newTime,
-      });
-      
-      showSuccessToast('Appointment rescheduled successfully');
-      setRescheduleModal({ isOpen: false, appointment: null });
+      await appointmentsApi.cancelAppointment(cancelModal.id, cancelReason);
+      showSuccessToast('Appointment cancelled');
+      setCancelModal(null); setCancelReason('');
       fetchAppointments();
-    } catch (err: any) {
-      console.error('Error rescheduling appointment:', err);
-      showErrorToast('Failed to reschedule appointment. Please try again.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCancel = (appointment: Appointment) => {
-    setCancelModal({ isOpen: true, appointment });
-  };
-
-  const handleConfirmCancel = async (appointmentId: string, reason: string) => {
-    try {
-      setActionLoading(true);
-      await appointmentsApi.cancelAppointment(appointmentId, reason);
-      
-      showSuccessToast('Appointment cancelled successfully');
-      setCancelModal({ isOpen: false, appointment: null });
-      fetchAppointments();
-    } catch (err: any) {
-      console.error('Error cancelling appointment:', err);
-      showErrorToast('Failed to cancel appointment. Please try again.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDownloadPrescription = async (appointmentId: string) => {
-    try {
-      showInfoToast('Downloading prescription...');
-      // This would typically call an API endpoint to download the prescription
-      // For now, we'll just show a success message
-      showSuccessToast('Prescription downloaded successfully');
-    } catch (err: any) {
-      console.error('Error downloading prescription:', err);
-      showErrorToast('Failed to download prescription. Please try again.');
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'upcoming':
-        return 'bg-blue-100 text-blue-700';
-      case 'completed':
-        return 'bg-green-100 text-green-700';
-      case 'cancelled':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getConsultationTypeBadge = (type: string) => {
-    switch (type) {
-      case 'video':
-        return 'bg-blue-100 text-blue-700';
-      case 'chat':
-        return 'bg-green-100 text-green-700';
-      case 'in-person':
-        return 'bg-purple-100 text-purple-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const renderAppointmentCard = (appointment: Appointment) => {
-    const isUpcoming = activeTab === 'upcoming';
-    const isCompleted = activeTab === 'completed';
-
-    return (
-      <div
-        key={appointment.id}
-        className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow"
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start space-x-4">
-            <img
-              src={appointment.provider.photo || '/default-avatar.png'}
-              alt={appointment.provider.name}
-              className="w-16 h-16 rounded-full object-cover"
-            />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {appointment.provider.name}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {appointment.provider.specialty || appointment.provider.type}
-              </p>
-              <div className="flex items-center space-x-2 mt-2">
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(appointment.status)}`}>
-                  {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                </span>
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getConsultationTypeBadge(appointment.type)}`}>
-                  {appointment.type === 'in-person' ? 'In-Person' : appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <svg
-              className="w-5 h-5 mr-2 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <span>{format(new Date(appointment.date), 'MMMM dd, yyyy')}</span>
-          </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <svg
-              className="w-5 h-5 mr-2 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{appointment.time}</span>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-2 mt-4">
-          {isUpcoming && (
-            <>
-              {appointment.consultationLink && (
-                <button
-                  onClick={() => handleJoinConsultation(appointment)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Join Consultation
-                </button>
-              )}
-              <button
-                onClick={() => handleReschedule(appointment)}
-                disabled={actionLoading}
-                className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium flex items-center disabled:opacity-50"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                Reschedule
-              </button>
-              <button
-                onClick={() => handleCancel(appointment)}
-                disabled={actionLoading}
-                className="px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium flex items-center disabled:opacity-50"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Cancel
-              </button>
-            </>
-          )}
-          {isCompleted && (
-            <button
-              onClick={() => handleDownloadPrescription(appointment.id)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center"
-            >
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Download Prescription
-            </button>
-          )}
-        </div>
-      </div>
-    );
+    } catch { showErrorToast('Failed to cancel appointment'); }
+    finally { setActionLoading(null); }
   };
 
   return (
     <DashboardLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">My Appointments</h1>
-        <p className="text-gray-600 mt-2">
-          View and manage your healthcare appointments
-        </p>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Manage your healthcare appointments</p>
+          </div>
+          <button onClick={() => navigate('/patient/browse-services')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Book New
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
+          {TABS.map(tab => (
+            <button key={tab.value} onClick={() => setActiveTab(tab.value)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === tab.value
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}>
+              <span>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+          </div>
+        ) : appointments.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center">
+            <div className="text-5xl mb-4">
+              {activeTab === 'upcoming' ? '📅' : activeTab === 'completed' ? '✅' : '❌'}
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">No {activeTab} appointments</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              {activeTab === 'upcoming' ? 'Book a consultation to get started' : `No ${activeTab} appointments yet`}
+            </p>
+            {activeTab === 'upcoming' && (
+              <button onClick={() => navigate('/patient/browse-services')}
+                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+                Browse Services
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {appointments.map((apt: any) => {
+              const id = apt.id || apt._id;
+              const status = apt.status || 'scheduled';
+              const style = STATUS_STYLES[status] || STATUS_STYLES.scheduled;
+              const providerName = apt.provider?.name || apt.professionalName || 'Healthcare Provider';
+              const providerSpecialty = apt.provider?.specialty || apt.provider?.type || '';
+              const providerPhoto = apt.provider?.photo || null;
+              const serviceTitle = apt.service?.title || apt.reasonForVisit || 'Consultation';
+              const rawDate = apt.date || apt.scheduledDate;
+              const time = apt.time || apt.scheduledTime || '';
+              const mode = apt.type || apt.appointmentMode || 'in_person';
+              const fee = apt.payment?.amount || apt.consultationFee || 0;
+              const paymentStatus = apt.payment?.status || 'pending';
+              const isBusy = actionLoading === id;
+              const isUpcoming = activeTab === 'upcoming';
+              const isCompleted = activeTab === 'completed';
+
+              const formattedDate = rawDate ? format(new Date(rawDate), 'EEEE, MMM d, yyyy') : '—';
+              const relDate = rawDate ? formatDistanceToNow(new Date(rawDate), { addSuffix: true }) : '';
+              const dateIsPast = rawDate ? isPast(new Date(rawDate)) : false;
+
+              return (
+                <div key={id}
+                  className={`bg-white rounded-2xl border overflow-hidden transition-all hover:shadow-md ${
+                    isUpcoming && !dateIsPast ? 'border-gray-200' : 'border-gray-200 opacity-90'
+                  }`}>
+                  {/* Top accent */}
+                  <div className={`h-1 ${
+                    status === 'confirmed' ? 'bg-green-400' :
+                    status === 'scheduled' ? 'bg-blue-400' :
+                    status === 'completed' ? 'bg-gray-300' :
+                    'bg-red-300'
+                  }`} />
+
+                  <div className="p-5">
+                    <div className="flex items-start gap-4">
+                      <Avatar name={providerName} photo={providerPhoto} size="w-14 h-14" />
+
+                      <div className="flex-1 min-w-0">
+                        {/* Top row */}
+                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                          <div>
+                            <p className="font-bold text-gray-900 text-base">{providerName}</p>
+                            {providerSpecialty && (
+                              <p className="text-xs text-gray-500 capitalize mt-0.5">{providerSpecialty}</p>
+                            )}
+                          </div>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border capitalize flex-shrink-0 ${style.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                            {status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+
+                        {/* Service */}
+                        <p className="text-sm text-blue-600 font-medium mt-1.5">{serviceTitle}</p>
+
+                        {/* Info chips */}
+                        <div className="flex flex-wrap gap-2 mt-2.5">
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+                            <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formattedDate}
+                          </span>
+                          {time && (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+                              <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {time}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+                            {MODE_ICONS[mode] || '🏥'} {MODE_LABELS[mode] || mode}
+                          </span>
+                          {fee > 0 && (
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                              paymentStatus === 'paid'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              💳 ₦{fee.toLocaleString()} · {paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
+                            </span>
+                          )}
+                          {relDate && (
+                            <span className="text-xs text-gray-400">{relDate}</span>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {isUpcoming && apt.consultationLink && (
+                            <a href={apt.consultationLink} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Join Call
+                            </a>
+                          )}
+                          {isUpcoming && fee > 0 && paymentStatus === 'pending' && (
+                            <button onClick={() => navigate('/patient/payments')}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white text-xs font-semibold rounded-xl hover:bg-amber-600 transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                              Pay Now
+                            </button>
+                          )}
+                          {isUpcoming && (status === 'scheduled' || status === 'confirmed') && (
+                            <button onClick={() => { setCancelModal(apt); setCancelReason(''); }} disabled={isBusy}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-red-600 text-xs font-semibold rounded-xl border border-red-200 hover:bg-red-50 disabled:opacity-50 transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Cancel
+                            </button>
+                          )}
+                          {isCompleted && (
+                            <button onClick={() => navigate('/patient/medical-records')}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-50 text-green-700 text-xs font-semibold rounded-xl border border-green-200 hover:bg-green-100 transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              View Records
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-md mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
-            <button
-              onClick={() => setActiveTab('upcoming')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'upcoming'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Upcoming
-            </button>
-            <button
-              onClick={() => setActiveTab('completed')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'completed'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Completed
-            </button>
-            <button
-              onClick={() => setActiveTab('cancelled')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'cancelled'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Cancelled
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Appointments List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : appointments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-md p-12 text-center">
-          <svg
-            className="w-16 h-16 text-gray-300 mx-auto mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-          <p className="text-gray-500 text-lg font-medium">
-            No {activeTab} appointments
-          </p>
-          <p className="text-gray-400 text-sm mt-2">
-            {activeTab === 'upcoming'
-              ? 'Book a consultation to get started'
-              : `You don't have any ${activeTab} appointments yet`}
-          </p>
-          {activeTab === 'upcoming' && (
-            <button
-              onClick={() => navigate('/patient/browse-services')}
-              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Browse Services
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {appointments.map((appointment) => renderAppointmentCard(appointment))}
+      {/* Cancel Modal */}
+      {cancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={e => { if (e.target === e.currentTarget) setCancelModal(null); }}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-base font-bold text-gray-900">Cancel Appointment</h3>
+              <button onClick={() => setCancelModal(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                <Avatar name={cancelModal.provider?.name || 'Provider'} photo={cancelModal.provider?.photo} size="w-10 h-10" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{cancelModal.provider?.name || 'Provider'}</p>
+                  <p className="text-xs text-gray-500">
+                    {cancelModal.date ? format(new Date(cancelModal.date), 'MMM d, yyyy') : '—'} at {cancelModal.time || '—'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                  Reason <span className="text-gray-400 font-normal">(Optional)</span>
+                </label>
+                <textarea value={cancelReason} onChange={e => setCancelReason(e.target.value)} rows={3}
+                  placeholder="Let us know why you're cancelling..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none" />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50 rounded-b-2xl">
+              <button onClick={() => setCancelModal(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                Keep Appointment
+              </button>
+              <button onClick={handleCancel} disabled={!!actionLoading}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors">
+                {actionLoading ? 'Cancelling...' : 'Cancel Appointment'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
-
-      {/* Modals */}
-      <RescheduleModal
-        isOpen={rescheduleModal.isOpen}
-        appointment={rescheduleModal.appointment}
-        onClose={() => setRescheduleModal({ isOpen: false, appointment: null })}
-        onConfirm={handleConfirmReschedule}
-      />
-      <CancelModal
-        isOpen={cancelModal.isOpen}
-        appointment={cancelModal.appointment}
-        onClose={() => setCancelModal({ isOpen: false, appointment: null })}
-        onConfirm={handleConfirmCancel}
-      />
     </DashboardLayout>
   );
 };
