@@ -42,6 +42,19 @@ router.put('/read-all', protect, async (req, res) => {
     }
 });
 
+// Alias: mark-all-read (frontend compatibility)
+router.put('/mark-all-read', protect, async (req, res) => {
+    try {
+        await Notification.updateMany(
+            { user: req.user._id, isRead: false },
+            { isRead: true, readAt: new Date() }
+        );
+        res.json({ success: true, message: 'All notifications marked as read' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Mark single notification as read
 router.put('/:id/read', protect, async (req, res) => {
     try {

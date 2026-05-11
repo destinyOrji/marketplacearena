@@ -163,6 +163,14 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                     </button>
                   </div>
                 )}
+                {notifications.length > 0 && (
+                  <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+                    <a href="/patient/notifications"
+                      className="text-blue-600 hover:text-blue-700 text-sm font-medium w-full text-center block">
+                      View all notifications
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>

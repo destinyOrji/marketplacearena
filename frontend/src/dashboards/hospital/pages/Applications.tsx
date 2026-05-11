@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiFilter, FiFileText, FiCheckCircle, FiXCircle, FiSearch } from 'react-icons/fi';
+import { FiFileText, FiCheckCircle, FiXCircle, FiSearch, FiSend, FiMessageSquare, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -18,14 +18,188 @@ const STATUS_TABS = [
 ];
 
 const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
-  pending:     { badge: 'bg-amber-100 text-amber-700 border-amber-200',     dot: 'bg-amber-400' },
-  reviewed:    { badge: 'bg-blue-100 text-blue-700 border-blue-200',        dot: 'bg-blue-400' },
-  shortlisted: { badge: 'bg-purple-100 text-purple-700 border-purple-200',  dot: 'bg-purple-400' },
-  offered:     { badge: 'bg-indigo-100 text-indigo-700 border-indigo-200',  dot: 'bg-indigo-400' },
-  accepted:    { badge: 'bg-green-100 text-green-700 border-green-200',     dot: 'bg-green-400' },
-  rejected:    { badge: 'bg-red-100 text-red-700 border-red-200',           dot: 'bg-red-400' },
-  withdrawn:   { badge: 'bg-gray-100 text-gray-600 border-gray-200',        dot: 'bg-gray-400' },
+  pending:     { badge: 'bg-amber-100 text-amber-700 border-amber-200',    dot: 'bg-amber-400' },
+  reviewed:    { badge: 'bg-blue-100 text-blue-700 border-blue-200',       dot: 'bg-blue-400' },
+  shortlisted: { badge: 'bg-purple-100 text-purple-700 border-purple-200', dot: 'bg-purple-400' },
+  offered:     { badge: 'bg-indigo-100 text-indigo-700 border-indigo-200', dot: 'bg-indigo-400' },
+  accepted:    { badge: 'bg-green-100 text-green-700 border-green-200',    dot: 'bg-green-400' },
+  rejected:    { badge: 'bg-red-100 text-red-700 border-red-200',          dot: 'bg-red-400' },
+  withdrawn:   { badge: 'bg-gray-100 text-gray-600 border-gray-200',       dot: 'bg-gray-400' },
 };
+
+// Quick message templates
+const QUICK_MESSAGES = [
+  'Congratulations! We are pleased to offer you the position. Please confirm your availability for an onboarding call.',
+  'Thank you for your application. We would like to schedule an interview. Please let us know your available times.',
+  'We have reviewed your application and would like to discuss the next steps. Please contact us at your earliest convenience.',
+  'We are pleased to inform you that your application has been shortlisted. We will be in touch shortly.',
+];
+
+interface MessageModalProps {
+  app: any;
+  onClose: () => void;
+  onSent: () => void;
+}
+
+const MessageModal: React.FC<MessageModalProps> = ({ app, onClose, onSent }) => {
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const profName = app.professional?.user?.firstName
+    ? `${app.professional.user.firstName} ${app.professional.user.lastName}`
+    : app.professional_name || 'Professional';
+  const jobTitle = app.job?.jobTitle || app.job?.job_title || 'N/A';
+  const id = app._id || app.id;
+
+  const getHeaders = () => {
+    const token = localStorage.getItem('hospitalToken') || localStorage.getItem('authToken');
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
+  const handleSend = async () => {
+    if (!message.trim()) {
+      toast.error('Please enter a message');
+      return;
+    }
+    setSending(true);
+    try {
+      await axios.post(
+        `${API_URL}/hospitals/applications/${id}/message`,
+        { message: message.trim() },
+        getHeaders()
+      );
+      toast.success('Message sent to professional!');
+      onSent();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const applyTemplate = (tpl: string) => {
+    setMessage(tpl);
+    textareaRef.current?.focus();
+  };
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+              <FiMessageSquare className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Message Professional</h3>
+              <p className="text-xs text-gray-500">Sending to {profName}</p>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Context */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-900">{profName}</p>
+              <p className="text-xs text-blue-600">Applied for: {jobTitle}</p>
+            </div>
+          </div>
+
+          {/* Quick templates */}
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Quick Templates</p>
+            <div className="space-y-1.5">
+              {QUICK_MESSAGES.map((tpl, i) => (
+                <button key={i} onClick={() => applyTemplate(tpl)}
+                  className="w-full text-left text-xs text-gray-600 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 rounded-lg px-3 py-2 transition-colors line-clamp-1">
+                  {tpl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Message textarea */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              Your Message <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={5}
+              disabled={sending}
+              placeholder="Type your message to the professional here..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none disabled:bg-gray-50 transition-colors"
+            />
+            <p className="text-xs text-gray-400 mt-1 text-right">{message.length} characters</p>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+            <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-amber-700">
+              This message will be delivered to the professional's notification inbox immediately.
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
+          <button onClick={onClose} disabled={sending}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleSend} disabled={sending || !message.trim()}
+            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+            {sending ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Sending...
+              </>
+            ) : (
+              <>
+                <FiSend className="w-4 h-4" />
+                Send Message
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 const Applications: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -35,6 +209,7 @@ const Applications: React.FC = () => {
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [messageApp, setMessageApp] = useState<any | null>(null);
 
   const getHeaders = () => {
     const token = localStorage.getItem('hospitalToken') || localStorage.getItem('authToken');
@@ -89,7 +264,6 @@ const Applications: React.FC = () => {
     }
   };
 
-  // Counts per status
   const counts = STATUS_TABS.reduce((acc, tab) => {
     acc[tab.value] = tab.value === ''
       ? applications.length
@@ -97,7 +271,6 @@ const Applications: React.FC = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  // Search filter
   const filtered = applications.filter(app => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -109,7 +282,7 @@ const Applications: React.FC = () => {
   });
 
   const getInitials = (name: string) =>
-    name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
 
   return (
     <div className="space-y-6">
@@ -117,7 +290,7 @@ const Applications: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Job Applications</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Review and manage applications from health professionals</p>
+          <p className="text-sm text-gray-500 mt-0.5">Review, manage and communicate with applicants</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-full">
@@ -128,29 +301,29 @@ const Applications: React.FC = () => {
               {counts['pending']} pending
             </span>
           )}
+          {counts['accepted'] > 0 && (
+            <span className="px-3 py-1.5 bg-green-100 text-green-700 text-sm font-semibold rounded-full border border-green-200">
+              {counts['accepted']} accepted
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Status tabs + Search */}
+      {/* Tabs + Search */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        {/* Tabs */}
+        {/* Status tabs */}
         <div className="flex overflow-x-auto border-b border-gray-200 scrollbar-hide">
           {STATUS_TABS.map(tab => (
-            <button
-              key={tab.value}
-              onClick={() => setStatusFilter(tab.value)}
+            <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
               className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 statusFilter === tab.value
                   ? 'border-blue-600 text-blue-600 bg-blue-50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
+              }`}>
               {tab.label}
               {counts[tab.value] > 0 && (
                 <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
-                  statusFilter === tab.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600'
+                  statusFilter === tab.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
                 }`}>
                   {counts[tab.value]}
                 </span>
@@ -159,21 +332,17 @@ const Applications: React.FC = () => {
           ))}
         </div>
 
-        {/* Search bar */}
+        {/* Search */}
         <div className="p-4 border-b border-gray-100">
           <div className="relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search by applicant name or job title..."
-              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-            />
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
           </div>
         </div>
 
-        {/* Content */}
+        {/* List */}
         {loading ? (
           <div className="flex justify-center items-center h-48">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
@@ -187,9 +356,7 @@ const Applications: React.FC = () => {
               {search ? 'No matching applications' : 'No applications yet'}
             </h3>
             <p className="text-sm text-gray-500">
-              {search
-                ? 'Try a different search term'
-                : 'Applications will appear here when professionals apply to your vacancies.'}
+              {search ? 'Try a different search term' : 'Applications will appear here when professionals apply to your vacancies.'}
             </p>
           </div>
         ) : (
@@ -211,6 +378,7 @@ const Applications: React.FC = () => {
               const isAccepting = actionLoading === id + '_accept';
               const isRejecting = actionLoading === id + '_reject';
               const isBusy = isAccepting || isRejecting;
+              const canMessage = status === 'accepted' || status === 'shortlisted' || status === 'offered';
 
               return (
                 <div key={id} className="hover:bg-gray-50 transition-colors">
@@ -221,8 +389,8 @@ const Applications: React.FC = () => {
                         <span className="text-white text-sm font-bold">{getInitials(profName)}</span>
                       </div>
 
-                      {/* Main content */}
                       <div className="flex-1 min-w-0">
+                        {/* Top row: name + status + actions */}
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
@@ -232,50 +400,48 @@ const Applications: React.FC = () => {
                                 {status}
                               </span>
                             </div>
-                            {profType && (
-                              <p className="text-xs text-gray-500 mt-0.5 capitalize">{profType}</p>
-                            )}
-                            {profEmail && (
-                              <p className="text-xs text-gray-400">{profEmail}</p>
-                            )}
+                            {profType && <p className="text-xs text-gray-500 mt-0.5 capitalize">{profType}</p>}
+                            {profEmail && <p className="text-xs text-gray-400">{profEmail}</p>}
                           </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                             {status === 'pending' && (
                               <>
-                                <button
-                                  onClick={() => handleAccept(id)}
-                                  disabled={isBusy}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm"
-                                >
+                                <button onClick={() => handleAccept(id)} disabled={isBusy}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm">
                                   {isAccepting ? (
                                     <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
                                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                     </svg>
-                                  ) : (
-                                    <FiCheckCircle className="w-3.5 h-3.5" />
-                                  )}
+                                  ) : <FiCheckCircle className="w-3.5 h-3.5" />}
                                   Accept
                                 </button>
-                                <button
-                                  onClick={() => handleReject(id)}
-                                  disabled={isBusy}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 border border-red-200 disabled:opacity-50 transition-colors"
-                                >
+                                <button onClick={() => handleReject(id)} disabled={isBusy}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 border border-red-200 disabled:opacity-50 transition-colors">
                                   {isRejecting ? (
                                     <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
                                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                     </svg>
-                                  ) : (
-                                    <FiXCircle className="w-3.5 h-3.5" />
-                                  )}
+                                  ) : <FiXCircle className="w-3.5 h-3.5" />}
                                   Reject
                                 </button>
                               </>
                             )}
+
+                            {/* Message button — shown for accepted/shortlisted/offered */}
+                            {canMessage && (
+                              <button
+                                onClick={() => setMessageApp(app)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                              >
+                                <FiMessageSquare className="w-3.5 h-3.5" />
+                                Message
+                              </button>
+                            )}
+
                             {status === 'accepted' && (
                               <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-semibold rounded-lg border border-green-200">
                                 <FiCheckCircle className="w-3.5 h-3.5" /> Accepted
@@ -289,7 +455,7 @@ const Applications: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Job info row */}
+                        {/* Job info */}
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                           <div className="flex items-center gap-1.5 text-sm text-gray-600">
                             <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,13 +478,11 @@ const Applications: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Cover letter preview */}
+                        {/* Cover letter */}
                         {coverLetter && (
                           <div className="mt-3">
-                            <button
-                              onClick={() => setExpandedId(isExpanded ? null : id)}
-                              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                            >
+                            <button onClick={() => setExpandedId(isExpanded ? null : id)}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
                               <svg className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -342,11 +506,19 @@ const Applications: React.FC = () => {
         )}
       </div>
 
-      {/* Footer count */}
       {!loading && filtered.length > 0 && (
         <p className="text-center text-sm text-gray-400">
           Showing {filtered.length} of {applications.length} application{applications.length !== 1 ? 's' : ''}
         </p>
+      )}
+
+      {/* Message Modal */}
+      {messageApp && (
+        <MessageModal
+          app={messageApp}
+          onClose={() => setMessageApp(null)}
+          onSent={() => setMessageApp(null)}
+        />
       )}
     </div>
   );

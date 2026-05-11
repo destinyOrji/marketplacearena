@@ -108,7 +108,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({
     setMarkingAll(true);
     try {
       const token = getToken();
-      await fetch(`${API_URL}/notifications/mark-all-read`, {
+      await fetch(`${API_URL}/notifications/read-all`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -681,6 +681,66 @@ router.put('/applications/:id/reject', protect, async (req, res) => {
     }
 });
 
+// Send message to professional after accepting application
+router.post('/applications/:id/message', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const Notification = require('../models/Notification');
+        const { message } = req.body;
+
+        if (!message || !message.trim()) {
+            return res.status(400).json({ success: false, message: 'Message is required' });
+        }
+
+        // Find the application and populate professional + job
+        const application = await JobApplication.findById(req.params.id)
+            .populate({ path: 'professional', populate: { path: 'user', select: '_id firstName lastName' } })
+            .populate('job', 'jobTitle');
+
+        if (!application) {
+            return res.status(404).json({ success: false, message: 'Application not found' });
+        }
+
+        // Verify the hospital owns this application
+        const Job = require('../models/Job');
+        const Hospital = require('../models/Hospital');
+        const hospital = await Hospital.findOne({ user: req.user._id });
+        if (!hospital) {
+            return res.status(403).json({ success: false, message: 'Hospital not found' });
+        }
+        const job = await Job.findOne({ _id: application.job, hospital: hospital._id });
+        if (!job) {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+
+        const professionalUserId = application.professional?.user?._id;
+        if (!professionalUserId) {
+            return res.status(400).json({ success: false, message: 'Professional user not found' });
+        }
+
+        // Create notification for the professional
+        await Notification.create({
+            user: professionalUserId,
+            title: `Message from ${hospital.hospitalName}`,
+            message: message.trim(),
+            type: 'general',
+            data: {
+                applicationId: application._id,
+                jobId: application.job._id || application.job,
+                jobTitle: application.job?.jobTitle || '',
+                hospitalName: hospital.hospitalName,
+                hospitalId: hospital._id,
+                messageType: 'hospital_message'
+            }
+        });
+
+        res.json({ success: true, message: 'Message sent successfully' });
+    } catch (error) {
+        console.error('Error sending message:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Appointments
 router.get('/appointments', protect, async (req, res) => {
     try {

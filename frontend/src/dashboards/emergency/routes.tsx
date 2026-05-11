@@ -18,6 +18,7 @@ const CoverageAreas = React.lazy(() => import('./pages/CoverageAreas'));
 const VehiclesEquipment = React.lazy(() => import('./pages/VehiclesEquipment'));
 const Analytics = React.lazy(() => import('./pages/Analytics'));
 const Settings = React.lazy(() => import('./pages/Settings'));
+const Notifications = React.lazy(() => import('./pages/Notifications'));
 
 const EmergencyRoutes: React.FC = () => {
   const token = localStorage.getItem('authToken');
@@ -39,6 +40,7 @@ const EmergencyRoutes: React.FC = () => {
               <Route path="vehicles" element={<VehiclesEquipment />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="notifications" element={<Notifications />} />
             </Route>
           </Routes>
         </Suspense>

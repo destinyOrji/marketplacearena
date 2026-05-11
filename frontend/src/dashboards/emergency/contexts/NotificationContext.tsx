@@ -78,6 +78,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   };
 
+  // Poll every 30 seconds
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   const markAsRead = useCallback(async (id: string) => {
     try {
       await notificationsApi.markAsRead(id);
