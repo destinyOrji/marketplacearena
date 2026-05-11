@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FiEdit, FiArrowLeft, FiEye, FiFileText, FiCalendar, FiUsers } from 'react-icons/fi';
+import { FiEdit, FiEye, FiFileText, FiCalendar, FiUsers } from 'react-icons/fi';
 import { hospitalApi } from '../services/api';
 import { format } from 'date-fns';
 import axios from 'axios';
@@ -92,7 +92,9 @@ const VacancyDetail: React.FC = () => {
         <div className="flex items-start gap-3">
           <button onClick={() => navigate('/hospital/vacancies')}
             className="mt-1 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-            <FiArrowLeft className="h-5 w-5" />
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
           <div>
             <div className="flex items-center gap-3 flex-wrap">
