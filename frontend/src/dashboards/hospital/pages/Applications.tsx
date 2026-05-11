@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiFileText, FiCheckCircle, FiXCircle, FiSearch, FiSend, FiMessageSquare, FiX } from 'react-icons/fi';
+import { FiFileText, FiCheckCircle, FiXCircle, FiSearch, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -101,7 +101,10 @@ const MessageModal: React.FC<MessageModalProps> = ({ app, onClose, onSent }) => 
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-              <FiMessageSquare className="w-4 h-4 text-white" />
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
             </div>
             <div>
               <h3 className="text-base font-bold text-gray-900">Message Professional</h3>
@@ -188,7 +191,9 @@ const MessageModal: React.FC<MessageModalProps> = ({ app, onClose, onSent }) => 
               </>
             ) : (
               <>
-                <FiSend className="w-4 h-4" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
                 Send Message
               </>
             )}
@@ -437,7 +442,10 @@ const Applications: React.FC = () => {
                                 onClick={() => setMessageApp(app)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                               >
-                                <FiMessageSquare className="w-3.5 h-3.5" />
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                </svg>
                                 Message
                               </button>
                             )}
