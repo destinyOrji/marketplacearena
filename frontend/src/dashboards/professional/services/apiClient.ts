@@ -2,6 +2,7 @@
 
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { parseApiError } from '../utils/errorHandling';
+import { ErrorType } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
@@ -21,7 +22,7 @@ const apiClient: AxiosInstance = axios.create({
  */
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('professionalToken');
+    const token = localStorage.getItem('professionalToken') || localStorage.getItem('authToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,13 +41,18 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     const appError = parseApiError(error);
 
-    // Handle authentication errors
-    if (appError.type === 'AUTH_ERROR') {
-      localStorage.removeItem('professionalToken');
-      localStorage.removeItem('professional');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    // Handle authentication errors — only redirect if token is truly missing/expired
+    if (appError.type === ErrorType.AUTH_ERROR) {
+      const token = localStorage.getItem('professionalToken') || localStorage.getItem('authToken');
+      if (!token) {
+        // No token at all — redirect to login
+        localStorage.removeItem('professionalToken');
+        localStorage.removeItem('professional');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+      // If token exists but got 401, let the error bubble up to the caller
     }
 
     return Promise.reject(appError);

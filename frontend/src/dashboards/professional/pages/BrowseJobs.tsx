@@ -79,7 +79,12 @@ const BrowseJobs: React.FC = () => {
       setShowApplicationModal(false);
       setSelectedJob(null);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to submit application');
+      // Extract the most useful error message
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to submit application. Please try again.';
+      throw new Error(msg);
     }
   };
 
