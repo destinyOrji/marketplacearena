@@ -436,7 +436,6 @@ router.get('/appointments', protect, async (req, res) => {
                     select: 'firstName lastName email'
                 }
             })
-            .populate('service')
             .sort({ scheduledDate: -1 });
 
         const data = appointments.map(apt => ({
@@ -457,7 +456,7 @@ router.get('/appointments', protect, async (req, res) => {
                 id: apt.service._id,
                 title: apt.service.title,
                 price: apt.service.price
-            } : null,
+            } : { id: '', title: apt.reasonForVisit || 'Consultation', price: apt.consultationFee || 0 },
             payment: {
                 amount: apt.consultationFee || apt.service?.price || 0,
                 status: apt.paymentStatus || 'pending'

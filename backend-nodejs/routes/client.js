@@ -335,7 +335,6 @@ router.get('/appointments', protect, async (req, res) => {
         const appointments = await Appointment.find({ client: client._id, ...statusFilter })
             .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
             .populate({ path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName email' } })
-            .populate('service')
             .sort({ scheduledDate: -1 });
 
         const data = appointments.map(apt => {
@@ -372,7 +371,7 @@ router.get('/appointments', protect, async (req, res) => {
                     id:    apt.service._id,
                     title: apt.service.title,
                     price: apt.service.price,
-                } : null,
+                } : { id: '', title: apt.reasonForVisit || 'Consultation', price: apt.consultationFee || 0 },
                 provider,
                 payment: {
                     amount: apt.consultationFee || apt.service?.price || 0,
@@ -486,7 +485,6 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
             client:          client._id,
             professional:    professional?._id || null,
             gymPhysio:       gymPhysio?._id || null,
-            service:         service?._id,
             appointmentType,
             appointmentMode,
             scheduledDate:   apptDate,
@@ -502,11 +500,11 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
 
         const appointment = await Appointment.create(appointmentData);
 
-        // Populate for response
-        const populatePaths = [{ path: 'service' }];
+        // Populate for response — only populate fields that exist in the schema
+        const populatePaths = [];
         if (professional) populatePaths.push({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } });
         if (gymPhysio) populatePaths.push({ path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName email' } });
-        await appointment.populate(populatePaths);
+        if (populatePaths.length > 0) await appointment.populate(populatePaths);
 
         // Build provider info for response
         let providerInfo;
@@ -536,10 +534,10 @@ router.post('/appointments/book', protect, requireSubscription, async (req, res)
             time:    appointment.scheduledTime,
             status:  appointment.status,
             type:    appointment.appointmentMode,
-            service: appointment.service ? {
-                id:    appointment.service._id,
-                title: appointment.service.title,
-                price: appointment.service.price,
+            service: service ? {
+                id:    service._id,
+                title: service.title,
+                price: service.price,
             } : null,
             provider: providerInfo,
             payment: {
