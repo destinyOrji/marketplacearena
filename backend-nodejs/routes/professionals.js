@@ -884,7 +884,6 @@ router.put('/bank-account', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-});
 
 router.put('/settings/update', protect, async (req, res) => {
     res.json({ success: true, message: 'Settings updated' });
