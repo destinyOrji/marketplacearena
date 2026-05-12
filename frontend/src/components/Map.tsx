@@ -110,9 +110,14 @@ const DrawControl: React.FC<{ onDrawCreated?: (layer: any) => void }> = ({ onDra
           radius: layer.getRadius(),
         };
       } else if (layer instanceof L.Polygon || layer instanceof L.Rectangle) {
+        const latLngs = layer.getLatLngs()[0];
+        // Handle nested arrays for polygons
+        const points = Array.isArray(latLngs) 
+          ? latLngs.map((latlng: any) => [latlng.lat, latlng.lng])
+          : [];
         coordinates = {
           type: 'polygon',
-          points: layer.getLatLngs()[0].map((latlng: L.LatLng) => [latlng.lat, latlng.lng]),
+          points,
         };
       }
 
