@@ -1,12 +1,214 @@
+// Gym & Physio Appointments — full redesign with accept/reject + patient notifications
+
 import React, { useEffect, useState } from 'react';
 import { getAppointments, confirmAppointment, cancelAppointment, completeAppointment } from '../services/api';
 import { toast } from 'react-toastify';
+import { format, formatDistanceToNow } from 'date-fns';
+import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
+
+const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
+  scheduled:  { badge: 'bg-blue-100 text-blue-700 border-blue-200',   dot: 'bg-blue-500' },
+  pending:    { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500' },
+  confirmed:  { badge: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
+  completed:  { badge: 'bg-gray-100 text-gray-600 border-gray-200',    dot: 'bg-gray-400' },
+  cancelled:  { badge: 'bg-red-100 text-red-600 border-red-200',       dot: 'bg-red-500' },
+};
+
+const STATUS_TABS = [
+  { value: 'all',       label: 'All' },
+  { value: 'scheduled', label: 'New' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+const MODE_LABELS: Record<string, string> = {
+  video_call: '📹 Video', phone_call: '📞 Phone',
+  in_person: '🏥 In-Person', 'in-person': '🏥 In-Person',
+};
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpdate: () => void }> = ({
+  appointment, onClose, onUpdate,
+}) => {
+  const [notes, setNotes] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const isRejectMode = appointment._action === 'reject';
+
+  const getToken = () => localStorage.getItem('gymPhysioToken') || localStorage.getItem('authToken') || '';
+
+  const notifyPatient = async (message: string, type: string) => {
+    try {
+      await axios.post(
+        `${API_URL}/gym-physio/appointments/${appointment.id}/notify-patient`,
+        { message, type },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+    } catch {} // non-fatal
+  };
+
+  const handleAccept = async () => {
+    setLoading(true);
+    try {
+      await confirmAppointment(appointment.id);
+      await notifyPatient(
+        notes
+          ? `Your booking has been confirmed. Note: ${notes}`
+          : 'Your booking has been confirmed by the provider.',
+        'appointment_confirmed'
+      );
+      toast.success('Appointment accepted — patient notified!');
+      onUpdate();
+    } catch { toast.error('Failed to accept appointment'); }
+    finally { setLoading(false); }
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) { toast.error('Please provide a reason'); return; }
+    setLoading(true);
+    try {
+      await cancelAppointment(appointment.id);
+      await notifyPatient(
+        `Your booking request has been declined. Reason: ${rejectReason}`,
+        'appointment_rejected'
+      );
+      toast.success('Appointment rejected — patient notified');
+      onUpdate();
+    } catch { toast.error('Failed to reject appointment'); }
+    finally { setLoading(false); }
+  };
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      await completeAppointment(appointment.id);
+      toast.success('Appointment marked as completed');
+      onUpdate();
+    } catch { toast.error('Failed to complete appointment'); }
+    finally { setLoading(false); }
+  };
+
+  const initials = (appointment.patient?.name || 'P').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget && !loading) onClose(); }}>
+      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">
+            {isRejectMode ? 'Reject Booking' : 'Booking Details'}
+          </h2>
+          <button onClick={onClose} disabled={loading}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+          {/* Client */}
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold">{initials}</span>
+            </div>
+            <div>
+              <p className="font-bold text-gray-900">{appointment.patient?.name || 'Client'}</p>
+              {appointment.patient?.email && <p className="text-xs text-gray-500">{appointment.patient.email}</p>}
+              {appointment.patient?.phone && <p className="text-xs text-gray-400">{appointment.patient.phone}</p>}
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="space-y-2 text-sm">
+            {[
+              { label: 'Service', value: appointment.service?.title || 'Session' },
+              { label: 'Date', value: appointment.date ? format(new Date(appointment.date), 'EEEE, MMMM d, yyyy') : '—' },
+              { label: 'Time', value: appointment.time || '—' },
+              { label: 'Mode', value: MODE_LABELS[appointment.type] || appointment.type || '—' },
+              { label: 'Status', value: appointment.status },
+              { label: 'Fee', value: appointment.payment?.amount > 0 ? `₦${appointment.payment.amount.toLocaleString()}` : 'Free' },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex justify-between py-1.5 border-b border-gray-100 last:border-0">
+                <span className="text-gray-500">{label}</span>
+                <span className="font-medium text-gray-900 capitalize">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {appointment.reason && (
+            <div className="bg-blue-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-blue-700 mb-1">Reason</p>
+              <p className="text-sm text-blue-900">{appointment.reason}</p>
+            </div>
+          )}
+
+          {!isRejectMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                Message to Client <span className="text-gray-400 font-normal">(Optional)</span>
+              </label>
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} disabled={loading}
+                placeholder="Any instructions or notes for the client..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50" />
+            </div>
+          )}
+
+          {isRejectMode && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                Reason for Rejection <span className="text-red-500">*</span>
+              </label>
+              <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3} disabled={loading}
+                placeholder="Explain why you are declining this booking..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-red-500 resize-none disabled:bg-gray-50" />
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 flex gap-3 bg-gray-50 rounded-b-2xl">
+          <button onClick={onClose} disabled={loading}
+            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            Close
+          </button>
+
+          {isRejectMode && (
+            <button onClick={handleReject} disabled={loading || !rejectReason.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors">
+              {loading ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
+              Reject & Notify Client
+            </button>
+          )}
+
+          {!isRejectMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
+            <button onClick={handleAccept} disabled={loading}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
+              {loading ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
+              Accept & Notify Client
+            </button>
+          )}
+
+          {!isRejectMode && appointment.status === 'confirmed' && (
+            <button onClick={handleComplete} disabled={loading}
+              className="flex-1 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              Mark Completed
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 const Appointments: React.FC = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
 
   useEffect(() => { fetchAppointments(); }, []);
 
@@ -14,122 +216,191 @@ const Appointments: React.FC = () => {
     setLoading(true);
     try {
       const data = await getAppointments();
-      setAppointments(Array.isArray(data) ? data : []);
+      const normalized = (Array.isArray(data) ? data : []).map((apt: any) => ({
+        ...apt,
+        id: apt._id || apt.id,
+        date: apt.scheduledDate || apt.date,
+        time: apt.scheduledTime || apt.time || '—',
+        status: apt.status || 'scheduled',
+        type: apt.appointmentMode || apt.type || 'in_person',
+        patient: apt.patient || {
+          id: apt.client?._id || '',
+          name: apt.client?.user
+            ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
+            : 'Client',
+          email: apt.client?.user?.email || '',
+          phone: apt.client?.user?.phone || apt.client?.phone || '',
+          photo: null,
+        },
+        service: apt.service || { id: '', title: apt.serviceName || 'Session', price: 0 },
+        payment: apt.payment || { amount: apt.consultationFee || 0, status: apt.paymentStatus || 'pending' },
+        reason: apt.reasonForVisit || apt.reason || '',
+      }));
+      setAppointments(normalized);
     } catch { toast.error('Failed to load appointments'); }
     finally { setLoading(false); }
   };
 
-  const handleAction = async (id: string, action: 'confirm' | 'cancel' | 'complete') => {
-    setActionLoading(id + action);
-    try {
-      if (action === 'confirm') await confirmAppointment(id);
-      else if (action === 'cancel') await cancelAppointment(id);
-      else await completeAppointment(id);
-      toast.success(`Appointment ${action}ed`);
-      fetchAppointments();
-    } catch { toast.error(`Failed to ${action} appointment`); }
-    finally { setActionLoading(null); }
-  };
+  const filtered = appointments.filter(a => statusFilter === 'all' || a.status === statusFilter);
 
-  const filtered = statusFilter === 'all' ? appointments : appointments.filter((a: any) => a.status === statusFilter);
-
-  const getStatusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      completed: 'bg-green-100 text-green-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      cancelled: 'bg-red-100 text-red-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      scheduled: 'bg-indigo-100 text-indigo-800',
-    };
-    return map[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600" />
-    </div>
-  );
+  const counts = STATUS_TABS.reduce((acc, tab) => {
+    acc[tab.value] = tab.value === 'all'
+      ? appointments.length
+      : appointments.filter(a => a.status === tab.value).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div>
         <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-        <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-          {appointments.length} total
-        </span>
+        <p className="text-sm text-gray-500 mt-0.5">Manage client bookings and sessions</p>
       </div>
 
-      {/* Filter */}
-      <div className="bg-white rounded-xl shadow-sm p-4 flex gap-2 flex-wrap">
-        {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${statusFilter === s ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-            {s}
+      {/* New bookings alert */}
+      {counts['scheduled'] > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-blue-900">
+              {counts['scheduled']} new booking{counts['scheduled'] !== 1 ? 's' : ''} awaiting response
+            </p>
+            <p className="text-xs text-blue-600">Accept or reject to notify the client</p>
+          </div>
+          <button onClick={() => setStatusFilter('scheduled')}
+            className="ml-auto text-xs font-semibold text-blue-600 bg-white border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+            View New
           </button>
-        ))}
+        </div>
+      )}
+
+      {/* Tabs + List */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="flex overflow-x-auto border-b border-gray-200">
+          {STATUS_TABS.map(tab => (
+            <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
+              className={`flex-shrink-0 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                statusFilter === tab.value
+                  ? 'border-blue-600 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}>
+              {tab.label}
+              {counts[tab.value] > 0 && (
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                  statusFilter === tab.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>{counts[tab.value]}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-16 text-center">
+            <div className="text-5xl mb-4">📅</div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">No appointments</h3>
+            <p className="text-sm text-gray-500">
+              {statusFilter === 'all' ? 'No bookings yet' : `No ${statusFilter} bookings`}
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filtered.map((apt: any) => {
+              const style = STATUS_STYLES[apt.status] || STATUS_STYLES.scheduled;
+              const initials = (apt.patient?.name || 'C').split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+              const relDate = apt.date ? formatDistanceToNow(new Date(apt.date), { addSuffix: true }) : '';
+
+              return (
+                <div key={apt.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <span className="text-white text-sm font-bold">{initials}</span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-base font-bold text-gray-900">{apt.patient?.name || 'Client'}</p>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${style.badge}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                              {apt.status === 'scheduled' ? 'New Booking' : apt.status}
+                            </span>
+                          </div>
+                          {apt.patient?.email && <p className="text-xs text-gray-400">{apt.patient.email}</p>}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {(apt.status === 'scheduled' || apt.status === 'pending') && (
+                            <>
+                              <button onClick={() => setSelectedAppointment(apt)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Accept
+                              </button>
+                              <button onClick={() => setSelectedAppointment({ ...apt, _action: 'reject' })}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white text-red-600 text-xs font-semibold rounded-lg border border-red-200 hover:bg-red-50 transition-colors">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {apt.status === 'confirmed' && (
+                            <button onClick={() => setSelectedAppointment(apt)}
+                              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                              View Details
+                            </button>
+                          )}
+                          {(apt.status === 'completed' || apt.status === 'cancelled') && (
+                            <button onClick={() => setSelectedAppointment(apt)}
+                              className="text-xs text-gray-500 hover:text-gray-700 underline">View</button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600">
+                        <span className="font-medium text-blue-600">{apt.service?.title || 'Session'}</span>
+                        <span className="text-xs text-gray-400">
+                          {apt.date ? format(new Date(apt.date), 'MMM d, yyyy') : '—'} at {apt.time}
+                        </span>
+                        <span className="text-xs text-gray-400">{MODE_LABELS[apt.type] || apt.type}</span>
+                        {apt.payment?.amount > 0 && (
+                          <span className="text-xs font-semibold text-green-600">₦{apt.payment.amount.toLocaleString()}</span>
+                        )}
+                        {relDate && <span className="text-xs text-gray-400">{relDate}</span>}
+                      </div>
+
+                      {apt.reason && (
+                        <p className="text-xs text-gray-500 mt-1 italic">"{apt.reason}"</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <p className="text-5xl mb-3">📅</p>
-          <p className="text-gray-600">No appointments found</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {['Client', 'Service', 'Date', 'Time', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filtered.map((apt: any) => {
-                const id = apt._id || apt.id;
-                const clientName = apt.client?.user ? `${apt.client.user.firstName} ${apt.client.user.lastName}` : apt.client?.name || 'Client';
-                const serviceName = apt.service?.title || apt.serviceName || 'Service';
-                const date = apt.scheduledDate || apt.date;
-                const time = apt.scheduledTime || apt.time || '';
-                return (
-                  <tr key={id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{clientName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{serviceName}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{date ? new Date(date).toLocaleDateString() : 'N/A'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{time}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(apt.status)}`}>
-                        {apt.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        {apt.status === 'pending' && (
-                          <button onClick={() => handleAction(id, 'confirm')} disabled={!!actionLoading}
-                            className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50">
-                            Confirm
-                          </button>
-                        )}
-                        {apt.status === 'confirmed' && (
-                          <button onClick={() => handleAction(id, 'complete')} disabled={!!actionLoading}
-                            className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50">
-                            Complete
-                          </button>
-                        )}
-                        {['pending', 'confirmed'].includes(apt.status) && (
-                          <button onClick={() => handleAction(id, 'cancel')} disabled={!!actionLoading}
-                            className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 disabled:opacity-50">
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {selectedAppointment && (
+        <AppointmentModal
+          appointment={selectedAppointment}
+          onClose={() => setSelectedAppointment(null)}
+          onUpdate={() => { fetchAppointments(); setSelectedAppointment(null); }}
+        />
       )}
     </div>
   );

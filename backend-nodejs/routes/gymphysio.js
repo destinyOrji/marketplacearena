@@ -358,6 +358,46 @@ router.put('/appointments/:id/complete', protect, async (req, res) => {
     }
 });
 
+// Notify patient when gym-physio accepts or rejects appointment
+router.post('/appointments/:id/notify-patient', protect, async (req, res) => {
+    try {
+        const Notification = require('../models/Notification');
+        const apt = await Appointment.findById(req.params.id)
+            .populate({ path: 'client', populate: { path: 'user', select: '_id firstName lastName' } });
+
+        if (!apt) return res.status(404).json({ success: false, message: 'Appointment not found' });
+
+        const patientUserId = apt.client?.user?._id;
+        if (!patientUserId) return res.status(400).json({ success: false, message: 'Patient user not found' });
+
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        const providerName = gymPhysio?.businessName || 'Your provider';
+
+        const { message, type } = req.body;
+        const isRejected = type === 'appointment_rejected';
+
+        await Notification.create({
+            user: patientUserId,
+            title: isRejected ? 'Booking Request Declined' : 'Booking Confirmed',
+            message: message || (isRejected
+                ? `Your booking with ${providerName} has been declined.`
+                : `Your booking with ${providerName} has been confirmed.`),
+            type: isRejected ? 'application_status' : 'appointment',
+            data: {
+                appointmentId: apt._id,
+                providerName,
+                scheduledDate: apt.scheduledDate,
+                scheduledTime: apt.scheduledTime,
+            }
+        });
+
+        res.json({ success: true, message: 'Patient notified' });
+    } catch (error) {
+        console.error('Notify patient error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Schedule
 router.get('/schedule', protect, async (req, res) => {
     try {

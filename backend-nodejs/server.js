@@ -95,6 +95,8 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/jobs', require('./routes/jobs'));
 app.use('/api/client', require('./routes/client'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
+const { providerRouter } = require('./routes/subscriptions');
+app.use('/api/subscriptions/provider', providerRouter);
 app.use('/api/notifications', require('./routes/notifications'));
 
 // Debug routes (only in development)

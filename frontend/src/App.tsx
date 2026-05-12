@@ -43,6 +43,7 @@ const ForgotPassword = lazy(() => import('./dashboards/patient/pages/ForgotPassw
 const ResetPassword = lazy(() => import('./dashboards/patient/pages/ResetPassword'));
 const DashboardHome = lazy(() => import('./dashboards/patient/pages/DashboardHome'));
 const BrowseServices = lazy(() => import('./dashboards/patient/pages/BrowseServices'));
+const BrowseGymPhysio = lazy(() => import('./dashboards/patient/pages/BrowseGymPhysio'));
 const BookConsultation = lazy(() => import('./dashboards/patient/pages/BookConsultation'));
 const EmergencyServices = lazy(() => import('./dashboards/patient/pages/EmergencyServices'));
 const MyAppointments = lazy(() => import('./dashboards/patient/pages/MyAppointments'));
@@ -159,6 +160,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <BrowseServices />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient/browse-gym-physio" 
+              element={
+                <ProtectedRoute>
+                  <BrowseGymPhysio />
                 </ProtectedRoute>
               } 
             />

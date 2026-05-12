@@ -6,7 +6,7 @@ import { ServiceProvider, FilterOptions } from '../types';
 
 type ViewMode = 'grid' | 'list';
 
-const BrowseServices: React.FC = () => {
+const BrowseGymPhysio: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -23,32 +23,29 @@ const BrowseServices: React.FC = () => {
   const [totalResults, setTotalResults] = useState(0);
   const pageSize = 12;
   
-  // Filter state
+  // Filter state - specific to gym/physio
   const [filters, setFilters] = useState<FilterOptions>({
-    type: [],
+    type: ['gym-physio'], // Always filter for gym-physio only
     specialty: [],
     location: '',
     minRating: 0,
     availability: false,
   });
 
-  // Available filter options - only healthcare professionals (no gym-physio)
-  const serviceTypes = ['doctor', 'hospital', 'ambulance'];
-  const specialties = [
-    'General Practice',
-    'Cardiology',
-    'Dermatology',
-    'Pediatrics',
-    'Orthopedics',
-    'Neurology',
-    'Psychiatry',
-    'Gynecology',
-    'Ophthalmology',
-    'Dentistry',
-    'Emergency Medicine',
-    'Surgery',
-    'Radiology',
-    'Anesthesiology',
+  // Gym/Physio specific specialties
+  const gymPhysioSpecialties = [
+    'Personal Training',
+    'Group Fitness',
+    'Yoga',
+    'Pilates',
+    'CrossFit',
+    'Physiotherapy',
+    'Sports Rehabilitation',
+    'Massage Therapy',
+    'Nutrition Counseling',
+    'Weight Management',
+    'Strength Training',
+    'Cardio Training',
   ];
 
   // Fetch services with debouncing
@@ -69,7 +66,7 @@ const BrowseServices: React.FC = () => {
         page: currentPage,
         pageSize,
         search: searchQuery || undefined,
-        type: filters.type.length > 0 ? filters.type.join(',') : undefined,
+        type: 'gym-physio', // Always filter for gym-physio
         specialty: filters.specialty.length > 0 ? filters.specialty.join(',') : undefined,
         location: filters.location || undefined,
         minRating: filters.minRating > 0 ? filters.minRating : undefined,
@@ -82,8 +79,8 @@ const BrowseServices: React.FC = () => {
       setTotalPages(resData.totalPages || 1);
       setTotalResults(resData.total || 0);
     } catch (err: any) {
-      console.error('Error fetching services:', err);
-      setError('Failed to load services. Please try again.');
+      console.error('Error fetching gym/physio services:', err);
+      setError('Failed to load gym & physiotherapy services. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -111,16 +108,6 @@ const BrowseServices: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const handleTypeToggle = (type: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      type: prev.type.includes(type)
-        ? prev.type.filter((t) => t !== type)
-        : [...prev.type, type],
-    }));
-    setCurrentPage(1);
-  };
-
   const handleSpecialtyToggle = (specialty: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -133,7 +120,7 @@ const BrowseServices: React.FC = () => {
 
   const clearFilters = () => {
     setFilters({
-      type: [],
+      type: ['gym-physio'],
       specialty: [],
       location: '',
       minRating: 0,
@@ -165,13 +152,13 @@ const BrowseServices: React.FC = () => {
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-blue-100 rounded-lg">
             <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Browse Healthcare Professionals</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Browse Gym & Physiotherapy</h1>
         </div>
         <p className="text-gray-600 mt-2">
-          Find doctors, hospitals, and emergency services for your healthcare needs
+          Find the perfect gym, fitness center, or physiotherapy service for your wellness goals
         </p>
       </div>
 
@@ -224,8 +211,7 @@ const BrowseServices: React.FC = () => {
             <span className="text-sm font-medium text-gray-700">Filters</span>
           </button>
 
-          {(filters.type.length > 0 ||
-            filters.specialty.length > 0 ||
+          {(filters.specialty.length > 0 ||
             filters.location ||
             filters.minRating > 0 ||
             filters.availability) && (
@@ -297,31 +283,21 @@ const BrowseServices: React.FC = () => {
                   <button onClick={() => setShowFilters(false)} className="lg:hidden text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                 </div>
 
-              {/* Service Type Filter */}
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Service Type</h4>
-                <div className="space-y-2">
-                  {serviceTypes.map((type) => (
-                    <label key={type} className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={filters.type.includes(type)}
-                        onChange={() => handleTypeToggle(type)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="ml-2 text-sm text-gray-700 capitalize">
-                        {type}
-                      </span>
-                    </label>
-                  ))}
+              {/* Service Type Badge */}
+              <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-blue-800">Gym & Physiotherapy</span>
                 </div>
               </div>
 
               {/* Specialty Filter */}
               <div className="mb-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Specialty</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {specialties.map((specialty) => (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {gymPhysioSpecialties.map((specialty) => (
                     <label key={specialty} className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -410,24 +386,28 @@ const BrowseServices: React.FC = () => {
           ) : services.length === 0 ? (
             /* Empty State */
             <div className="text-center py-20">
-              <svg
-                className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <p className="text-gray-500 text-lg font-medium">No services found</p>
+              <div className="flex justify-center mb-4">
+                <div className="p-4 bg-blue-100 rounded-full">
+                  <svg
+                    className="w-16 h-16 text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-gray-500 text-lg font-medium">No gym or physiotherapy services found</p>
               <p className="text-gray-400 text-sm mt-2">
                 Try adjusting your search or filters
               </p>
-              {(searchQuery || filters.type.length > 0 || filters.specialty.length > 0) && (
+              {(searchQuery || filters.specialty.length > 0) && (
                 <button
                   onClick={clearFilters}
                   className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
@@ -519,4 +499,4 @@ const BrowseServices: React.FC = () => {
   );
 };
 
-export default BrowseServices;
+export default BrowseGymPhysio;

@@ -37,9 +37,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     },
     {
       id: 'browse-services',
-      label: 'Browse Services',
+      label: 'Browse Professionals',
       icon: <SearchIcon className="w-6 h-6" />,
       path: '/patient/browse-services',
+    },
+    {
+      id: 'browse-gym-physio',
+      label: 'Browse Gym & Physio',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+      path: '/patient/browse-gym-physio',
     },
     {
       id: 'appointments',

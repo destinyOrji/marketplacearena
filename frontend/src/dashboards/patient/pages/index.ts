@@ -2,6 +2,7 @@ export { default as Login } from './Login';
 export { default as ForgotPassword } from './ForgotPassword';
 export { default as DashboardHome } from './DashboardHome';
 export { default as BrowseServices } from './BrowseServices';
+export { default as BrowseGymPhysio } from './BrowseGymPhysio';
 export { default as BookConsultation } from './BookConsultation';
 export { default as EmergencyServices } from './EmergencyServices';
 export { default as MyAppointments } from './MyAppointments';

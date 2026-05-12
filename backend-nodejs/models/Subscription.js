@@ -4,17 +4,24 @@ const subscriptionSchema = new mongoose.Schema({
     client: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Client',
-        required: true
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
+    // For provider subscriptions: hospital | gym-physio | ambulance | client
+    providerType: {
+        type: String,
+        default: 'client'
+    },
     plan: {
         type: String,
-        enum: ['monthly', '6-months', 'yearly'],
         required: true
+    },
+    planName: {
+        type: String,
+        default: ''
     },
     amount: {
         type: Number,

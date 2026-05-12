@@ -663,9 +663,45 @@ router.post('/emergency/book', protect, async (req, res) => {
     }
 });
 
-// Medical records
+// Medical records — built from completed appointments
 router.get('/medical-records', protect, async (req, res) => {
-    res.json({ success: true, data: { data: [], total: 0 } });
+    try {
+        const Appointment = require('../models/Appointment');
+        const client = await Client.findOne({ user: req.user._id });
+        if (!client) return res.json({ success: true, data: [] });
+
+        const appointments = await Appointment.find({
+            client: client._id,
+            status: 'completed',
+        })
+        .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName' } })
+        .populate({ path: 'gymPhysio', select: 'businessName' })
+        .sort({ scheduledDate: -1 });
+
+        const data = appointments.map(apt => {
+            const providerName = apt.professional?.user
+                ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim()
+                : apt.gymPhysio?.businessName || 'Healthcare Provider';
+
+            return {
+                id: apt._id,
+                date: apt.scheduledDate || apt.createdAt,
+                provider: providerName,
+                diagnosis: apt.reasonForVisit || 'Consultation',
+                notes: apt.professionalNotes || apt.clientNotes || '',
+                prescription: apt.prescription || [],
+                attachments: apt.documents || [],
+                appointmentType: apt.appointmentType || 'consultation',
+                appointmentMode: apt.appointmentMode || 'in_person',
+                status: apt.status,
+            };
+        });
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Medical records error:', error);
+        res.json({ success: true, data: [] });
+    }
 });
 
 // Payments — initialize Paystack payment for an appointment
@@ -742,6 +778,23 @@ router.post('/payments/verify/:reference', protect, async (req, res) => {
                 transactionId: req.params.reference,
                 paymentMethod: 'paystack',
             });
+
+            // Notify patient that payment was received
+            const Notification = require('../models/Notification');
+            const apt = await Appointment.findById(appointmentId)
+                .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName' } });
+            if (apt) {
+                const providerName = apt.professional?.user
+                    ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim()
+                    : 'your provider';
+                await Notification.create({
+                    user: req.user._id,
+                    title: 'Payment Confirmed',
+                    message: `Your payment of ₦${(paystackResponse.data.amount / 100).toLocaleString()} for your appointment with ${providerName} has been received.`,
+                    type: 'payment',
+                    data: { appointmentId, reference: req.params.reference, amount: paystackResponse.data.amount / 100 }
+                }).catch(() => {});
+            }
         }
 
         res.json({ success: true, data: { reference: req.params.reference }, message: 'Payment verified' });

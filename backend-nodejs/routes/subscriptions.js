@@ -255,6 +255,16 @@ router.post('/verify-payment/:reference', protect, async (req, res) => {
         subscription.paymentReference = reference;
         await subscription.save();
 
+        // Notify patient that subscription is active
+        const Notification = require('../models/Notification');
+        await Notification.create({
+            user: req.user._id,
+            title: 'Subscription Activated',
+            message: `Your ${subscription.plan} subscription has been activated. You now have full access to book appointments and emergency services.`,
+            type: 'payment',
+            data: { subscriptionId: subscription._id, plan: subscription.plan, endDate: subscription.endDate }
+        }).catch(() => {});
+
         res.json({ 
             success: true, 
             data: subscription,
@@ -343,3 +353,176 @@ router.put('/auto-renew/:subscriptionId', protect, async (req, res) => {
 });
 
 module.exports = router;
+
+// ─── Provider Subscription Routes (Hospital, Gym-Physio, Ambulance) ───────────
+// These are separate from patient subscriptions
+
+const providerRouter = express.Router();
+
+const PROVIDER_PLANS = {
+    hospital: [
+        { id: 'hospital-monthly',  name: 'Monthly',   duration: 'monthly',   price: 15000, durationMonths: 1,  jobPostings: 5,   features: ['5 job postings/month', 'Application management', 'Candidate messaging', 'Basic analytics'] },
+        { id: 'hospital-6months',  name: '6 Months',  duration: '6-months',  price: 75000, durationMonths: 6,  jobPostings: 30,  features: ['30 job postings', 'Priority listing', 'Advanced analytics', 'Email support', 'Save ₦15,000'], popular: true },
+        { id: 'hospital-yearly',   name: 'Yearly',    duration: 'yearly',    price: 120000, durationMonths: 12, jobPostings: -1, features: ['Unlimited job postings', 'Featured listings', 'Dedicated support', 'Custom reports', 'Save ₦60,000'] },
+    ],
+    'gym-physio': [
+        { id: 'gym-monthly',  name: 'Monthly',  duration: 'monthly',  price: 5000,  durationMonths: 1,  features: ['List your services', 'Accept bookings', 'Client management', 'Basic analytics'] },
+        { id: 'gym-6months', name: '6 Months', duration: '6-months', price: 25000, durationMonths: 6,  features: ['All Monthly features', 'Priority listing', 'Advanced analytics', 'Save ₦5,000'], popular: true },
+        { id: 'gym-yearly',  name: 'Yearly',   duration: 'yearly',   price: 40000, durationMonths: 12, features: ['All features', 'Featured placement', 'Dedicated support', 'Save ₦20,000'] },
+    ],
+    ambulance: [
+        { id: 'amb-monthly',  name: 'Monthly',  duration: 'monthly',  price: 8000,  durationMonths: 1,  features: ['List your service', 'Emergency bookings', 'Fleet management', 'Basic analytics'] },
+        { id: 'amb-6months', name: '6 Months', duration: '6-months', price: 40000, durationMonths: 6,  features: ['All Monthly features', 'Priority dispatch', 'Advanced analytics', 'Save ₦8,000'], popular: true },
+        { id: 'amb-yearly',  name: 'Yearly',   duration: 'yearly',   price: 65000, durationMonths: 12, features: ['All features', 'Featured listing', 'Dedicated support', 'Save ₦31,000'] },
+    ],
+};
+
+// GET /subscriptions/provider/plans?role=hospital
+providerRouter.get('/plans', async (req, res) => {
+    const { role } = req.query;
+    const plans = PROVIDER_PLANS[role] || [];
+    res.json({ success: true, data: plans });
+});
+
+// GET /subscriptions/provider/status — check if provider has active subscription
+providerRouter.get('/status', protect, async (req, res) => {
+    try {
+        const sub = await Subscription.findOne({
+            user: req.user._id,
+            providerType: req.user.role,
+            status: 'active',
+            paymentStatus: 'completed',
+            endDate: { $gte: new Date() }
+        });
+        res.json({
+            success: true,
+            data: {
+                hasActiveSubscription: !!sub,
+                subscription: sub || null,
+                daysRemaining: sub ? Math.ceil((sub.endDate - new Date()) / 86400000) : 0,
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /subscriptions/provider/subscribe
+providerRouter.post('/subscribe', protect, async (req, res) => {
+    try {
+        const { planId } = req.body;
+        const role = req.user.role; // hospital | gym-physio | ambulance
+
+        const allPlans = PROVIDER_PLANS[role] || [];
+        const plan = allPlans.find(p => p.id === planId);
+        if (!plan) return res.status(400).json({ success: false, message: 'Invalid plan' });
+
+        // Check existing active subscription
+        const existing = await Subscription.findOne({
+            user: req.user._id,
+            providerType: role,
+            status: 'active',
+            endDate: { $gte: new Date() }
+        });
+        if (existing) return res.status(400).json({ success: false, message: 'You already have an active subscription' });
+
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + plan.durationMonths);
+
+        const subscription = await Subscription.create({
+            user: req.user._id,
+            providerType: role,
+            plan: plan.id,
+            planName: plan.name,
+            amount: plan.price,
+            startDate,
+            endDate,
+            status: 'pending',
+            paymentStatus: 'pending',
+        });
+
+        res.status(201).json({ success: true, data: subscription });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /subscriptions/provider/initialize-payment/:subscriptionId
+providerRouter.post('/initialize-payment/:subscriptionId', protect, async (req, res) => {
+    try {
+        const subscription = await Subscription.findOne({ _id: req.params.subscriptionId, user: req.user._id });
+        if (!subscription) return res.status(404).json({ success: false, message: 'Subscription not found' });
+        if (subscription.paymentStatus === 'completed') return res.status(400).json({ success: false, message: 'Already paid' });
+
+        const user = await User.findById(req.user._id);
+        if (!user?.email) return res.status(400).json({ success: false, message: 'User email required' });
+
+        const reference = `PSUB-${req.user.role.toUpperCase()}-${subscription._id}-${Date.now()}`;
+
+        const paystackResponse = await initializeTransaction(
+            user.email,
+            subscription.amount,
+            reference,
+            { subscriptionId: subscription._id.toString(), providerType: req.user.role }
+        );
+
+        if (!paystackResponse.status) {
+            return res.status(500).json({ success: false, message: 'Failed to initialize payment' });
+        }
+
+        subscription.paymentReference = reference;
+        await subscription.save();
+
+        res.json({
+            success: true,
+            data: {
+                authorizationUrl: paystackResponse.data.authorization_url,
+                reference: paystackResponse.data.reference,
+                subscriptionId: subscription._id,
+            }
+        });
+    } catch (error) {
+        console.error('Provider subscription payment error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /subscriptions/provider/verify-payment/:reference
+providerRouter.post('/verify-payment/:reference', protect, async (req, res) => {
+    try {
+        const paystackResponse = await verifyTransaction(req.params.reference);
+        if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
+            return res.status(400).json({ success: false, message: 'Payment verification failed' });
+        }
+
+        const subscriptionId = paystackResponse.data.metadata?.subscriptionId;
+        const subscription = await Subscription.findOne({ _id: subscriptionId, user: req.user._id });
+        if (!subscription) return res.status(404).json({ success: false, message: 'Subscription not found' });
+
+        if (subscription.paymentStatus === 'completed') {
+            return res.json({ success: true, data: subscription, message: 'Already active' });
+        }
+
+        subscription.status = 'active';
+        subscription.paymentStatus = 'completed';
+        subscription.paymentReference = req.params.reference;
+        await subscription.save();
+
+        // Notify provider
+        const Notification = require('../models/Notification');
+        await Notification.create({
+            user: req.user._id,
+            title: 'Subscription Activated',
+            message: `Your ${subscription.planName || subscription.plan} subscription is now active. You can now post jobs and manage your listings.`,
+            type: 'payment',
+            data: { subscriptionId: subscription._id, plan: subscription.plan, endDate: subscription.endDate }
+        }).catch(() => {});
+
+        res.json({ success: true, data: subscription, message: 'Subscription activated!' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+module.exports.providerRouter = providerRouter;
