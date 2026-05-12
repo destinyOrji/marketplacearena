@@ -270,6 +270,8 @@ const VacancyForm: React.FC = () => {
           </div>
         )}
       </form>
+    </div>
+  );
 };
 
 export default VacancyForm;
