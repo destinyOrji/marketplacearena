@@ -227,14 +227,18 @@ const CoverageAreaModal: React.FC<CoverageAreaModalProps> = ({ area, onClose, on
     setLoading(true);
 
     try {
-      const payload = {
+      const payload: any = {
         name: formData.name,
         serviceTypes: formData.serviceTypes,
         radius: formData.radius * 1000,
         isActive: formData.isActive,
-        center: formData.center,
         boundaries: drawnShape ? [drawnShape] : formData.boundaries,
       };
+
+      // Only add center if it's not null
+      if (formData.center) {
+        payload.center = formData.center;
+      }
 
       let result;
       if (area) {
