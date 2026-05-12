@@ -209,7 +209,7 @@ const Billing: React.FC = () => {
                   <p className="text-sm text-gray-700">
                     Showing page <span className="font-semibold">{currentPage}</span> of{' '}
                     <span className="font-semibold">{pagination.total_pages}</span>
-                    {' '}({pagination.total_items} total payments)
+                    {' '}({pagination.total_count} total payments)
                   </p>
                 </div>
                 <div>
