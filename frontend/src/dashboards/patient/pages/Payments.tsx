@@ -1,393 +1,339 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '../components';
-import PaymentModal from '../components/PaymentModal';
 import { paymentsApi } from '../services/api';
-import { Payment } from '../types';
 import { format } from 'date-fns';
-import { showSuccessToast, showErrorToast } from '../utils/toast';
+import { showErrorToast } from '../utils/toast';
+import { useNavigate } from 'react-router-dom';
 
 type PaymentStatus = 'all' | 'completed' | 'pending' | 'failed';
 
+const STATUS_STYLES: Record<string, { badge: string; dot: string; icon: string }> = {
+  completed: { badge: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500', icon: '✅' },
+  pending:   { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', icon: '⏳' },
+  failed:    { badge: 'bg-red-100 text-red-600 border-red-200',       dot: 'bg-red-500',   icon: '❌' },
+};
+
+// ─── Invoice Modal ────────────────────────────────────────────────────────────
+const InvoiceModal: React.FC<{ payment: any; onClose: () => void }> = ({ payment, onClose }) => {
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    const content = printRef.current?.innerHTML;
+    if (!content) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`
+      <html><head><title>Invoice - ${payment.reference || payment.id}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 40px; color: #111; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+        .logo { font-size: 22px; font-weight: bold; color: #2563eb; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .paid { background: #dcfce7; color: #15803d; }
+        .pending { background: #fef3c7; color: #b45309; }
+        .failed { background: #fee2e2; color: #dc2626; }
+        table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+        th { background: #f9fafb; padding: 10px 16px; text-align: left; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+        .total-row td { font-weight: bold; font-size: 16px; border-top: 2px solid #e5e7eb; }
+        .footer { margin-top: 40px; text-align: center; color: #9ca3af; font-size: 12px; }
+      </style></head><body>${content}</body></html>
+    `);
+    win.document.close();
+    win.print();
+  };
+
+  const statusStyle = STATUS_STYLES[payment.status] || STATUS_STYLES.pending;
+  const invoiceNum = `INV-${String(payment.id).slice(-8).toUpperCase()}`;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h3 className="text-base font-bold text-gray-900">Payment Invoice</h3>
+          <div className="flex items-center gap-2">
+            <button onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Print
+            </button>
+            <button onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Invoice content */}
+        <div className="overflow-y-auto flex-1 p-6">
+          <div ref={printRef}>
+            {/* Invoice header */}
+            <div className="header flex items-start justify-between mb-6">
+              <div>
+                <div className="logo text-xl font-bold text-blue-600">Health Market Arena</div>
+                <p className="text-xs text-gray-500 mt-1">healthmarketarena.com</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-bold text-gray-900">{invoiceNum}</p>
+                <span className={`badge inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${statusStyle.badge}`}>
+                  {payment.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-200 my-4" />
+
+            {/* Details */}
+            <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Date</p>
+                <p className="font-semibold text-gray-900">
+                  {payment.date ? format(new Date(payment.date), 'MMMM d, yyyy') : '—'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Reference</p>
+                <p className="font-mono font-semibold text-gray-900 text-xs">{payment.reference || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Provider</p>
+                <p className="font-semibold text-gray-900">{payment.provider || 'Healthcare Provider'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Payment Method</p>
+                <p className="font-semibold text-gray-900 capitalize">{payment.method || 'Paystack'}</p>
+              </div>
+            </div>
+
+            {/* Line items */}
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-100">
+                  <td className="px-4 py-3 text-gray-800">{payment.service || 'Consultation'}</td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-900">₦{(payment.amount || 0).toLocaleString()}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200">
+                  <td className="px-4 py-3 font-bold text-gray-900">Total</td>
+                  <td className="px-4 py-3 text-right font-bold text-blue-600 text-lg">₦{(payment.amount || 0).toLocaleString()}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            {/* Footer */}
+            <div className="footer mt-6 text-center text-xs text-gray-400 border-t border-gray-100 pt-4">
+              <p>Thank you for using Health Market Arena</p>
+              <p className="mt-1">For support: support@healthmarketarena.com</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 const Payments: React.FC = () => {
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const navigate = useNavigate();
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<PaymentStatus>('all');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [invoicePayment, setInvoicePayment] = useState<any | null>(null);
 
-  useEffect(() => {
-    fetchPayments();
-  }, [statusFilter, dateRange]);
+  useEffect(() => { fetchPayments(); }, [statusFilter, dateRange]);
 
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      setError(null);
-
       const params: any = {};
-      if (statusFilter !== 'all') {
-        params.status = statusFilter;
-      }
-      if (dateRange.start) {
-        params.startDate = dateRange.start;
-      }
-      if (dateRange.end) {
-        params.endDate = dateRange.end;
-      }
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (dateRange.start) params.startDate = dateRange.start;
+      if (dateRange.end) params.endDate = dateRange.end;
 
-      const response = await paymentsApi.getPayments(params);
-      const paymentsData = response.data?.data ?? response.data ?? [];
-      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
-    } catch (err: any) {
-      console.error('Error fetching payments:', err);
-      setError('Failed to load payment history. Please try again.');
+      const res = await paymentsApi.getPayments(params);
+      const data = (res.data?.data as any) ?? res.data ?? [];
+      setPayments(Array.isArray(data) ? data : []);
+    } catch {
+      showErrorToast('Failed to load payment history');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDownloadReceipt = async (paymentId: string) => {
-    try {
-      const response = await paymentsApi.getReceipt(paymentId);
-      const receiptData = response.data?.data ?? response.data;
-      if (receiptData?.receiptUrl) {
-        window.open(receiptData.receiptUrl, '_blank');
-        showSuccessToast('Receipt downloaded successfully');
-      }
-    } catch (err: any) {
-      console.error('Error downloading receipt:', err);
-      showErrorToast('Failed to download receipt. Please try again.');
-    }
-  };
+  // Summary stats
+  const totalPaid = payments.filter(p => p.status === 'completed').reduce((s, p) => s + (p.amount || 0), 0);
+  const totalPending = payments.filter(p => p.status === 'pending').reduce((s, p) => s + (p.amount || 0), 0);
+  const countCompleted = payments.filter(p => p.status === 'completed').length;
+  const countPending = payments.filter(p => p.status === 'pending').length;
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-700';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'failed':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-        );
-      case 'pending':
-        return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-              clipRule="evenodd"
-            />
-          </svg>
-        );
-      case 'failed':
-        return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
-        );
-      default:
-        return null;
-    }
-  };
+  const hasFilters = statusFilter !== 'all' || dateRange.start || dateRange.end;
 
   return (
     <DashboardLayout>
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Payment History</h1>
-        <p className="text-gray-600 mt-2">
-          View and manage your payment transactions
-        </p>
-      </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Status Filter */}
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as PaymentStatus)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-            >
-              <option value="all">All Payments</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="failed">Failed</option>
-            </select>
+            <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Your payment history and invoices</p>
           </div>
-
-          {/* Start Date Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Start Date
-            </label>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-            />
-          </div>
-
-          {/* End Date Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              End Date
-            </label>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-            />
-          </div>
-        </div>
-
-        {/* Clear Filters Button */}
-        {(statusFilter !== 'all' || dateRange.start || dateRange.end) && (
-          <div className="mt-4">
-            <button
-              onClick={() => {
-                setStatusFilter('all');
-                setDateRange({ start: '', end: '' });
-              }}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Payment History Table */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : payments.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <svg
-              className="w-16 h-16 text-gray-300 mx-auto mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              />
+          <button onClick={() => navigate('/patient/browse-services')}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <p className="text-gray-500 text-lg font-medium">No payments found</p>
-            <p className="text-gray-400 text-sm mt-2">
-              {statusFilter !== 'all' || dateRange.start || dateRange.end
-                ? 'Try adjusting your filters'
-                : 'Your payment history will appear here'}
-            </p>
+            Book Consultation
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Paid', value: `₦${totalPaid.toLocaleString()}`, icon: '💳', color: 'bg-green-50 text-green-600' },
+            { label: 'Pending', value: `₦${totalPending.toLocaleString()}`, icon: '⏳', color: 'bg-amber-50 text-amber-600' },
+            { label: 'Completed', value: countCompleted, icon: '✅', color: 'bg-blue-50 text-blue-600' },
+            { label: 'Pending Count', value: countPending, icon: '🔔', color: 'bg-purple-50 text-purple-600' },
+          ].map(s => (
+            <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-4">
+              <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mb-2`}>{s.icon}</div>
+              <p className="text-xl font-bold text-gray-900">{s.value}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Status</label>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as PaymentStatus)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="all">All Payments</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">From</label>
+              <input type="date" value={dateRange.start} onChange={e => setDateRange(d => ({ ...d, start: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">To</label>
+              <input type="date" value={dateRange.end} onChange={e => setDateRange(d => ({ ...d, end: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+          {hasFilters && (
+            <button onClick={() => { setStatusFilter('all'); setDateRange({ start: '', end: '' }); }}
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center items-center h-48">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+            </div>
+          ) : payments.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="text-5xl mb-4">💳</div>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">No payments found</h3>
+              <p className="text-sm text-gray-500">
+                {hasFilters ? 'Try adjusting your filters' : 'Your payment history will appear here after booking'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Service
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Method
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    {['Date', 'Service', 'Provider', 'Amount', 'Method', 'Status', 'Invoice'].map(h => (
+                      <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {payments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {format(new Date(payment.date), 'MMM dd, yyyy')}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {payment.service}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${payment.amount.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {payment.method}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                            payment.status
-                          )}`}
-                        >
-                          <span className="mr-1">{getStatusIcon(payment.status)}</span>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {payment.status === 'completed' && (
-                          <button
-                            onClick={() => handleDownloadReceipt(payment.id)}
-                            className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
-                          >
-                            <svg
-                              className="w-4 h-4 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                            Receipt
-                          </button>
-                        )}
-                        {payment.status === 'failed' && (
-                          <button
-                            onClick={() => setSelectedPayment(payment)}
-                            className="text-red-600 hover:text-red-700 font-medium"
-                          >
-                            Retry
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {payments.map((p: any) => {
+                    const style = STATUS_STYLES[p.status] || STATUS_STYLES.pending;
+                    return (
+                      <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {p.date ? format(new Date(p.date), 'MMM d, yyyy') : '—'}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-800 max-w-[160px] truncate">
+                          {p.service || 'Consultation'}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap">
+                          {p.provider || '—'}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className="text-sm font-bold text-gray-900">₦{(p.amount || 0).toLocaleString()}</span>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-600 whitespace-nowrap capitalize">
+                          {p.method || 'Paystack'}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize ${style.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          {p.status === 'completed' ? (
+                            <button onClick={() => setInvoicePayment(p)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-semibold rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Invoice
+                            </button>
+                          ) : p.status === 'pending' ? (
+                            <button onClick={() => navigate('/patient/book-consultation')}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-semibold rounded-lg border border-amber-200 hover:bg-amber-100 transition-colors">
+                              Pay Now
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden divide-y divide-gray-200">
-              {payments.map((payment) => (
-                <div key={payment.id} className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-medium text-gray-900">{payment.service}</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {format(new Date(payment.date), 'MMM dd, yyyy')}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(
-                        payment.status
-                      )}`}
-                    >
-                      <span className="mr-1">{getStatusIcon(payment.status)}</span>
-                      {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold text-gray-900">
-                        ${payment.amount.toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-600">{payment.method}</p>
-                    </div>
-                    <div>
-                      {payment.status === 'completed' && (
-                        <button
-                          onClick={() => handleDownloadReceipt(payment.id)}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                          Receipt
-                        </button>
-                      )}
-                      {payment.status === 'failed' && (
-                        <button
-                          onClick={() => setSelectedPayment(payment)}
-                          className="text-red-600 hover:text-red-700 text-sm font-medium"
-                        >
-                          Retry
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Payment Modal for Retry */}
-      {selectedPayment && (
-        <PaymentModal
-          isOpen={true}
-          amount={selectedPayment.amount}
-          service={selectedPayment.service}
-          onClose={() => setSelectedPayment(null)}
-          onSuccess={(paymentId) => {
-            setSelectedPayment(null);
-            fetchPayments();
-            showSuccessToast('Payment completed successfully!');
-          }}
-        />
+      {/* Invoice Modal */}
+      {invoicePayment && (
+        <InvoiceModal payment={invoicePayment} onClose={() => setInvoicePayment(null)} />
       )}
     </DashboardLayout>
   );

@@ -751,9 +751,67 @@ router.post('/payments/verify/:reference', protect, async (req, res) => {
     }
 });
 
-// Get payment history
+// Get payment history — returns appointments with payment info
 router.get('/payments', protect, async (req, res) => {
-    res.json({ success: true, data: { data: [], total: 0 } });
+    try {
+        const Appointment = require('../models/Appointment');
+        const client = await Client.findOne({ user: req.user._id });
+        if (!client) return res.json({ success: true, data: [] });
+
+        const { status, startDate, endDate } = req.query;
+
+        let query = { client: client._id };
+
+        // Filter by payment status
+        if (status && status !== 'all') {
+            const statusMap = {
+                completed: 'paid',
+                pending: 'pending',
+                failed: 'failed',
+            };
+            if (statusMap[status]) query.paymentStatus = statusMap[status];
+        }
+
+        // Filter by date range
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate + 'T23:59:59');
+        }
+
+        const appointments = await Appointment.find(query)
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName' } })
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        const data = appointments
+            .filter(apt => apt.consultationFee > 0 || apt.paymentStatus !== 'pending')
+            .map(apt => {
+                const providerName = apt.professional?.user
+                    ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim()
+                    : 'Healthcare Provider';
+                return {
+                    id: apt._id,
+                    date: apt.createdAt || apt.scheduledDate,
+                    service: apt.reasonForVisit || 'Consultation',
+                    provider: providerName,
+                    amount: apt.consultationFee || 0,
+                    currency: apt.currency || 'NGN',
+                    method: apt.paymentMethod || 'Paystack',
+                    status: apt.paymentStatus === 'paid' ? 'completed'
+                          : apt.paymentStatus === 'failed' ? 'failed'
+                          : 'pending',
+                    reference: apt.transactionId || '',
+                    appointmentId: apt._id,
+                    appointmentStatus: apt.status,
+                };
+            });
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Get payments error:', error);
+        res.json({ success: true, data: [] });
+    }
 });
 
 // Feedback
