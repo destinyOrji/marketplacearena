@@ -493,6 +493,32 @@ router.get('/analytics', protect, async (req, res) => {
     }
 });
 
+// Bank account settings
+router.get('/bank-account', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) return res.status(404).json({ success: false, message: 'Profile not found' });
+        res.json({ success: true, data: gymPhysio.bankAccount || {} });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/bank-account', protect, async (req, res) => {
+    try {
+        const { bankName, accountNumber, accountName, bankCode } = req.body;
+        const gymPhysio = await GymPhysio.findOneAndUpdate(
+            { user: req.user._id },
+            { $set: { bankAccount: { bankName, accountNumber, accountName, bankCode } } },
+            { new: true }
+        );
+        if (!gymPhysio) return res.status(404).json({ success: false, message: 'Profile not found' });
+        res.json({ success: true, data: gymPhysio.bankAccount, message: 'Bank account saved' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Settings
 router.get('/settings', protect, async (req, res) => {
     res.json({ success: true, data: { notifications: { email: true, sms: true, inApp: true }, privacy: { profileVisibility: 'public', showRatings: true } } });

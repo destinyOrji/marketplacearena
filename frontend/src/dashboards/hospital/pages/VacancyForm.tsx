@@ -260,12 +260,16 @@ const VacancyForm: React.FC = () => {
           <button type="submit" disabled={submitting}
             className="flex items-center gap-2 px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
             <FiSave className="h-4 w-4" />
-            {submitting ? 'Saving...' : isEdit ? 'Update Vacancy' : 'Create Vacancy'}
+            {submitting ? 'Saving...' : isEdit ? 'Update Vacancy' : 'Create & Pay ₦5,000'}
           </button>
         </div>
+
+        {!isEdit && (
+          <div className="mt-3 text-center text-xs text-gray-400">
+            💡 A one-time posting fee of <strong>₦5,000</strong> is charged per vacancy. You'll be redirected to Paystack to complete payment.
+          </div>
+        )}
       </form>
-    </div>
-  );
 };
 
 export default VacancyForm;

@@ -139,7 +139,42 @@ router.get('/vacancies', protect, async (req, res) => {
     }
 });
 
-router.post('/vacancies/create/', protect, async (req, res) => {
+// Hospital pays to post a vacancy (admin collects 10%)
+router.post('/vacancies/pay', protect, async (req, res) => {
+    try {
+        const { initializeTransaction } = require('../services/paystackService');
+        const { vacancyId, amount } = req.body;
+
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        const fee = amount || 5000; // Default ₦5,000 per vacancy posting
+        const reference = `VAC-${vacancyId || 'NEW'}-${Date.now()}`;
+
+        const paystackResponse = await initializeTransaction(
+            user.email,
+            fee,
+            reference,
+            { vacancyId: vacancyId || '', type: 'vacancy_posting', hospitalId: user._id.toString() }
+        );
+
+        if (!paystackResponse.status) {
+            return res.status(500).json({ success: false, message: 'Failed to initialize payment' });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                authorizationUrl: paystackResponse.data.authorization_url,
+                reference: paystackResponse.data.reference,
+                amount: fee,
+            }
+        });
+    } catch (error) {
+        console.error('Vacancy payment error:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
     try {
         const Job = require('../models/Job');
         const Notification = require('../models/Notification');

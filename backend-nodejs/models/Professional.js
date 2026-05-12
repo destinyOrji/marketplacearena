@@ -82,7 +82,15 @@ const professionalSchema = new mongoose.Schema({
     },
     currency: {
         type: String,
-        default: 'USD'
+        default: 'NGN'
+    },
+
+    // Bank account for payouts
+    bankAccount: {
+        bankName:      { type: String, default: '' },
+        accountNumber: { type: String, default: '' },
+        accountName:   { type: String, default: '' },
+        bankCode:      { type: String, default: '' },
     },
     
     // Ratings and reviews

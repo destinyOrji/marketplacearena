@@ -51,12 +51,28 @@ const MyAppointments: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('upcoming');
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [allAppointments, setAllAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [cancelModal, setCancelModal] = useState<any | null>(null);
   const [cancelReason, setCancelReason] = useState('');
 
-  useEffect(() => { fetchAppointments(); }, [activeTab]);
+  // Load all tabs on mount for stats
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [activeTab]);
+
+  const loadAll = async () => {
+    try {
+      const res = await appointmentsApi.getAppointments({});
+      const data = (res.data?.data as any) ?? res.data ?? [];
+      setAllAppointments(Array.isArray(data) ? data : []);
+    } catch {}
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -76,8 +92,17 @@ const MyAppointments: React.FC = () => {
       showSuccessToast('Appointment cancelled');
       setCancelModal(null); setCancelReason('');
       fetchAppointments();
+      loadAll();
     } catch { showErrorToast('Failed to cancel appointment'); }
     finally { setActionLoading(null); }
+  };
+
+  // Stats from all appointments
+  const stats = {
+    upcoming:  allAppointments.filter(a => ['scheduled','confirmed','pending'].includes(a.status)).length,
+    completed: allAppointments.filter(a => a.status === 'completed').length,
+    cancelled: allAppointments.filter(a => ['cancelled','no_show'].includes(a.status)).length,
+    unpaid:    allAppointments.filter(a => (a.payment?.status || 'pending') === 'pending' && (a.payment?.amount || a.consultationFee || 0) > 0).length,
   };
 
   return (
@@ -96,6 +121,23 @@ const MyAppointments: React.FC = () => {
             </svg>
             Book New
           </button>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Upcoming', value: stats.upcoming, icon: '📅', color: 'bg-blue-50 text-blue-600', tab: 'upcoming' as Tab },
+            { label: 'Completed', value: stats.completed, icon: '✅', color: 'bg-green-50 text-green-600', tab: 'completed' as Tab },
+            { label: 'Cancelled', value: stats.cancelled, icon: '❌', color: 'bg-red-50 text-red-500', tab: 'cancelled' as Tab },
+            { label: 'Unpaid', value: stats.unpaid, icon: '💳', color: 'bg-amber-50 text-amber-600', tab: 'upcoming' as Tab },
+          ].map(s => (
+            <button key={s.label} onClick={() => setActiveTab(s.tab)}
+              className="bg-white rounded-2xl border border-gray-200 p-4 text-left hover:border-blue-300 hover:shadow-sm transition-all">
+              <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mb-2`}>{s.icon}</div>
+              <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+            </button>
+          ))}
         </div>
 
         {/* Tabs */}

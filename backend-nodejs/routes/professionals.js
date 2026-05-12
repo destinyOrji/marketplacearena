@@ -859,9 +859,31 @@ router.get('/applications', protect, async (req, res) => {
     }
 });
 
-// Settings
-router.get('/settings', protect, async (req, res) => {
-    res.json({ success: true, data: { notifications: { email: true, sms: true, inApp: true, jobAlerts: true }, privacy: { profileVisibility: 'public', showRatings: true } } });
+// Bank account settings
+router.get('/bank-account', protect, async (req, res) => {
+    try {
+        const professional = await Professional.findOne({ user: req.user._id });
+        if (!professional) return res.status(404).json({ success: false, message: 'Professional not found' });
+        res.json({ success: true, data: professional.bankAccount || {} });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/bank-account', protect, async (req, res) => {
+    try {
+        const { bankName, accountNumber, accountName, bankCode } = req.body;
+        const professional = await Professional.findOneAndUpdate(
+            { user: req.user._id },
+            { $set: { bankAccount: { bankName, accountNumber, accountName, bankCode } } },
+            { new: true }
+        );
+        if (!professional) return res.status(404).json({ success: false, message: 'Professional not found' });
+        res.json({ success: true, data: professional.bankAccount, message: 'Bank account saved' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 });
 
 router.put('/settings/update', protect, async (req, res) => {
@@ -882,8 +904,9 @@ router.post('/change-password', protect, async (req, res) => {
     }
 });
 
-// Alias for frontend compatibility
-router.put('/profile/password', protect, async (req, res) => {
+// Settings
+router.get('/settings', protect, async (req, res) => {
+    res.json({ success: true, data: { notifications: { email: true, sms: true, inApp: true, jobAlerts: true }, privacy: { profileVisibility: 'public', showRatings: true } } });
     try {
         const { currentPassword, newPassword } = req.body;
         const user = await User.findById(req.user._id);

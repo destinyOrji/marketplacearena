@@ -241,16 +241,39 @@ router.get('/settings/email-templates', adminAuth, (req, res) => {
 router.put('/settings/email-templates/:id', adminAuth, (req, res) => {
     res.json({ statuscode: 0, status: 'success', message: 'Email template updated' });
 });
-router.get('/settings/payment', adminAuth, (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: {
-        provider: 'paystack',
-        api_key: process.env.PAYSTACK_PUBLIC_KEY || '',
-        secret_key: '***hidden***',
-        webhook_url: `${process.env.FRONTEND_URL || 'https://healthmarketarena.com'}/api/webhooks/paystack`,
-        test_mode: (process.env.PAYSTACK_PUBLIC_KEY || '').startsWith('pk_test')
-    }});
+router.get('/settings/payment', adminAuth, async (req, res) => {
+    try {
+        // Load platform config from a simple JSON store or env
+        const platformFee = parseFloat(process.env.PLATFORM_FEE_PERCENT || '10');
+        res.json({ statuscode: 0, status: 'success', data: {
+            provider: 'paystack',
+            api_key: process.env.PAYSTACK_PUBLIC_KEY || '',
+            secret_key: '***hidden***',
+            webhook_url: `${process.env.FRONTEND_URL || 'https://healthmarketarena.com'}/api/webhooks/paystack`,
+            test_mode: (process.env.PAYSTACK_PUBLIC_KEY || '').startsWith('pk_test'),
+            platformFeePercent: platformFee,
+            adminBankAccount: {
+                bankName:      process.env.ADMIN_BANK_NAME || '',
+                accountNumber: process.env.ADMIN_ACCOUNT_NUMBER || '',
+                accountName:   process.env.ADMIN_ACCOUNT_NAME || '',
+                bankCode:      process.env.ADMIN_BANK_CODE || '',
+            }
+        }});
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
 });
-router.put('/settings/payment', adminAuth, (req, res) => {
+router.put('/settings/payment', adminAuth, async (req, res) => {
+    // In production you'd persist these to DB; for now update env-like config
+    const { platformFeePercent, adminBankAccount } = req.body;
+    // Store in process.env for runtime (restart-safe storage would need DB)
+    if (platformFeePercent !== undefined) process.env.PLATFORM_FEE_PERCENT = String(platformFeePercent);
+    if (adminBankAccount) {
+        if (adminBankAccount.bankName)      process.env.ADMIN_BANK_NAME = adminBankAccount.bankName;
+        if (adminBankAccount.accountNumber) process.env.ADMIN_ACCOUNT_NUMBER = adminBankAccount.accountNumber;
+        if (adminBankAccount.accountName)   process.env.ADMIN_ACCOUNT_NAME = adminBankAccount.accountName;
+        if (adminBankAccount.bankCode)      process.env.ADMIN_BANK_CODE = adminBankAccount.bankCode;
+    }
     res.json({ statuscode: 0, status: 'success', message: 'Payment settings updated' });
 });
 router.get('/settings/admins', adminAuth, async (req, res) => {

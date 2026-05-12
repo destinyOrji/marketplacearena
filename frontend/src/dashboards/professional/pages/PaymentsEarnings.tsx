@@ -1,254 +1,213 @@
-// Payments & Earnings Page - Track income and payments
+// Payments & Earnings — with bank account settings
 
 import React, { useState, useEffect } from 'react';
-import { EarningsSummary, PaymentTransaction } from '../types';
 import { paymentsApi } from '../services/api';
+import apiClient from '../services/apiClient';
 import { toast } from 'react-toastify';
-import { format, subDays, subMonths } from 'date-fns';
+import { format } from 'date-fns';
+
+type ActiveTab = 'earnings' | 'bank';
+
+const PLATFORM_FEE = 0.10; // 10%
 
 const PaymentsEarnings: React.FC = () => {
-  const [summary, setSummary] = useState<EarningsSummary | null>(null);
-  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [tab, setTab] = useState<ActiveTab>('earnings');
+  const [summary, setSummary] = useState<any>({ totalEarnings: 0, pendingPayments: 0, platformFees: 0, netEarnings: 0 });
+  const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'completed' | 'failed'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [bankAccount, setBankAccount] = useState({ bankName: '', accountNumber: '', accountName: '', bankCode: '' });
+  const [savingBank, setSavingBank] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const [summaryData, paymentsData] = await Promise.all([
+      const [sumRes, payRes, bankRes] = await Promise.allSettled([
         paymentsApi.getEarningsSummary(),
         paymentsApi.getPayments(),
+        apiClient.get('/professionals/bank-account'),
       ]);
-      setSummary(summaryData || { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 });
-      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
-    } catch (error) {
-      setSummary({ totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 });
-      setPayments([]);
+      if (sumRes.status === 'fulfilled') setSummary(sumRes.value || {});
+      if (payRes.status === 'fulfilled') setPayments(Array.isArray(payRes.value) ? payRes.value : []);
+      if (bankRes.status === 'fulfilled') {
+        const b = bankRes.value.data?.data || {};
+        setBankAccount({ bankName: b.bankName || '', accountNumber: b.accountNumber || '', accountName: b.accountName || '', bankCode: b.bankCode || '' });
+      }
+    } catch {}
+    setLoading(false);
+  };
+
+  const saveBankAccount = async () => {
+    setSavingBank(true);
+    try {
+      await apiClient.put('/professionals/bank-account', bankAccount);
+      toast.success('Bank account saved successfully');
+    } catch {
+      toast.error('Failed to save bank account');
     } finally {
-      setLoading(false);
+      setSavingBank(false);
     }
   };
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-    const matchesSearch =
-      payment.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      payment.service.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Calculate earnings by period
-  const getEarningsByPeriod = () => {
-    const now = new Date();
-    let startDate: Date;
-
-    switch (period) {
-      case 'daily':
-        startDate = subDays(now, 1);
-        break;
-      case 'weekly':
-        startDate = subDays(now, 7);
-        break;
-      case 'monthly':
-        startDate = subMonths(now, 1);
-        break;
-      case 'yearly':
-        startDate = subMonths(now, 12);
-        break;
-      default:
-        startDate = subMonths(now, 1);
-    }
-
-    const periodPayments = payments.filter(
-      (p) => p.status === 'completed' && new Date(p.date) >= startDate
-    );
-
-    return periodPayments.reduce((sum, p) => sum + p.netAmount, 0);
-  };
+  const totalEarnings = summary.totalEarnings || 0;
+  const platformFees = summary.platformFees || Math.round(totalEarnings * PLATFORM_FEE);
+  const netEarnings = summary.netEarnings || (totalEarnings - platformFees);
+  const pending = summary.pendingPayments || 0;
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Payments & Earnings</h1>
-        <p className="text-gray-600">Track your earnings and payment history</p>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Payments & Earnings</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Track your income and manage payout settings</p>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Earnings Summary Cards */}
-          {summary && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">Total Earnings</h3>
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">${summary.totalEarnings.toLocaleString()}</p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">Pending Payments</h3>
-                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">${summary.pendingPayments.toLocaleString()}</p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">Platform Fees</h3>
-                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">${summary.platformFees.toLocaleString()}</p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-gray-600">Net Earnings</h3>
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">${summary.netEarnings.toLocaleString()}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Earnings by Period */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Earnings Breakdown</h2>
-              <div className="flex gap-2">
-                {['daily', 'weekly', 'monthly', 'yearly'].map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPeriod(p as any)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      period === p
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {p.charAt(0).toUpperCase() + p.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="text-center py-8">
-              <p className="text-4xl font-bold text-gray-900 mb-2">
-                ${getEarningsByPeriod().toLocaleString()}
-              </p>
-              <p className="text-gray-600">
-                Earnings in the last {period === 'daily' ? 'day' : period === 'weekly' ? 'week' : period === 'monthly' ? 'month' : 'year'}
-              </p>
-            </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Earned', value: `₦${totalEarnings.toLocaleString()}`, icon: '💰', color: 'bg-blue-50 text-blue-600' },
+          { label: 'Pending',      value: `₦${pending.toLocaleString()}`,       icon: '⏳', color: 'bg-amber-50 text-amber-600' },
+          { label: 'Platform Fee (10%)', value: `₦${platformFees.toLocaleString()}`, icon: '🏛', color: 'bg-red-50 text-red-500' },
+          { label: 'Net Earnings', value: `₦${netEarnings.toLocaleString()}`,   icon: '📈', color: 'bg-green-50 text-green-600' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-4">
+            <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mb-2`}>{s.icon}</div>
+            <p className="text-xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
           </div>
+        ))}
+      </div>
 
-          {/* Payment History */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Payment History</h2>
+      {/* Tabs */}
+      <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
+        {[
+          { value: 'earnings', label: '💳 Payment History' },
+          { value: 'bank',     label: '🏦 Bank Account' },
+        ].map(t => (
+          <button key={t.value} onClick={() => setTab(t.value as ActiveTab)}
+            className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              tab === t.value ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-            {/* Filters */}
-            <div className="flex flex-col lg:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <input
-                  type="text"
-                  placeholder="Search by patient or service..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
-              </select>
+      {/* Payment History */}
+      {tab === 'earnings' && (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="flex justify-center items-center h-48">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
             </div>
-
-            {/* Payment Table */}
-            {filteredPayments.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">No payments found</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Patient</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Service</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">Gross</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">Fee</th>
-                      <th className="text-right py-3 px-4 text-sm font-semibold text-gray-900">Net</th>
-                      <th className="text-center py-3 px-4 text-sm font-semibold text-gray-900">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredPayments.map((payment) => (
-                      <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 text-sm text-gray-900">
-                          {format(new Date(payment.date), 'MMM dd, yyyy')}
+          ) : payments.length === 0 ? (
+            <div className="p-16 text-center">
+              <div className="text-5xl mb-4">💳</div>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">No payments yet</h3>
+              <p className="text-sm text-gray-500">Payments from confirmed appointments will appear here</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['Date', 'Patient', 'Service', 'Gross', 'Platform Fee', 'Net', 'Status'].map(h => (
+                      <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {payments.map((p: any, i) => {
+                    const gross = p.grossAmount || p.amount || 0;
+                    const fee = p.platformFee || Math.round(gross * PLATFORM_FEE);
+                    const net = p.netAmount || (gross - fee);
+                    return (
+                      <tr key={p.id || i} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-3.5 text-sm text-gray-600 whitespace-nowrap">
+                          {p.date ? format(new Date(p.date), 'MMM d, yyyy') : '—'}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-900">{payment.patient}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{payment.service}</td>
-                        <td className="py-3 px-4 text-sm text-gray-900 text-right">
-                          ${payment.grossAmount.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-red-600 text-right">
-                          -${payment.platformFee.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 text-sm font-semibold text-gray-900 text-right">
-                          ${payment.netAmount.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
-                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                          </span>
+                        <td className="px-5 py-3.5 text-sm font-medium text-gray-900">{p.patient || 'Patient'}</td>
+                        <td className="px-5 py-3.5 text-sm text-gray-600 max-w-[140px] truncate">{p.service || 'Consultation'}</td>
+                        <td className="px-5 py-3.5 text-sm text-gray-900 font-medium">₦{gross.toLocaleString()}</td>
+                        <td className="px-5 py-3.5 text-sm text-red-500">-₦{fee.toLocaleString()}</td>
+                        <td className="px-5 py-3.5 text-sm font-bold text-green-700">₦{net.toLocaleString()}</td>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
+                            p.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            p.status === 'pending'   ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-600'
+                          }`}>{p.status || 'completed'}</span>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bank Account */}
+      {tab === 'bank' && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 max-w-lg">
+          <div className="mb-5">
+            <h2 className="text-base font-bold text-gray-900">Payout Bank Account</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Your net earnings (after 10% platform fee) will be transferred to this account.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bank Name</label>
+              <input type="text" value={bankAccount.bankName}
+                onChange={e => setBankAccount(b => ({ ...b, bankName: e.target.value }))}
+                placeholder="e.g. First Bank, GTBank, Access Bank"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Account Number</label>
+              <input type="text" value={bankAccount.accountNumber}
+                onChange={e => setBankAccount(b => ({ ...b, accountNumber: e.target.value }))}
+                placeholder="10-digit account number"
+                maxLength={10}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Account Name</label>
+              <input type="text" value={bankAccount.accountName}
+                onChange={e => setBankAccount(b => ({ ...b, accountName: e.target.value }))}
+                placeholder="Name on the account"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bank Code <span className="text-gray-400 font-normal">(Optional)</span></label>
+              <input type="text" value={bankAccount.bankCode}
+                onChange={e => setBankAccount(b => ({ ...b, bankCode: e.target.value }))}
+                placeholder="e.g. 011 for First Bank"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
+              💡 Platform fee: <strong>10%</strong> of each payment is retained by Health Market Arena. The remaining <strong>90%</strong> is your net earnings.
+            </div>
+
+            <button onClick={saveBankAccount} disabled={savingBank}
+              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+              {savingBank ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <> 💾 Save Bank Account </>
+              )}
+            </button>
           </div>
         </div>
       )}
