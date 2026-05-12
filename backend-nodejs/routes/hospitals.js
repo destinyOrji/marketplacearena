@@ -175,6 +175,8 @@ router.post('/vacancies/pay', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+router.post('/vacancies/create/', protect, async (req, res) => {
     try {
         const Job = require('../models/Job');
         const Notification = require('../models/Notification');
