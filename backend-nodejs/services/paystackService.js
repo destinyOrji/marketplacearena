@@ -1,36 +1,48 @@
 const axios = require('axios');
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
-const paystackRequest = axios.create({
-  baseURL: PAYSTACK_BASE_URL,
-  headers: {
-    Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
-    'Content-Type': 'application/json',
-  },
-});
+// Read key per-request so env vars are always current
+const getClient = () => {
+  const key = process.env.PAYSTACK_SECRET_KEY;
+  if (!key) throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables');
+  return axios.create({
+    baseURL: PAYSTACK_BASE_URL,
+    headers: {
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 15000,
+  });
+};
 
 /**
  * Initialize a Paystack transaction
  * @param {string} email - Customer email
- * @param {number} amountInNaira - Amount in Naira (will be converted to kobo)
+ * @param {number} amountInNaira - Amount in Naira (converted to kobo)
  * @param {string} reference - Unique transaction reference
- * @param {object} metadata - Extra data to attach to the transaction
+ * @param {object} metadata - Extra data
  * @returns {object} Paystack initialization response
  */
 const initializeTransaction = async (email, amountInNaira, reference, metadata = {}) => {
-  const amountInKobo = amountInNaira * 100; // Paystack uses kobo
+  const amountInKobo = Math.round(amountInNaira * 100); // Paystack uses kobo
 
-  const response = await paystackRequest.post('/transaction/initialize', {
-    email,
-    amount: amountInKobo,
-    reference,
-    metadata,
-    callback_url: `${process.env.FRONTEND_URL}/payment/verify`,
-  });
-
-  return response.data;
+  try {
+    const client = getClient();
+    const response = await client.post('/transaction/initialize', {
+      email,
+      amount: amountInKobo,
+      reference,
+      metadata,
+      callback_url: `${process.env.FRONTEND_URL}/payment/verify`,
+    });
+    return response.data;
+  } catch (error) {
+    // Extract Paystack's actual error message
+    const paystackMsg = error.response?.data?.message || error.message;
+    console.error('Paystack initializeTransaction error:', paystackMsg, error.response?.data);
+    throw new Error(`Paystack error: ${paystackMsg}`);
+  }
 };
 
 /**
@@ -39,27 +51,26 @@ const initializeTransaction = async (email, amountInNaira, reference, metadata =
  * @returns {object} Paystack verification response
  */
 const verifyTransaction = async (reference) => {
-  const response = await paystackRequest.get(`/transaction/verify/${reference}`);
-  return response.data;
+  try {
+    const client = getClient();
+    const response = await client.get(`/transaction/verify/${reference}`);
+    return response.data;
+  } catch (error) {
+    const paystackMsg = error.response?.data?.message || error.message;
+    console.error('Paystack verifyTransaction error:', paystackMsg);
+    throw new Error(`Paystack error: ${paystackMsg}`);
+  }
 };
 
 /**
  * Validate Paystack webhook signature
- * @param {Buffer} rawBody - Raw request body
- * @param {string} signature - x-paystack-signature header value
- * @returns {boolean}
  */
 const validateWebhookSignature = (rawBody, signature) => {
   const crypto = require('crypto');
-  const hash = crypto
-    .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
-    .update(rawBody)
-    .digest('hex');
+  const key = process.env.PAYSTACK_SECRET_KEY;
+  if (!key) return false;
+  const hash = crypto.createHmac('sha512', key).update(rawBody).digest('hex');
   return hash === signature;
 };
 
-module.exports = {
-  initializeTransaction,
-  verifyTransaction,
-  validateWebhookSignature,
-};
+module.exports = { initializeTransaction, verifyTransaction, validateWebhookSignature };

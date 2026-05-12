@@ -672,24 +672,29 @@ router.get('/medical-records', protect, async (req, res) => {
 router.post('/payments', protect, async (req, res) => {
     try {
         const { initializeTransaction } = require('../services/paystackService');
-        const Appointment = require('../models/Appointment');
 
         const { appointmentId, amount, service } = req.body;
+
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid payment amount' });
+        }
+
         const user = await User.findById(req.user._id);
-
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+        if (!user.email) return res.status(400).json({ success: false, message: 'User email is required for payment' });
 
-        const reference = `APT-${appointmentId || Date.now()}-${Date.now()}`;
+        // Unique reference — use timestamp to avoid duplicates
+        const reference = `APT-${appointmentId || 'SVC'}-${Date.now()}`;
 
         const paystackResponse = await initializeTransaction(
             user.email,
             amount,
             reference,
-            { appointmentId: appointmentId || '', service: service || '' }
+            { appointmentId: appointmentId || '', service: service || '', userId: user._id.toString() }
         );
 
         if (!paystackResponse.status) {
-            return res.status(500).json({ success: false, message: 'Failed to initialize payment' });
+            return res.status(500).json({ success: false, message: paystackResponse.message || 'Failed to initialize payment' });
         }
 
         res.json({
@@ -703,7 +708,7 @@ router.post('/payments', protect, async (req, res) => {
             },
         });
     } catch (error) {
-        console.error('Payment error:', error);
+        console.error('Payment initialization error:', error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
