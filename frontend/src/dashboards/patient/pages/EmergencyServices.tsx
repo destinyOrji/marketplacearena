@@ -3,6 +3,7 @@ import { DashboardLayout } from '../components';
 import { emergencyApi } from '../services/api';
 import { AmbulanceService, EmergencyBooking } from '../types';
 import { showSuccessToast, showErrorToast, showWarningToast } from '../utils/toast';
+import Map from '../../../components/Map';
 
 interface Location { latitude: number; longitude: number; address: string; }
 interface BookingConfirmation {
@@ -33,8 +34,49 @@ const EmergencyServices: React.FC = () => {
   const [availableAmbulances, setAvailableAmbulances] = useState<AmbulanceService[]>([]);
   const [selectedAmbulance, setSelectedAmbulance] = useState<AmbulanceService | null>(null);
   const [bookingConfirmation, setBookingConfirmation] = useState<BookingConfirmation | null>(null);
+  const [ambulanceLocation, setAmbulanceLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [trackingInterval, setTrackingInterval] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => { detectCurrentLocation(); }, []);
+
+  useEffect(() => {
+    // Simulate real-time ambulance tracking when booking is confirmed
+    if (bookingConfirmation && patientLocation) {
+      // Start with ambulance at a simulated location
+      const initialAmbulanceLoc = {
+        latitude: patientLocation.latitude + 0.02, // ~2km away
+        longitude: patientLocation.longitude + 0.02,
+      };
+      setAmbulanceLocation(initialAmbulanceLoc);
+
+      // Update ambulance location every 5 seconds (simulated movement)
+      const interval = setInterval(() => {
+        setAmbulanceLocation((prev) => {
+          if (!prev || !patientLocation) return prev;
+
+          // Calculate direction towards patient
+          const latDiff = patientLocation.latitude - prev.latitude;
+          const lngDiff = patientLocation.longitude - prev.longitude;
+          const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+
+          // If very close, stop moving
+          if (distance < 0.001) return prev;
+
+          // Move 10% closer each update
+          return {
+            latitude: prev.latitude + latDiff * 0.1,
+            longitude: prev.longitude + lngDiff * 0.1,
+          };
+        });
+      }, 5000);
+
+      setTrackingInterval(interval);
+
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }
+  }, [bookingConfirmation, patientLocation]);
 
   const detectCurrentLocation = () => {
     setDetectingLocation(true);
@@ -324,7 +366,7 @@ const EmergencyServices: React.FC = () => {
   // ── Step 3: Tracking ──────────────────────────────────────────────────────
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4">
         {/* Success banner */}
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white text-center">
           <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -338,6 +380,51 @@ const EmergencyServices: React.FC = () => {
 
         {bookingConfirmation && (
           <>
+            {/* Real-time Map Tracking */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Live Tracking</h2>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-sm text-green-600 font-medium">Tracking Active</span>
+                </div>
+              </div>
+              
+              {patientLocation && ambulanceLocation && (
+                <Map
+                  height="450px"
+                  zoom={14}
+                  markers={[
+                    {
+                      position: [patientLocation.latitude, patientLocation.longitude],
+                      type: 'patient',
+                      popup: `📍 Your Location\n${patientLocation.address}`,
+                    },
+                    {
+                      position: [ambulanceLocation.latitude, ambulanceLocation.longitude],
+                      type: 'ambulance',
+                      popup: `🚑 Ambulance\n${bookingConfirmation.vehicleNumber}\nDriver: ${bookingConfirmation.driverName}`,
+                    },
+                  ]}
+                  route={[
+                    [ambulanceLocation.latitude, ambulanceLocation.longitude],
+                    [patientLocation.latitude, patientLocation.longitude],
+                  ]}
+                />
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-blue-600">🔵</span>
+                  <span className="text-gray-600">Your Location</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-red-600">🔴</span>
+                  <span className="text-gray-600">Ambulance Location</span>
+                </div>
+              </div>
+            </div>
+
             {/* ETA */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center justify-between">

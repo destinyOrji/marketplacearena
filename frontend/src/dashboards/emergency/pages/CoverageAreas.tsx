@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CoverageZone } from '../types';
 import { coverageApi } from '../services/api';
+import Map from '../../../components/Map';
 
 const CoverageAreas: React.FC = () => {
   const [coverageAreas, setCoverageAreas] = useState<CoverageZone[]>([]);
@@ -82,15 +83,20 @@ const CoverageAreas: React.FC = () => {
         {/* Map View */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Coverage Map</h2>
-          <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              <p>Map integration placeholder</p>
-              <p className="text-sm mt-1">Google Maps / Mapbox integration</p>
-            </div>
-          </div>
+          <Map
+            height="400px"
+            zoom={12}
+            circles={coverageAreas
+              .filter(area => area.isActive)
+              .map(area => ({
+                center: area.center ? [area.center.latitude, area.center.longitude] : [9.0820, 8.6753],
+                radius: area.radius || 5000,
+                color: '#ef4444',
+              }))}
+          />
+          <p className="text-xs text-gray-500 mt-3">
+            🔴 Red circles show your active coverage areas
+          </p>
         </div>
 
         {/* Coverage Areas List */}
@@ -202,8 +208,11 @@ const CoverageAreaModal: React.FC<CoverageAreaModalProps> = ({ area, onClose, on
     serviceTypes: area?.serviceTypes || [],
     radius: area?.radius ? area.radius / 1000 : 5,
     isActive: area?.isActive ?? true,
+    center: area?.center || null,
+    boundaries: area?.boundaries || [],
   });
   const [loading, setLoading] = useState(false);
+  const [drawnShape, setDrawnShape] = useState<any>(null);
 
   const serviceTypeOptions = [
     'ambulance',
@@ -223,7 +232,8 @@ const CoverageAreaModal: React.FC<CoverageAreaModalProps> = ({ area, onClose, on
         serviceTypes: formData.serviceTypes,
         radius: formData.radius * 1000,
         isActive: formData.isActive,
-        boundaries: [], // Placeholder - would be set via map drawing
+        center: formData.center,
+        boundaries: drawnShape ? [drawnShape] : formData.boundaries,
       };
 
       let result;
@@ -238,6 +248,30 @@ const CoverageAreaModal: React.FC<CoverageAreaModalProps> = ({ area, onClose, on
       console.error('Error saving coverage area:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDrawCreated = (layer: any) => {
+    setDrawnShape(layer);
+    
+    // Update center and radius based on drawn shape
+    if (layer.type === 'circle') {
+      setFormData({
+        ...formData,
+        center: { latitude: layer.center[0], longitude: layer.center[1] },
+        radius: layer.radius / 1000,
+      });
+    } else if (layer.type === 'polygon' && layer.points.length > 0) {
+      // Calculate center of polygon
+      const lats = layer.points.map((p: number[]) => p[0]);
+      const lngs = layer.points.map((p: number[]) => p[1]);
+      const centerLat = lats.reduce((a: number, b: number) => a + b, 0) / lats.length;
+      const centerLng = lngs.reduce((a: number, b: number) => a + b, 0) / lngs.length;
+      
+      setFormData({
+        ...formData,
+        center: { latitude: centerLat, longitude: centerLng },
+      });
     }
   };
 
@@ -339,15 +373,28 @@ const CoverageAreaModal: React.FC<CoverageAreaModalProps> = ({ area, onClose, on
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Define Boundaries
             </label>
-            <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                </svg>
-                <p className="text-sm">Draw coverage area on map</p>
-                <p className="text-xs mt-1">Map drawing tools will be integrated here</p>
+            <Map
+              height="320px"
+              zoom={12}
+              center={formData.center ? [formData.center.latitude, formData.center.longitude] : [9.0820, 8.6753]}
+              enableDrawing={true}
+              onDrawCreated={handleDrawCreated}
+              circles={drawnShape?.type === 'circle' ? [{
+                center: drawnShape.center,
+                radius: drawnShape.radius,
+                color: '#ef4444',
+              }] : []}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Use the drawing tools on the map to define your coverage area (circle, polygon, or rectangle)
+            </p>
+            {drawnShape && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-700">
+                  ✓ Coverage area defined: {drawnShape.type === 'circle' ? `${(drawnShape.radius / 1000).toFixed(1)} km radius` : 'Custom polygon'}
+                </p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Actions */}

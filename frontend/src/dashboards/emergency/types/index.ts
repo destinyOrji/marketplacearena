@@ -217,6 +217,7 @@ export interface CoverageZone {
   name: string;
   serviceTypes: string[];
   boundaries: [number, number][];
+  center?: { latitude: number; longitude: number };
   radius?: number;
   isActive: boolean;
 }
