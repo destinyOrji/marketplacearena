@@ -675,7 +675,7 @@ router.post('/payments', protect, async (req, res) => {
 
         const { appointmentId, amount, service } = req.body;
 
-        if (!amount || amount <= 0) {
+        if (!amount || Number(amount) <= 0) {
             return res.status(400).json({ success: false, message: 'Invalid payment amount' });
         }
 
@@ -683,19 +683,29 @@ router.post('/payments', protect, async (req, res) => {
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         if (!user.email) return res.status(400).json({ success: false, message: 'User email is required for payment' });
 
-        // Unique reference — use timestamp to avoid duplicates
+        // Verify Paystack key is configured
+        if (!process.env.PAYSTACK_SECRET_KEY) {
+            console.error('PAYSTACK_SECRET_KEY is not set');
+            return res.status(500).json({ success: false, message: 'Payment gateway not configured. Please contact support.' });
+        }
+
         const reference = `APT-${appointmentId || 'SVC'}-${Date.now()}`;
+
+        console.log(`Initializing Paystack payment: email=${user.email}, amount=${amount}, ref=${reference}`);
 
         const paystackResponse = await initializeTransaction(
             user.email,
-            amount,
+            Number(amount),
             reference,
             { appointmentId: appointmentId || '', service: service || '', userId: user._id.toString() }
         );
 
         if (!paystackResponse.status) {
-            return res.status(500).json({ success: false, message: paystackResponse.message || 'Failed to initialize payment' });
+            console.error('Paystack returned failure:', paystackResponse);
+            return res.status(500).json({ success: false, message: paystackResponse.message || 'Payment initialization failed' });
         }
+
+        console.log(`Paystack payment initialized: ref=${paystackResponse.data?.reference}`);
 
         res.json({
             statuscode: 0,
@@ -709,7 +719,7 @@ router.post('/payments', protect, async (req, res) => {
         });
     } catch (error) {
         console.error('Payment initialization error:', error.message);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message || 'Payment initialization failed' });
     }
 });
 
