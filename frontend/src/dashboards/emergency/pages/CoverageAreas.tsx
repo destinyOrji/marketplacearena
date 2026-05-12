@@ -81,98 +81,136 @@ const CoverageAreas: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map View */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Coverage Map</h2>
-          <Map
-            height="400px"
-            zoom={12}
-            circles={coverageAreas
-              .filter(area => area.isActive)
-              .map(area => ({
-                center: area.center ? [area.center.latitude, area.center.longitude] : [9.0820, 8.6753],
-                radius: area.radius || 5000,
-                color: '#ef4444',
-              }))}
-          />
-          <p className="text-xs text-gray-500 mt-3">
-            🔴 Red circles show your active coverage areas
-          </p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="text-2xl">🗺️</span>
+              Coverage Map
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">View all your active coverage areas across Nigeria</p>
+          </div>
+          <div className="p-6">
+            <Map
+              height="450px"
+              center={[9.0820, 8.6753]} // Nigeria center
+              zoom={6}
+              circles={coverageAreas
+                .filter(area => area.isActive)
+                .map(area => ({
+                  center: area.center ? [area.center.latitude, area.center.longitude] : [9.0820, 8.6753],
+                  radius: area.radius || 5000,
+                  color: '#ef4444',
+                }))}
+            />
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="w-3 h-3 bg-red-500 rounded-full opacity-30 border-2 border-red-500"></span>
+                <span>Active Coverage Areas</span>
+              </div>
+              <div className="text-sm text-gray-500">
+                {coverageAreas.filter(area => area.isActive).length} active zone{coverageAreas.filter(area => area.isActive).length !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Coverage Areas List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Coverage Zones</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <span className="text-2xl">📍</span>
+              Coverage Zones
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">Manage your service coverage areas</p>
+          </div>
           
-          {coverageAreas.length === 0 ? (
-            <div className="text-center py-12">
-              <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-              <p className="text-gray-600 mb-4">No coverage areas defined yet</p>
-              <button
-                onClick={handleAddArea}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Add Your First Coverage Area
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {coverageAreas.map((area) => (
-                <div
-                  key={area.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-red-300 transition-colors"
+          <div className="p-6">
+            {coverageAreas.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No coverage areas yet</h3>
+                <p className="text-gray-600 mb-6 text-sm">Define your service coverage areas to start receiving emergency requests</p>
+                <button
+                  onClick={handleAddArea}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-semibold shadow-sm"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{area.name}</h3>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {area.serviceTypes.map((type, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Your First Coverage Area
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2">
+                {coverageAreas.map((area) => (
+                  <div
+                    key={area.id}
+                    className="border border-gray-200 rounded-xl p-4 hover:border-red-300 hover:shadow-md transition-all bg-gradient-to-br from-white to-gray-50"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-gray-900 text-base">{area.name}</h3>
+                          <button
+                            onClick={() => handleToggleActive(area)}
+                            className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                              area.isActive
+                                ? 'bg-green-100 text-green-700 border border-green-200'
+                                : 'bg-gray-100 text-gray-600 border border-gray-200'
+                            }`}
                           >
-                            {type}
-                          </span>
-                        ))}
+                            {area.isActive ? '✓ Active' : 'Inactive'}
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {area.serviceTypes.map((type, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium border border-blue-100"
+                            >
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                        {area.radius && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            <span>Coverage Radius: <strong>{(area.radius / 1000).toFixed(1)} km</strong></span>
+                          </div>
+                        )}
                       </div>
-                      {area.radius && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          Radius: {(area.radius / 1000).toFixed(1)} km
-                        </p>
-                      )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleToggleActive(area)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          area.isActive
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}
+                        onClick={() => handleEditArea(area)}
+                        className="flex-1 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium border border-gray-200 flex items-center justify-center gap-2"
                       >
-                        {area.isActive ? 'Active' : 'Inactive'}
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteArea(area.id)}
+                        className="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium border border-red-200 flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
                       </button>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => handleEditArea(area)}
-                      className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteArea(area.id)}
-                      className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -375,27 +413,37 @@ const CoverageAreaModal: React.FC<CoverageAreaModalProps> = ({ area, onClose, on
           {/* Map Drawing Area */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Define Boundaries
+              📍 Define Coverage Boundaries
             </label>
-            <Map
-              height="320px"
-              zoom={12}
-              center={formData.center ? [formData.center.latitude, formData.center.longitude] : [9.0820, 8.6753]}
-              enableDrawing={true}
-              onDrawCreated={handleDrawCreated}
-              circles={drawnShape?.type === 'circle' ? [{
-                center: drawnShape.center,
-                radius: drawnShape.radius,
-                color: '#ef4444',
-              }] : []}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Use the drawing tools on the map to define your coverage area (circle, polygon, or rectangle)
-            </p>
+            <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden">
+              <Map
+                height="350px"
+                zoom={6}
+                center={formData.center ? [formData.center.latitude, formData.center.longitude] : [9.0820, 8.6753]}
+                enableDrawing={true}
+                onDrawCreated={handleDrawCreated}
+                circles={drawnShape?.type === 'circle' ? [{
+                  center: drawnShape.center,
+                  radius: drawnShape.radius,
+                  color: '#ef4444',
+                }] : []}
+              />
+            </div>
+            <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-700 flex items-start gap-2">
+                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Use the drawing tools on the map to define your coverage area. You can draw a circle, polygon, or rectangle to mark your service zone.</span>
+              </p>
+            </div>
             {drawnShape && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-xs text-green-700">
-                  ✓ Coverage area defined: {drawnShape.type === 'circle' ? `${(drawnShape.radius / 1000).toFixed(1)} km radius` : 'Custom polygon'}
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Coverage area defined: {drawnShape.type === 'circle' ? `${(drawnShape.radius / 1000).toFixed(1)} km radius` : 'Custom polygon'}
                 </p>
               </div>
             )}

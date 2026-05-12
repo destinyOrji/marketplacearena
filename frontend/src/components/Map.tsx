@@ -2,8 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
-import 'leaflet-draw';
+
+// Only import leaflet-draw if needed
+let LeafletDraw: any = null;
+try {
+  LeafletDraw = require('leaflet-draw');
+  require('leaflet-draw/dist/leaflet.draw.css');
+} catch (e) {
+  console.warn('Leaflet Draw not available');
+}
 
 // Fix for default marker icons in React-Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -54,7 +61,7 @@ const DrawControl: React.FC<{ onDrawCreated?: (layer: any) => void }> = ({ onDra
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
 
   useEffect(() => {
-    if (!map || !onDrawCreated) return;
+    if (!map || !onDrawCreated || !LeafletDraw) return;
 
     // Create a feature group for drawn items
     const drawnItems = new L.FeatureGroup();
@@ -62,7 +69,7 @@ const DrawControl: React.FC<{ onDrawCreated?: (layer: any) => void }> = ({ onDra
     drawnItemsRef.current = drawnItems;
 
     // Initialize draw control
-    const drawControl = new L.Control.Draw({
+    const drawControl = new (L.Control as any).Draw({
       edit: {
         featureGroup: drawnItems,
         remove: true,
@@ -126,10 +133,10 @@ const DrawControl: React.FC<{ onDrawCreated?: (layer: any) => void }> = ({ onDra
       }
     };
 
-    map.on(L.Draw.Event.CREATED, handleDrawCreated);
+    map.on((L as any).Draw.Event.CREATED, handleDrawCreated);
 
     return () => {
-      map.off(L.Draw.Event.CREATED, handleDrawCreated);
+      map.off((L as any).Draw.Event.CREATED, handleDrawCreated);
       map.removeControl(drawControl);
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
@@ -166,6 +173,7 @@ const Map: React.FC<MapProps> = ({
   className = '',
 }) => {
   const [mapReady, setMapReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const getMarkerIcon = (type: string) => {
     switch (type) {
@@ -178,65 +186,86 @@ const Map: React.FC<MapProps> = ({
     }
   };
 
-  return (
-    <div className={`relative ${className}`} style={{ height }}>
-      <MapContainer
-        center={center}
-        zoom={zoom}
-        style={{ height: '100%', width: '100%', borderRadius: '0.75rem' }}
-        whenReady={() => setMapReady(true)}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+  if (error) {
+    return (
+      <div className={`relative ${className}`} style={{ height }}>
+        <div className="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <p className="text-sm">Map temporarily unavailable</p>
+            <p className="text-xs mt-1">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Markers */}
-        {markers.map((marker, index) => (
-          <Marker
-            key={index}
-            position={marker.position}
-            icon={getMarkerIcon(marker.type)}
-          >
-            {marker.popup && <Popup>{marker.popup}</Popup>}
-          </Marker>
-        ))}
-
-        {/* Circles */}
-        {circles.map((circle, index) => (
-          <Circle
-            key={index}
-            center={circle.center}
-            radius={circle.radius}
-            pathOptions={{
-              color: circle.color || '#ef4444',
-              fillColor: circle.color || '#ef4444',
-              fillOpacity: 0.1,
-              weight: 2,
-            }}
+  try {
+    return (
+      <div className={`relative ${className}`} style={{ height }}>
+        <MapContainer
+          center={center}
+          zoom={zoom}
+          style={{ height: '100%', width: '100%', borderRadius: '0.75rem' }}
+          whenReady={() => setMapReady(true)}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-        ))}
 
-        {/* Route */}
-        {route.length > 1 && (
-          <Polyline
-            positions={route}
-            pathOptions={{
-              color: '#2563eb',
-              weight: 4,
-              opacity: 0.7,
-            }}
-          />
-        )}
+          {/* Markers */}
+          {markers.map((marker, index) => (
+            <Marker
+              key={index}
+              position={marker.position}
+              icon={getMarkerIcon(marker.type)}
+            >
+              {marker.popup && <Popup>{marker.popup}</Popup>}
+            </Marker>
+          ))}
 
-        {/* Auto-fit bounds */}
-        {markers.length > 0 && <AutoFitBounds markers={markers} />}
+          {/* Circles */}
+          {circles.map((circle, index) => (
+            <Circle
+              key={index}
+              center={circle.center}
+              radius={circle.radius}
+              pathOptions={{
+                color: circle.color || '#ef4444',
+                fillColor: circle.color || '#ef4444',
+                fillOpacity: 0.1,
+                weight: 2,
+              }}
+            />
+          ))}
 
-        {/* Drawing controls */}
-        {enableDrawing && <DrawControl onDrawCreated={onDrawCreated} />}
-      </MapContainer>
-    </div>
-  );
+          {/* Route */}
+          {route.length > 1 && (
+            <Polyline
+              positions={route}
+              pathOptions={{
+                color: '#2563eb',
+                weight: 4,
+                opacity: 0.7,
+              }}
+            />
+          )}
+
+          {/* Auto-fit bounds */}
+          {markers.length > 0 && <AutoFitBounds markers={markers} />}
+
+          {/* Drawing controls */}
+          {enableDrawing && LeafletDraw && <DrawControl onDrawCreated={onDrawCreated} />}
+        </MapContainer>
+      </div>
+    );
+  } catch (err: any) {
+    setError(err.message || 'Failed to load map');
+    return null;
+  }
 };
 
 export default Map;
