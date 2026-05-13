@@ -44,6 +44,9 @@ const PaymentsEarnings: React.FC = () => {
   const platformFees = earnings.platformFees || Math.round(totalEarnings * PLATFORM_FEE);
   const netEarnings = earnings.netEarnings || (totalEarnings - platformFees);
   const pending = earnings.pendingPayments || 0;
+  const totalTransactions = payments.length;
+  const completedPayments = payments.filter((p: any) => p.status === 'completed' || p.status === 'paid').length;
+  const failedPayments = payments.filter((p: any) => p.status === 'failed').length;
 
   return (
     <div className="space-y-6">
@@ -63,6 +66,21 @@ const PaymentsEarnings: React.FC = () => {
           <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-4">
             <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mb-2`}>{s.icon}</div>
             <p className="text-xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Additional Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Total Transactions', value: totalTransactions, icon: '📊', color: 'bg-purple-50 text-purple-600' },
+          { label: 'Completed', value: completedPayments, icon: '✅', color: 'bg-green-50 text-green-600' },
+          { label: 'Failed', value: failedPayments, icon: '❌', color: 'bg-red-50 text-red-500' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center text-base mb-2`}>{s.icon}</div>
+            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
             <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
           </div>
         ))}

@@ -9,6 +9,7 @@ const DashboardHome = lazy(() => import('./pages/DashboardHome'));
 const ProfileOnboarding = lazy(() => import('./pages/ProfileOnboarding'));
 const MyServices = lazy(() => import('./pages/MyServices'));
 const Appointments = lazy(() => import('./pages/Appointments'));
+const RecordAppointment = lazy(() => import('./pages/RecordAppointment'));
 const ScheduleAvailability = lazy(() => import('./pages/ScheduleAvailability'));
 const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
@@ -35,6 +36,7 @@ const GymPhysioRoutes: React.FC = () => {
           <Route path="/profile" element={<ProfileOnboarding />} />
           <Route path="/services" element={<MyServices />} />
           <Route path="/appointments" element={<Appointments />} />
+          <Route path="/record-appointment" element={<RecordAppointment />} />
           <Route path="/schedule" element={<ScheduleAvailability />} />
           <Route path="/payments" element={<PaymentsEarnings />} />
           <Route path="/analytics" element={<Analytics />} />

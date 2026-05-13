@@ -117,6 +117,32 @@ const gymPhysioSchema = new mongoose.Schema({
     completedBookings: {
         type: Number,
         default: 0
+    },
+    cancelledBookings: {
+        type: Number,
+        default: 0
+    },
+    totalRevenue: {
+        type: Number,
+        default: 0
+    },
+    
+    // Subscription
+    subscription: {
+        plan: {
+            type: String,
+            enum: ['basic', 'professional', 'premium', 'none'],
+            default: 'none'
+        },
+        status: {
+            type: String,
+            enum: ['active', 'expired', 'cancelled', 'none'],
+            default: 'none'
+        },
+        startDate: Date,
+        endDate: Date,
+        amount: Number,
+        transactionReference: String
     }
 }, {
     timestamps: true

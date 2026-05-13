@@ -141,6 +141,43 @@ export const getAnalytics = async (): Promise<any> => {
   return response.data.data;
 };
 
+export const getDetailedAnalytics = async (): Promise<any> => {
+  const response = await apiClient.get('/gym-physio/analytics/detailed');
+  return response.data.data;
+};
+
+// Payment Stats
+export const getPaymentStats = async (): Promise<any> => {
+  const response = await apiClient.get('/gym-physio/payments/stats');
+  return response.data.data;
+};
+
+// Subscription
+export const subscribe = async (plan: string, amount: number, transactionReference: string): Promise<any> => {
+  const response = await apiClient.post('/gym-physio/subscribe', { plan, amount, transactionReference });
+  return response.data.data;
+};
+
+export const getSubscriptionStatus = async (): Promise<any> => {
+  const response = await apiClient.get('/gym-physio/subscription/status');
+  return response.data.data;
+};
+
+// Notify Patient
+export const notifyPatient = async (appointmentId: string, message: string, type: string): Promise<void> => {
+  await apiClient.post(`/gym-physio/appointments/${appointmentId}/notify-patient`, { message, type });
+};
+
+// Upload Multiple Service Images
+export const uploadServiceImages = async (files: File[]): Promise<{ imageUrls: string[] }> => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('images', file));
+  const response = await apiClient.post('/gym-physio/services/upload-images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data;
+};
+
 // Settings
 export const getSettings = async (): Promise<any> => {
   const response = await apiClient.get('/gym-physio/settings');
@@ -178,6 +215,12 @@ export default {
   getEarnings,
   getPayments,
   getAnalytics,
+  getDetailedAnalytics,
+  getPaymentStats,
+  subscribe,
+  getSubscriptionStatus,
+  notifyPatient,
+  uploadServiceImages,
   getSettings,
   updateSettings,
   changePassword,

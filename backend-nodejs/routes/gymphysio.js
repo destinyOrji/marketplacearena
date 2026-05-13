@@ -561,11 +561,238 @@ router.put('/bank-account', protect, async (req, res) => {
 
 // Settings
 router.get('/settings', protect, async (req, res) => {
-    res.json({ success: true, data: { notifications: { email: true, sms: true, inApp: true }, privacy: { profileVisibility: 'public', showRatings: true } } });
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) return res.json({ success: true, data: { notifications: { email: true, sms: true, inApp: true }, privacy: { profileVisibility: 'public', showRatings: true } } });
+        
+        res.json({ 
+            success: true, 
+            data: { 
+                notifications: { email: true, sms: true, inApp: true }, 
+                privacy: { profileVisibility: 'public', showRatings: true },
+                subscription: gymPhysio.subscription || { plan: 'none', status: 'none' }
+            } 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 router.put('/settings/update', protect, async (req, res) => {
     res.json({ success: true, message: 'Settings updated' });
+});
+
+// Subscription endpoints
+router.post('/subscribe', protect, async (req, res) => {
+    try {
+        const { plan, amount, transactionReference } = req.body;
+        
+        if (!['basic', 'professional', 'premium'].includes(plan)) {
+            return res.status(400).json({ success: false, message: 'Invalid subscription plan' });
+        }
+
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Gym/Physio profile not found' });
+        }
+
+        // Calculate end date based on plan
+        const startDate = new Date();
+        const endDate = new Date();
+        
+        if (plan === 'basic') {
+            endDate.setMonth(endDate.getMonth() + 1); // 1 month
+        } else if (plan === 'professional') {
+            endDate.setMonth(endDate.getMonth() + 6); // 6 months
+        } else if (plan === 'premium') {
+            endDate.setFullYear(endDate.getFullYear() + 1); // 1 year
+        }
+
+        gymPhysio.subscription = {
+            plan,
+            status: 'active',
+            startDate,
+            endDate,
+            amount,
+            transactionReference
+        };
+
+        await gymPhysio.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Subscription activated successfully',
+            data: gymPhysio.subscription 
+        });
+    } catch (error) {
+        console.error('Subscription error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.get('/subscription/status', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ success: true, data: { plan: 'none', status: 'none' } });
+        }
+
+        // Check if subscription has expired
+        if (gymPhysio.subscription?.endDate && new Date() > new Date(gymPhysio.subscription.endDate)) {
+            gymPhysio.subscription.status = 'expired';
+            await gymPhysio.save();
+        }
+
+        res.json({ 
+            success: true, 
+            data: gymPhysio.subscription || { plan: 'none', status: 'none' }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.get('/payments/stats', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ 
+                success: true, 
+                data: { 
+                    totalTransactions: 0, 
+                    completedPayments: 0, 
+                    failedPayments: 0,
+                    pendingPayments: 0,
+                    totalEarnings: 0,
+                    platformFees: 0,
+                    netEarnings: 0
+                } 
+            });
+        }
+
+        const completedApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id, 
+            status: 'completed',
+            paymentStatus: 'paid'
+        });
+        
+        const pendingApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id, 
+            status: { $in: ['scheduled', 'confirmed'] },
+            paymentStatus: { $in: ['pending', 'processing'] }
+        });
+
+        const failedApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id, 
+            paymentStatus: 'failed'
+        });
+
+        const totalEarnings = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || apt.amount || 0), 0);
+        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.consultationFee || apt.amount || 0), 0);
+        const platformFees = Math.round(totalEarnings * 0.1);
+        const netEarnings = totalEarnings - platformFees;
+
+        res.json({ 
+            success: true, 
+            data: { 
+                totalTransactions: completedApts.length + pendingApts.length + failedApts.length,
+                completedPayments: completedApts.length,
+                failedPayments: failedApts.length,
+                pendingPayments: pendingApts.length,
+                totalEarnings,
+                platformFees,
+                netEarnings
+            } 
+        });
+    } catch (error) {
+        console.error('Payment stats error:', error);
+        res.json({ 
+            success: true, 
+            data: { 
+                totalTransactions: 0, 
+                completedPayments: 0, 
+                failedPayments: 0,
+                pendingPayments: 0,
+                totalEarnings: 0,
+                platformFees: 0,
+                netEarnings: 0
+            } 
+        });
+    }
+});
+
+router.get('/analytics/detailed', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ 
+                success: true, 
+                data: { 
+                    totalBookings: 0, 
+                    completedBookings: 0,
+                    cancelledBookings: 0,
+                    completionRate: 0, 
+                    averageRating: 0, 
+                    totalReviews: 0, 
+                    activeServices: 0,
+                    totalRevenue: 0,
+                    popularServices: [] 
+                } 
+            });
+        }
+
+        const activeServices = await Service.countDocuments({ 
+            professional: gymPhysio._id, 
+            status: 'active' 
+        });
+        
+        const services = await Service.find({ professional: gymPhysio._id })
+            .sort({ bookingCount: -1 })
+            .limit(5);
+        
+        const popularServices = services.map(s => ({
+            serviceId: s._id,
+            serviceName: s.title,
+            bookings: s.bookingCount || 0,
+            revenue: (s.bookingCount || 0) * (s.price || 0),
+            rating: s.rating || 0,
+            completionRate: s.completionRate || 0
+        }));
+
+        const completionRate = gymPhysio.totalBookings > 0
+            ? Math.round((gymPhysio.completedBookings / gymPhysio.totalBookings) * 100) : 0;
+
+        res.json({
+            success: true,
+            data: {
+                totalBookings: gymPhysio.totalBookings || 0,
+                completedBookings: gymPhysio.completedBookings || 0,
+                cancelledBookings: gymPhysio.cancelledBookings || 0,
+                completionRate,
+                averageRating: gymPhysio.averageRating || 0,
+                totalReviews: gymPhysio.totalReviews || 0,
+                activeServices,
+                totalRevenue: gymPhysio.totalRevenue || 0,
+                popularServices
+            }
+        });
+    } catch (error) {
+        console.error('Analytics error:', error);
+        res.json({ 
+            success: true, 
+            data: { 
+                totalBookings: 0, 
+                completedBookings: 0,
+                cancelledBookings: 0,
+                completionRate: 0, 
+                averageRating: 0, 
+                totalReviews: 0, 
+                activeServices: 0,
+                totalRevenue: 0,
+                popularServices: [] 
+            } 
+        });
+    }
 });
 
 router.post('/change-password', protect, async (req, res) => {
@@ -578,6 +805,26 @@ router.post('/change-password', protect, async (req, res) => {
         await user.save();
         res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Upload multiple service images
+router.post('/services/upload-images', protect, upload.array('images', 5), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, message: 'No files uploaded' });
+        }
+        
+        const imageUrls = (req.files as Express.Multer.File[]).map(file => `/uploads/gym-physio/${file.filename}`);
+        
+        res.json({ 
+            success: true, 
+            data: { imageUrls },
+            message: 'Images uploaded successfully' 
+        });
+    } catch (error) {
+        console.error('Error uploading images:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

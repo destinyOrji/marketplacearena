@@ -26,6 +26,10 @@ const serviceSchema = new mongoose.Schema({
         enum: ['consultation', 'procedure', 'therapy', 'diagnostic', 'emergency', 'fitness', 'physiotherapy', 'yoga', 'massage', 'nutrition', 'other'],
         default: 'other'
     },
+    subcategory: {
+        type: String,
+        default: ''
+    },
     price: {
         type: Number,
         required: true,
@@ -54,6 +58,10 @@ const serviceSchema = new mongoose.Schema({
     },
     images: [{ type: String }],
     tags: [{ type: String }],
+    features: [{ type: String }],
+    requirements: { type: String, default: '' },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    completionRate: { type: Number, default: 0, min: 0, max: 100 },
     availability: {
         type: String,
         enum: ['available', 'limited', 'unavailable'],

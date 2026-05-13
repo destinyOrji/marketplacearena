@@ -142,14 +142,18 @@ const ScheduleAvailability: React.FC = () => {
                   </div>
 
                   {d.isAvailable && d.timeSlots?.length > 0 && (
-                    <div className="mt-3 space-y-2 ml-14">
+                    <div className="mt-3 space-y-2 sm:ml-14">
                       {d.timeSlots.map((slot: any, i: number) => (
-                        <div key={i} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200">
-                          <input type="time" value={slot.startTime} onChange={e => handleTimeChange(day, i, 'startTime', e.target.value)} className={inputClass} />
-                          <span className="text-gray-500 text-sm font-medium">to</span>
-                          <input type="time" value={slot.endTime} onChange={e => handleTimeChange(day, i, 'endTime', e.target.value)} className={inputClass} />
+                        <div key={i} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 bg-white p-3 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2 flex-1">
+                            <input type="time" value={slot.startTime} onChange={e => handleTimeChange(day, i, 'startTime', e.target.value)} 
+                              className="flex-1 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                            <span className="text-gray-500 text-xs sm:text-sm font-medium">to</span>
+                            <input type="time" value={slot.endTime} onChange={e => handleTimeChange(day, i, 'endTime', e.target.value)} 
+                              className="flex-1 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                          </div>
                           {d.timeSlots.length > 1 && (
-                            <button onClick={() => handleRemoveSlot(day, i)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Remove time slot">
+                            <button onClick={() => handleRemoveSlot(day, i)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors self-center" title="Remove time slot">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>

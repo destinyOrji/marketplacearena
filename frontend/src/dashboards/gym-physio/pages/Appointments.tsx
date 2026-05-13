@@ -1,4 +1,4 @@
-// Gym & Physio Appointments — full redesign with accept/reject + patient notifications
+// Gym & Physio Appointments — full redesign with accept/reject + patient notifications + messaging
 
 import React, { useEffect, useState } from 'react';
 import { getAppointments, confirmAppointment, cancelAppointment, completeAppointment } from '../services/api';
@@ -35,8 +35,10 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
 }) => {
   const [notes, setNotes] = useState('');
   const [rejectReason, setRejectReason] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const isRejectMode = appointment._action === 'reject';
+  const isMessageMode = appointment._action === 'message';
 
   const getToken = () => localStorage.getItem('gymPhysioToken') || localStorage.getItem('authToken') || '';
 
@@ -48,6 +50,25 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
         { headers: { Authorization: `Bearer ${getToken()}` } }
       );
     } catch {} // non-fatal
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim()) {
+      toast.error('Please enter a message');
+      return;
+    }
+    setLoading(true);
+    try {
+      await notifyPatient(message.trim(), 'message_from_provider');
+      toast.success('Message sent to patient successfully!');
+      setMessage('');
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      toast.error(error?.message || 'Failed to send message');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAccept = async () => {
@@ -99,7 +120,7 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900">
-            {isRejectMode ? 'Reject Booking' : 'Booking Details'}
+            {isRejectMode ? 'Reject Booking' : isMessageMode ? 'Send Message to Patient' : 'Booking Details'}
           </h2>
           <button onClick={onClose} disabled={loading}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
@@ -146,7 +167,20 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
             </div>
           )}
 
-          {!isRejectMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
+          {/* Message mode */}
+          {isMessageMode && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+                Your Message <span className="text-blue-500">*</span>
+              </label>
+              <textarea value={message} onChange={e => setMessage(e.target.value)} rows={4} disabled={loading}
+                placeholder="Type your message to the patient here..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 resize-none disabled:bg-gray-50" />
+              <p className="text-xs text-gray-400 mt-1">This message will be sent to the patient via notification.</p>
+            </div>
+          )}
+
+          {!isRejectMode && !isMessageMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
             <div>
               <label className="block text-sm font-semibold text-gray-800 mb-1.5">
                 Message to Client <span className="text-gray-400 font-normal">(Optional)</span>
@@ -175,6 +209,14 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
             Close
           </button>
 
+          {isMessageMode && (
+            <button onClick={handleSendMessage} disabled={loading || !message.trim()}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              {loading ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
+              Send Message
+            </button>
+          )}
+
           {isRejectMode && (
             <button onClick={handleReject} disabled={loading || !rejectReason.trim()}
               className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors">
@@ -183,7 +225,7 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
             </button>
           )}
 
-          {!isRejectMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
+          {!isRejectMode && !isMessageMode && (appointment.status === 'scheduled' || appointment.status === 'pending') && (
             <button onClick={handleAccept} disabled={loading}
               className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
               {loading ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> : null}
@@ -191,7 +233,7 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
             </button>
           )}
 
-          {!isRejectMode && appointment.status === 'confirmed' && (
+          {!isRejectMode && !isMessageMode && appointment.status === 'confirmed' && (
             <button onClick={handleComplete} disabled={loading}
               className="flex-1 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
               Mark Completed
@@ -359,10 +401,19 @@ const Appointments: React.FC = () => {
                             </>
                           )}
                           {apt.status === 'confirmed' && (
-                            <button onClick={() => setSelectedAppointment(apt)}
-                              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-                              View Details
-                            </button>
+                            <>
+                              <button onClick={() => setSelectedAppointment({ ...apt, _action: 'message' })}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                </svg>
+                                Send Message
+                              </button>
+                              <button onClick={() => setSelectedAppointment(apt)}
+                                className="px-3 py-1.5 bg-white text-gray-700 text-xs font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                View Details
+                              </button>
+                            </>
                           )}
                           {(apt.status === 'completed' || apt.status === 'cancelled') && (
                             <button onClick={() => setSelectedAppointment(apt)}
