@@ -53,6 +53,7 @@ const Feedback = lazy(() => import('./dashboards/patient/pages/Feedback'));
 const ProfileSettings = lazy(() => import('./dashboards/patient/pages/ProfileSettings'));
 const Subscription = lazy(() => import('./dashboards/patient/pages/Subscription'));
 const PatientNotifications = lazy(() => import('./dashboards/patient/pages/Notifications'));
+const VideoCall = lazy(() => import('./dashboards/patient/pages/VideoCall'));
 
 // Lazy load registration pages
 const PatientRegister = lazy(() => import('./pages/auth/PatientRegister'));
@@ -240,6 +241,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PatientNotifications />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/patient/video-call/:appointmentId" 
+              element={
+                <ProtectedRoute>
+                  <VideoCall />
                 </ProtectedRoute>
               } 
             />

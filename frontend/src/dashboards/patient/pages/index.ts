@@ -10,3 +10,4 @@ export { default as MedicalRecords } from './MedicalRecords';
 export { default as Payments } from './Payments';
 export { default as Feedback } from './Feedback';
 export { default as ProfileSettings } from './ProfileSettings';
+export { default as VideoCall } from './VideoCall';
