@@ -36,6 +36,16 @@ export interface GymPhysioProfile {
   totalReviews: number;
   totalBookings: number;
   completedBookings: number;
+  cancelledBookings?: number;
+  totalRevenue?: number;
+  subscription?: {
+    plan: 'basic' | 'professional' | 'premium' | 'none';
+    status: 'active' | 'expired' | 'cancelled' | 'none';
+    startDate?: Date;
+    endDate?: Date;
+    amount?: number;
+    transactionReference?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -59,15 +69,20 @@ export interface Service {
   title: string;
   description: string;
   category: string;
+  subcategory?: string;
   price: number;
   duration: number;
   status: 'active' | 'inactive' | 'draft';
   images: string[];
   tags: string[];
+  features?: string[];
+  requirements?: string;
   availability: string;
   rating: number;
   reviewCount: number;
   bookingCount: number;
+  averageRating?: number;
+  completionRate?: number;
   createdAt: Date;
   updatedAt: Date;
 }
