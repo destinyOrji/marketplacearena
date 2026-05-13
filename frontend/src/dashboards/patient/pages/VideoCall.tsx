@@ -14,6 +14,7 @@ const VideoCall: React.FC = () => {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (appointmentId) {
@@ -33,9 +34,15 @@ const VideoCall: React.FC = () => {
       setLoading(true);
       const response = await appointmentsApi.getAppointmentById(appointmentId!);
       const data = response.data?.data || response.data;
+      
+      if (!data) {
+        throw new Error('Appointment not found');
+      }
+      
       setAppointment(data);
-    } catch (error) {
-      showErrorToast('Failed to load appointment details');
+    } catch (error: any) {
+      console.error('Failed to load appointment:', error);
+      showErrorToast(error?.message || 'Failed to load appointment details');
       setTimeout(() => navigate('/patient/appointments'), 2000);
     } finally {
       setLoading(false);
@@ -45,7 +52,7 @@ const VideoCall: React.FC = () => {
   const initializeMedia = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: { width: 1280, height: 720 },
         audio: true,
       });
       setStream(mediaStream);
@@ -53,9 +60,21 @@ const VideoCall: React.FC = () => {
         videoRef.current.srcObject = mediaStream;
       }
       setCallStatus('connected');
-    } catch (error) {
+      showSuccessToast('Camera and microphone connected');
+    } catch (error: any) {
       console.error('Error accessing media devices:', error);
-      showErrorToast('Could not access camera/microphone. Please check permissions.');
+      let errorMessage = 'Could not access camera/microphone.';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera/microphone permission denied. Please allow access in your browser settings.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera or microphone found. Please connect a device.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Camera/microphone is already in use by another application.';
+      }
+      
+      showErrorToast(errorMessage);
+      setCallStatus('waiting');
     }
   };
 

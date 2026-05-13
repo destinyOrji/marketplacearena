@@ -404,6 +404,75 @@ router.get('/appointments', protect, async (req, res) => {
     }
 });
 
+// Get single appointment by ID
+router.get('/appointments/:id', protect, async (req, res) => {
+    try {
+        const Appointment = require('../models/Appointment');
+        const client = await Client.findOne({ user: req.user._id });
+        if (!client) return res.status(404).json({ success: false, message: 'Client not found' });
+
+        const apt = await Appointment.findOne({ _id: req.params.id, client: client._id })
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email phone' } })
+            .populate({ path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName email phone' } })
+            .populate('service', 'title price');
+
+        if (!apt) return res.status(404).json({ success: false, message: 'Appointment not found' });
+
+        // Build provider info
+        let provider;
+        let providerPhone = null;
+        if (apt.gymPhysio) {
+            const gp = apt.gymPhysio;
+            provider = {
+                id: gp._id,
+                name: gp.businessName || (gp.user ? `${gp.user.firstName} ${gp.user.lastName}`.trim() : 'Gym/Physio'),
+                type: 'gym-physio',
+                specialty: gp.businessType || 'Fitness',
+                photo: gp.profilePicture || null,
+            };
+            providerPhone = gp.phone || gp.user?.phone;
+        } else {
+            provider = {
+                id: apt.professional?._id,
+                name: apt.professional?.user
+                    ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim()
+                    : 'Professional',
+                type: 'professional',
+                specialty: apt.professional?.specialization?.[0] || '',
+                photo: null,
+            };
+            providerPhone = apt.professional?.phone || apt.professional?.user?.phone;
+        }
+
+        const data = {
+            id: apt._id,
+            date: apt.scheduledDate,
+            time: apt.scheduledTime || '10:00',
+            status: apt.status,
+            type: apt.appointmentMode || 'in_person',
+            appointmentMode: apt.appointmentMode || 'in_person',
+            service: apt.service ? {
+                id: apt.service._id,
+                title: apt.service.title,
+                price: apt.service.price,
+            } : { id: '', title: apt.reasonForVisit || 'Consultation', price: apt.consultationFee || 0 },
+            provider,
+            providerPhone,
+            reasonForVisit: apt.reasonForVisit,
+            payment: {
+                amount: apt.consultationFee || apt.service?.price || 0,
+                status: apt.paymentStatus || 'pending',
+            },
+            consultationLink: apt.consultationLink || null,
+        };
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching appointment:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 router.post('/appointments/book', protect, requireSubscription, async (req, res) => {
     try {
         const Appointment = require('../models/Appointment');
