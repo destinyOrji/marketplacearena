@@ -111,11 +111,11 @@ const MyAppointments: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Appointments</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Manage your healthcare appointments</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Appointments</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Manage your healthcare appointments</p>
           </div>
           <button onClick={() => navigate('/patient/browse-services')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm w-full sm:w-auto">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
@@ -124,7 +124,7 @@ const MyAppointments: React.FC = () => {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {[
             { label: 'Upcoming', value: stats.upcoming, icon: '📅', color: 'bg-blue-50 text-blue-600', tab: 'upcoming' as Tab },
             { label: 'Completed', value: stats.completed, icon: '✅', color: 'bg-green-50 text-green-600', tab: 'completed' as Tab },
@@ -132,25 +132,25 @@ const MyAppointments: React.FC = () => {
             { label: 'Unpaid', value: stats.unpaid, icon: '💳', color: 'bg-amber-50 text-amber-600', tab: 'upcoming' as Tab },
           ].map(s => (
             <button key={s.label} onClick={() => setActiveTab(s.tab)}
-              className="bg-white rounded-2xl border border-gray-200 p-4 text-left hover:border-blue-300 hover:shadow-sm transition-all">
-              <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mb-2`}>{s.icon}</div>
-              <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+              className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-4 text-left hover:border-blue-300 hover:shadow-sm transition-all">
+              <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl ${s.color} flex items-center justify-center text-base sm:text-lg mb-1.5 sm:mb-2`}>{s.icon}</div>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{s.value}</p>
               <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
             </button>
           ))}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
+        <div className="flex gap-1 sm:gap-2 bg-gray-100 p-1 rounded-xl sm:rounded-2xl overflow-x-auto">
           {TABS.map(tab => (
             <button key={tab.value} onClick={() => setActiveTab(tab.value)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
                 activeTab === tab.value
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}>
-              <span>{tab.icon}</span>
-              {tab.label}
+              <span className="text-sm sm:text-base">{tab.icon}</span>
+              <span className="hidden xs:inline">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -212,50 +212,52 @@ const MyAppointments: React.FC = () => {
                     'bg-red-300'
                   }`} />
 
-                  <div className="p-5">
-                    <div className="flex items-start gap-4">
-                      <Avatar name={providerName} photo={providerPhoto} size="w-14 h-14" />
+                  <div className="p-3 sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <Avatar name={providerName} photo={providerPhoto} size="w-12 h-12 sm:w-14 sm:h-14" />
 
                       <div className="flex-1 min-w-0">
                         {/* Top row */}
-                        <div className="flex items-start justify-between gap-3 flex-wrap">
-                          <div>
-                            <p className="font-bold text-gray-900 text-base">{providerName}</p>
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-bold text-gray-900 text-sm sm:text-base truncate">{providerName}</p>
                             {providerSpecialty && (
-                              <p className="text-xs text-gray-500 capitalize mt-0.5">{providerSpecialty}</p>
+                              <p className="text-xs text-gray-500 capitalize mt-0.5 truncate">{providerSpecialty}</p>
                             )}
                           </div>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border capitalize flex-shrink-0 ${style.badge}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-semibold border capitalize flex-shrink-0 ${style.badge}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                            {status.replace(/_/g, ' ')}
+                            <span className="hidden xs:inline">{status.replace(/_/g, ' ')}</span>
                           </span>
                         </div>
 
                         {/* Service */}
-                        <p className="text-sm text-blue-600 font-medium mt-1.5">{serviceTitle}</p>
+                        <p className="text-xs sm:text-sm text-blue-600 font-medium mt-1.5 line-clamp-1">{serviceTitle}</p>
 
                         {/* Info chips */}
-                        <div className="flex flex-wrap gap-2 mt-2.5">
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
-                            <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
+                            <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            {formattedDate}
+                            <span className="hidden sm:inline">{formattedDate}</span>
+                            <span className="sm:hidden">{rawDate ? format(new Date(rawDate), 'MMM d') : '—'}</span>
                           </span>
                           {time && (
-                            <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
-                              <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
+                              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               {time}
                             </span>
                           )}
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
-                            {MODE_ICONS[mode] || '🏥'} {MODE_LABELS[mode] || mode}
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-50 border border-gray-200 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
+                            <span className="text-sm">{MODE_ICONS[mode] || '🏥'}</span>
+                            <span className="hidden sm:inline">{MODE_LABELS[mode] || mode}</span>
                           </span>
                           {fee > 0 && (
-                            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${
                               paymentStatus === 'paid'
                                 ? 'bg-green-50 text-green-700 border-green-200'
                                 : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -263,23 +265,21 @@ const MyAppointments: React.FC = () => {
                               💳 ₦{fee.toLocaleString()} · {paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
                             </span>
                           )}
-                          {relDate && (
-                            <span className="text-xs text-gray-400">{relDate}</span>
-                          )}
                         </div>
 
                         {/* Actions */}
-                        <div className="flex flex-wrap gap-2 mt-4">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                           {/* Video Call Button for video appointments */}
                           {isUpcoming && (mode === 'video_call' || mode === 'video') && status === 'confirmed' && (
                             <button
                               onClick={() => window.open(`/patient/video-call/${id}`, '_blank')}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg sm:rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md flex-1 sm:flex-initial">
+                              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                   d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                               </svg>
-                              Start Video Call
+                              <span className="hidden sm:inline">Start Video Call</span>
+                              <span className="sm:hidden">Video</span>
                             </button>
                           )}
                           
@@ -287,12 +287,13 @@ const MyAppointments: React.FC = () => {
                           {isUpcoming && (mode === 'phone_call' || mode === 'chat') && status === 'confirmed' && apt.providerPhone && (
                             <a
                               href={`tel:${apt.providerPhone}`}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-semibold rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md flex-1 sm:flex-initial">
+                              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                   d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                               </svg>
-                              Call Provider
+                              <span className="hidden sm:inline">Call Provider</span>
+                              <span className="sm:hidden">Call</span>
                             </a>
                           )}
                           

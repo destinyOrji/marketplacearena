@@ -84,48 +84,48 @@ const Appointments: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Review and manage your patient appointments</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Appointments</h1>
+        <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Review and manage your patient appointments</p>
       </div>
 
       {/* New bookings alert */}
       {counts['scheduled'] > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-blue-900">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm font-semibold text-blue-900">
               {counts['scheduled']} new booking{counts['scheduled'] !== 1 ? 's' : ''} awaiting your response
             </p>
             <p className="text-xs text-blue-600">Accept or reject to notify the patient</p>
           </div>
           <button onClick={() => setStatusFilter('scheduled')}
-            className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white border border-blue-200 px-3 py-1.5 rounded-lg">
-            View New
+            className="ml-auto text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white border border-blue-200 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg whitespace-nowrap">
+            View
           </button>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="flex overflow-x-auto border-b border-gray-200">
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="flex overflow-x-auto border-b border-gray-200 scrollbar-hide">
           {STATUS_TABS.map(tab => (
             <button key={tab.value} onClick={() => setStatusFilter(tab.value)}
-              className={`flex-shrink-0 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              className={`flex-shrink-0 px-3 sm:px-5 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 statusFilter === tab.value
                   ? 'border-blue-600 text-blue-600 bg-blue-50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}>
               {tab.label}
               {counts[tab.value] > 0 && (
-                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                <span className={`ml-1 sm:ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
                   statusFilter === tab.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
                 }`}>{counts[tab.value]}</span>
               )}
@@ -157,60 +157,61 @@ const Appointments: React.FC = () => {
               const style = STATUS_STYLES[apt.status] || STATUS_STYLES.scheduled;
               const initials = apt.patient.name.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
               return (
-                <div key={apt.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start gap-4">
+                <div key={apt.id} className="px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-3 sm:gap-4">
                     {/* Avatar */}
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <span className="text-white text-sm font-bold">{initials}</span>
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <span className="text-white text-xs sm:text-sm font-bold">{initials}</span>
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-base font-bold text-gray-900">{apt.patient.name}</p>
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${style.badge}`}>
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <p className="text-sm sm:text-base font-bold text-gray-900 truncate">{apt.patient.name}</p>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border capitalize flex-shrink-0 ${style.badge}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                              {apt.status === 'scheduled' ? 'New Booking' : apt.status}
+                              <span className="hidden xs:inline">{apt.status === 'scheduled' ? 'New' : apt.status}</span>
                             </span>
                           </div>
                           {apt.patient.email && (
-                            <p className="text-xs text-gray-400">{apt.patient.email}</p>
+                            <p className="text-xs text-gray-400 truncate">{apt.patient.email}</p>
                           )}
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                           {(apt.status === 'scheduled' || apt.status === 'pending') && (
                             <>
                               <button onClick={() => setSelectedAppointment(apt)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                Accept
+                                <span className="hidden xs:inline">Accept</span>
                               </button>
                               <button onClick={() => setSelectedAppointment({ ...apt, _action: 'reject' })}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 border border-red-200 transition-colors">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-white text-red-600 text-xs font-semibold rounded-lg hover:bg-red-50 border border-red-200 transition-colors">
+                                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
-                                Reject
+                                <span className="hidden xs:inline">Reject</span>
                               </button>
                             </>
                           )}
                           {apt.status === 'confirmed' && (
                             <>
                               <button onClick={() => setSelectedAppointment({ ...apt, _action: 'message' })}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                                <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                                 </svg>
-                                Send Message
+                                <span className="hidden sm:inline">Message</span>
                               </button>
                               <button onClick={() => setSelectedAppointment(apt)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 border border-gray-300 transition-colors">
-                                View Details
+                                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-white text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 border border-gray-300 transition-colors">
+                                <span className="hidden sm:inline">View</span>
+                                <span className="sm:hidden">•••</span>
                               </button>
                             </>
                           )}
@@ -224,22 +225,23 @@ const Appointments: React.FC = () => {
                       </div>
 
                       {/* Details row */}
-                      <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-600">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 sm:mt-2 text-xs sm:text-sm text-gray-600">
                         <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
-                          <span className="font-medium text-blue-600">{apt.service?.title || 'Consultation'}</span>
+                          <span className="font-medium text-blue-600 truncate">{apt.service?.title || 'Consultation'}</span>
                         </span>
                         <span className="flex items-center gap-1 text-xs text-gray-400">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          {apt.date ? format(new Date(apt.date), 'MMM d, yyyy') : '—'} at {apt.time}
+                          <span className="hidden sm:inline">{apt.date ? format(new Date(apt.date), 'MMM d, yyyy') : '—'} at {apt.time}</span>
+                          <span className="sm:hidden">{apt.date ? format(new Date(apt.date), 'MMM d') : '—'}</span>
                         </span>
-                        <span className="text-xs text-gray-400">{getTypeLabel(apt.type)}</span>
+                        <span className="text-xs text-gray-400 hidden sm:inline">{getTypeLabel(apt.type)}</span>
                         {apt.payment?.amount > 0 && (
                           <span className="text-xs font-semibold text-green-600">
                             ₦{apt.payment.amount.toLocaleString()}
@@ -248,7 +250,7 @@ const Appointments: React.FC = () => {
                       </div>
 
                       {apt.reason && (
-                        <p className="text-xs text-gray-500 mt-1.5 italic">"{apt.reason}"</p>
+                        <p className="text-xs text-gray-500 mt-1 sm:mt-1.5 italic line-clamp-2">"{apt.reason}"</p>
                       )}
                     </div>
                   </div>
