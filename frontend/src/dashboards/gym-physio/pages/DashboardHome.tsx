@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { getDashboardStats } from '../services/api';
+import { getDashboardStats, subscribe } from '../services/api';
+import { toast } from 'react-toastify';
 
 const DashboardHome: React.FC = () => {
   const { gymPhysio } = useAuth();
   const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     getDashboardStats()
@@ -19,6 +21,59 @@ const DashboardHome: React.FC = () => {
   const name = gymPhysio?.businessName || 'My Business';
   const isVerified = gymPhysio?.isVerified || stats.isVerified;
   const subscription = gymPhysio?.subscription || { plan: 'none', status: 'inactive' };
+
+  const handleSubscription = (plan: any) => {
+    setProcessingPayment(true);
+    
+    // Initialize Paystack payment
+    const handler = (window as any).PaystackPop.setup({
+      key: process.env.REACT_APP_PAYSTACK_PUBLIC_KEY || 'pk_test_d056dc35d8db7add1be696cf9a839c98a640003e',
+      email: gymPhysio?.user?.email || 'user@example.com',
+      amount: plan.price * 100, // Convert to kobo
+      currency: 'NGN',
+      ref: `SUB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      metadata: {
+        custom_fields: [
+          {
+            display_name: 'Plan',
+            variable_name: 'plan',
+            value: plan.name.toLowerCase()
+          },
+          {
+            display_name: 'Business Name',
+            variable_name: 'business_name',
+            value: gymPhysio?.businessName || 'N/A'
+          }
+        ]
+      },
+      callback: async function(response: any) {
+        try {
+          // Save subscription to backend
+          await subscribe(
+            plan.name.toLowerCase(),
+            plan.price,
+            response.reference
+          );
+          
+          toast.success(`Successfully subscribed to ${plan.name} plan!`);
+          setShowSubscriptionModal(false);
+          
+          // Reload page to update subscription status
+          window.location.reload();
+        } catch (error: any) {
+          toast.error(error.message || 'Failed to activate subscription');
+        } finally {
+          setProcessingPayment(false);
+        }
+      },
+      onClose: function() {
+        setProcessingPayment(false);
+        toast.info('Payment cancelled');
+      }
+    });
+    
+    handler.openIframe();
+  };
 
   const subscriptionPlans = [
     {
@@ -263,17 +318,14 @@ const DashboardHome: React.FC = () => {
                   </ul>
 
                   <button
-                    onClick={() => {
-                      // TODO: Implement subscription logic
-                      alert(`Subscribing to ${plan.name} plan - ₦${plan.price.toLocaleString()}`);
-                      setShowSubscriptionModal(false);
-                    }}
-                    className={`w-full py-3 rounded-xl font-semibold transition-colors ${
+                    onClick={() => handleSubscription(plan)}
+                    disabled={processingPayment}
+                    className={`w-full py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                       plan.recommended
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                     }`}>
-                    Choose {plan.name}
+                    {processingPayment ? 'Processing...' : `Choose ${plan.name}`}
                   </button>
                 </div>
               ))}
@@ -281,7 +333,7 @@ const DashboardHome: React.FC = () => {
 
             <div className="mt-6 p-4 bg-blue-50 rounded-xl">
               <p className="text-sm text-blue-900">
-                <strong>💡 Note:</strong> All plans include secure payment processing, customer support, and regular platform updates. Cancel anytime.
+                <strong>💡 Note:</strong> All plans include secure payment processing via Paystack, customer support, and regular platform updates. Cancel anytime.
               </p>
             </div>
           </div>

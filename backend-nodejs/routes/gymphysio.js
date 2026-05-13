@@ -484,16 +484,26 @@ router.get('/earnings', protect, async (req, res) => {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
         if (!gymPhysio) return res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 } });
 
-        const completedApts = await Appointment.find({ gymPhysio: gymPhysio._id, status: 'completed' });
-        const totalEarnings = completedApts.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+        const completedApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id, 
+            status: 'completed',
+            paymentStatus: 'paid'
+        });
+        
+        const totalEarnings = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
         const platformFees = Math.round(totalEarnings * 0.1);
         const netEarnings = totalEarnings - platformFees;
 
-        const pendingApts = await Appointment.find({ gymPhysio: gymPhysio._id, status: { $in: ['scheduled', 'confirmed'] } });
-        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+        const pendingApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id, 
+            status: { $in: ['scheduled', 'confirmed'] },
+            paymentStatus: { $in: ['pending', 'paid'] }
+        });
+        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
 
         res.json({ success: true, data: { totalEarnings, pendingPayments, completedPayments: totalEarnings, platformFees, netEarnings } });
     } catch (error) {
+        console.error('Earnings error:', error);
         res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 } });
     }
 });
@@ -670,36 +680,27 @@ router.get('/payments/stats', protect, async (req, res) => {
             });
         }
 
-        const completedApts = await Appointment.find({ 
-            gymPhysio: gymPhysio._id, 
-            status: 'completed',
-            paymentStatus: 'paid'
-        });
+        // Get all appointments for this gym-physio
+        const allAppointments = await Appointment.find({ gymPhysio: gymPhysio._id });
         
-        const pendingApts = await Appointment.find({ 
-            gymPhysio: gymPhysio._id, 
-            status: { $in: ['scheduled', 'confirmed'] },
-            paymentStatus: { $in: ['pending', 'processing'] }
-        });
+        const completedApts = allAppointments.filter(apt => apt.paymentStatus === 'paid');
+        const pendingApts = allAppointments.filter(apt => apt.paymentStatus === 'pending');
+        const failedApts = allAppointments.filter(apt => apt.paymentStatus === 'failed');
 
-        const failedApts = await Appointment.find({ 
-            gymPhysio: gymPhysio._id, 
-            paymentStatus: 'failed'
-        });
-
-        const totalEarnings = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || apt.amount || 0), 0);
-        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.consultationFee || apt.amount || 0), 0);
+        const totalEarnings = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
+        const pendingAmount = pendingApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
         const platformFees = Math.round(totalEarnings * 0.1);
         const netEarnings = totalEarnings - platformFees;
 
         res.json({ 
             success: true, 
             data: { 
-                totalTransactions: completedApts.length + pendingApts.length + failedApts.length,
+                totalTransactions: allAppointments.length,
                 completedPayments: completedApts.length,
                 failedPayments: failedApts.length,
                 pendingPayments: pendingApts.length,
                 totalEarnings,
+                pendingAmount,
                 platformFees,
                 netEarnings
             } 
