@@ -342,8 +342,15 @@ router.delete('/services/:id/delete', protect, async (req, res) => {
 // Appointments
 router.get('/appointments', protect, async (req, res) => {
     try {
+        console.log('Fetching appointments for user:', req.user._id);
+        
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
-        if (!gymPhysio) return res.json({ success: true, data: [] });
+        console.log('GymPhysio profile found:', gymPhysio ? gymPhysio._id : 'NOT FOUND');
+        
+        if (!gymPhysio) {
+            console.log('No GymPhysio profile found for user');
+            return res.json({ success: true, data: [] });
+        }
 
         const appointments = await Appointment.find({ gymPhysio: gymPhysio._id })
             .populate({
@@ -356,7 +363,10 @@ router.get('/appointments', protect, async (req, res) => {
             .populate('service')
             .sort({ scheduledDate: -1 });
 
+        console.log('Appointments found:', appointments.length);
+
         const data = appointments.map(apt => ({
+            _id: apt._id,
             id: apt._id,
             date: apt.scheduledDate,
             time: apt.scheduledTime || '10:00',
@@ -375,6 +385,7 @@ router.get('/appointments', protect, async (req, res) => {
                 id: apt.service._id,
                 title: apt.service.title,
                 price: apt.service.price,
+                images: apt.service.images || []
             } : null,
             payment: {
                 amount: apt.consultationFee || apt.service?.price || 0,
@@ -387,7 +398,7 @@ router.get('/appointments', protect, async (req, res) => {
         res.json({ success: true, data });
     } catch (error) {
         console.error('Error fetching appointments:', error);
-        res.json({ success: true, data: [] });
+        res.status(500).json({ success: false, message: error.message, data: [] });
     }
 });
 
