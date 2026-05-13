@@ -816,7 +816,7 @@ router.post('/services/upload-images', protect, upload.array('images', 5), async
             return res.status(400).json({ success: false, message: 'No files uploaded' });
         }
         
-        const imageUrls = (req.files as Express.Multer.File[]).map(file => `/uploads/gym-physio/${file.filename}`);
+        const imageUrls = req.files.map(file => `/uploads/gym-physio/${file.filename}`);
         
         res.json({ 
             success: true, 
