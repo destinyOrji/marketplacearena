@@ -223,6 +223,7 @@ router.post('/services/create', protect, async (req, res) => {
             title: req.body.title,
             description: req.body.description,
             category: req.body.category || 'fitness',
+            subcategory: req.body.subcategory || '',
             price: parseFloat(req.body.price),
             duration: parseInt(req.body.duration),
             status: req.body.status || 'active',
@@ -238,6 +239,7 @@ router.post('/services/create', protect, async (req, res) => {
             title: service.title,
             description: service.description,
             category: service.category,
+            subcategory: service.subcategory,
             price: service.price,
             duration: service.duration,
             status: service.status,
@@ -258,6 +260,81 @@ router.post('/services/create', protect, async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating service:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/services/:id/update', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Gym/Physio profile not found' });
+        }
+
+        const service = await Service.findOne({ _id: req.params.id, professional: gymPhysio._id });
+        if (!service) {
+            return res.status(404).json({ success: false, message: 'Service not found' });
+        }
+
+        // Update service fields
+        service.title = req.body.title || service.title;
+        service.description = req.body.description || service.description;
+        service.category = req.body.category || service.category;
+        service.subcategory = req.body.subcategory || service.subcategory;
+        service.price = req.body.price !== undefined ? parseFloat(req.body.price) : service.price;
+        service.duration = req.body.duration !== undefined ? parseInt(req.body.duration) : service.duration;
+        service.status = req.body.status || service.status;
+        service.images = req.body.images || service.images;
+        service.tags = req.body.tags || service.tags;
+        service.availability = req.body.availability || service.availability;
+
+        await service.save();
+
+        const formattedService = {
+            id: service._id.toString(),
+            title: service.title,
+            description: service.description,
+            category: service.category,
+            subcategory: service.subcategory,
+            price: service.price,
+            duration: service.duration,
+            status: service.status,
+            images: service.images || [],
+            tags: service.tags || [],
+            availability: service.availability,
+            rating: service.rating || 0,
+            reviewCount: service.reviewCount || 0,
+            bookingCount: service.bookingCount || 0,
+            createdAt: service.createdAt,
+            updatedAt: service.updatedAt
+        };
+
+        res.json({ 
+            success: true, 
+            data: formattedService, 
+            message: 'Service updated successfully' 
+        });
+    } catch (error) {
+        console.error('Error updating service:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.delete('/services/:id/delete', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Gym/Physio profile not found' });
+        }
+
+        const service = await Service.findOneAndDelete({ _id: req.params.id, professional: gymPhysio._id });
+        if (!service) {
+            return res.status(404).json({ success: false, message: 'Service not found' });
+        }
+
+        res.json({ success: true, message: 'Service deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting service:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

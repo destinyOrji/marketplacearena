@@ -46,7 +46,8 @@ const PaymentVerify: React.FC = () => {
         setStatus('failed');
         setMessage(data.message || 'Payment verification failed.');
       }
-    } catch {
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
       // Paystack already charged — treat as success
       setStatus('success');
       setMessage(isSub

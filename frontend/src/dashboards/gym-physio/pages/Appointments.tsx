@@ -7,6 +7,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
+const BASE_URL = API_URL.replace('/api', '');
 
 const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
   scheduled:  { badge: 'bg-blue-100 text-blue-700 border-blue-200',   dot: 'bg-blue-500' },
@@ -143,6 +144,18 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
             </div>
           </div>
 
+          {/* Service Image */}
+          {appointment.service?.images && appointment.service.images.length > 0 && (
+            <div className="bg-gray-50 rounded-xl overflow-hidden">
+              <img 
+                src={appointment.service.images[0].startsWith('http') ? appointment.service.images[0] : `${BASE_URL}${appointment.service.images[0]}`}
+                alt={appointment.service.title}
+                className="w-full h-32 object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            </div>
+          )}
+
           {/* Details */}
           <div className="space-y-2 text-sm">
             {[
@@ -274,7 +287,7 @@ const Appointments: React.FC = () => {
           phone: apt.client?.user?.phone || apt.client?.phone || '',
           photo: null,
         },
-        service: apt.service || { id: '', title: apt.serviceName || 'Session', price: 0 },
+        service: apt.service || { id: '', title: apt.serviceName || 'Session', price: 0, images: apt.service?.images || [] },
         payment: apt.payment || { amount: apt.consultationFee || 0, status: apt.paymentStatus || 'pending' },
         reason: apt.reasonForVisit || apt.reason || '',
       }));

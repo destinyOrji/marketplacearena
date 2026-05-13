@@ -22,9 +22,10 @@ const getClient = () => {
  * @param {number} amountInNaira - Amount in Naira (converted to kobo)
  * @param {string} reference - Unique transaction reference
  * @param {object} metadata - Extra data
+ * @param {string} callbackUrl - Optional custom callback URL (defaults to /payment/verify)
  * @returns {object} Paystack initialization response
  */
-const initializeTransaction = async (email, amountInNaira, reference, metadata = {}) => {
+const initializeTransaction = async (email, amountInNaira, reference, metadata = {}, callbackUrl = null) => {
   const amountInKobo = Math.round(amountInNaira * 100); // Paystack uses kobo
 
   try {
@@ -34,7 +35,7 @@ const initializeTransaction = async (email, amountInNaira, reference, metadata =
       amount: amountInKobo,
       reference,
       metadata,
-      callback_url: `${process.env.FRONTEND_URL}/payment/verify`,
+      callback_url: callbackUrl || `${process.env.FRONTEND_URL}/payment/verify`,
     });
     return response.data;
   } catch (error) {

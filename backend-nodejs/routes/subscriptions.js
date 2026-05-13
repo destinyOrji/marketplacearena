@@ -206,7 +206,7 @@ router.post('/initialize-payment/:subscriptionId', protect, async (req, res) => 
 });
 
 // Verify Paystack payment after user completes checkout
-router.post('/verify-payment/:reference', protect, async (req, res) => {
+router.post('/verify-payment/:reference', async (req, res) => {
     try {
         const { reference } = req.params;
 
@@ -229,8 +229,7 @@ router.post('/verify-payment/:reference', protect, async (req, res) => {
         }
 
         const subscription = await Subscription.findOne({
-            _id: subscriptionId,
-            user: req.user._id
+            _id: subscriptionId
         });
 
         if (!subscription) {
@@ -258,7 +257,7 @@ router.post('/verify-payment/:reference', protect, async (req, res) => {
         // Notify patient that subscription is active
         const Notification = require('../models/Notification');
         await Notification.create({
-            user: req.user._id,
+            user: subscription.user,
             title: 'Subscription Activated',
             message: `Your ${subscription.plan} subscription has been activated. You now have full access to book appointments and emergency services.`,
             type: 'payment',
@@ -464,7 +463,8 @@ providerRouter.post('/initialize-payment/:subscriptionId', protect, async (req, 
             user.email,
             subscription.amount,
             reference,
-            { subscriptionId: subscription._id.toString(), providerType: req.user.role }
+            { subscriptionId: subscription._id.toString(), providerType: req.user.role },
+            `${process.env.FRONTEND_URL}/provider-payment/verify`
         );
 
         if (!paystackResponse.status) {
@@ -489,7 +489,7 @@ providerRouter.post('/initialize-payment/:subscriptionId', protect, async (req, 
 });
 
 // POST /subscriptions/provider/verify-payment/:reference
-providerRouter.post('/verify-payment/:reference', protect, async (req, res) => {
+providerRouter.post('/verify-payment/:reference', async (req, res) => {
     try {
         const paystackResponse = await verifyTransaction(req.params.reference);
         if (!paystackResponse.status || paystackResponse.data.status !== 'success') {
@@ -497,7 +497,7 @@ providerRouter.post('/verify-payment/:reference', protect, async (req, res) => {
         }
 
         const subscriptionId = paystackResponse.data.metadata?.subscriptionId;
-        const subscription = await Subscription.findOne({ _id: subscriptionId, user: req.user._id });
+        const subscription = await Subscription.findOne({ _id: subscriptionId });
         if (!subscription) return res.status(404).json({ success: false, message: 'Subscription not found' });
 
         if (subscription.paymentStatus === 'completed') {
@@ -512,15 +512,16 @@ providerRouter.post('/verify-payment/:reference', protect, async (req, res) => {
         // Notify provider
         const Notification = require('../models/Notification');
         await Notification.create({
-            user: req.user._id,
+            user: subscription.user,
             title: 'Subscription Activated',
-            message: `Your ${subscription.planName || subscription.plan} subscription is now active. You can now post jobs and manage your listings.`,
+            message: `Your ${subscription.planName || subscription.plan} subscription is now active. You can now list services and accept bookings.`,
             type: 'payment',
             data: { subscriptionId: subscription._id, plan: subscription.plan, endDate: subscription.endDate }
         }).catch(() => {});
 
         res.json({ success: true, data: subscription, message: 'Subscription activated!' });
     } catch (error) {
+        console.error('Provider payment verification error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
