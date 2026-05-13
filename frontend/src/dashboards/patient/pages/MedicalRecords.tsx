@@ -171,56 +171,101 @@ const MedicalRecords: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Medical Records</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Your complete health history from completed appointments</p>
+        {/* Header with gradient background */}
+        <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-2xl p-8 text-white shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <h1 className="text-3xl font-bold">Medical Records</h1>
+              </div>
+              <p className="text-blue-100 text-sm">Your complete health history and consultation records</p>
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-medium">{records.length} Total Records</span>
+                </div>
+                {records.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm">Last updated: {format(new Date(records[0]?.date || new Date()), 'MMM d, yyyy')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <button onClick={() => navigate('/patient/appointments')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-600 text-sm font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              View Appointments
+            </button>
           </div>
-          <button onClick={() => navigate('/patient/appointments')}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            My Appointments
-          </button>
         </div>
 
-        {/* Search */}
+        {/* Search with enhanced design */}
         <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by diagnosis, provider, or notes..."
-            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+            className="w-full pl-12 pr-4 py-4 bg-white border-2 border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm hover:border-gray-300 transition-colors" />
+          {search && (
+            <button onClick={() => setSearch('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="flex justify-center items-center h-48">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+          <div className="flex flex-col justify-center items-center h-64 bg-white rounded-2xl border border-gray-200">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent" />
+            <p className="text-sm text-gray-500 mt-4">Loading your medical records...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center">
-            <div className="text-5xl mb-4">📋</div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl border-2 border-dashed border-gray-300 p-16 text-center">
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-5xl">📋</span>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
               {records.length === 0 ? 'No medical records yet' : 'No records match your search'}
             </h3>
-            <p className="text-sm text-gray-500 mb-5">
+            <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
               {records.length === 0
-                ? 'Records are created automatically after completed appointments'
-                : 'Try a different search term'}
+                ? 'Your medical records will appear here after you complete appointments with healthcare providers'
+                : 'Try adjusting your search terms or clear the search to see all records'}
             </p>
-            {records.length === 0 && (
+            {records.length === 0 ? (
               <button onClick={() => navigate('/patient/browse-services')}
-                className="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
-                Book a Consultation
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Book Your First Consultation
+              </button>
+            ) : (
+              <button onClick={() => setSearch('')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors">
+                Clear Search
               </button>
             )}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {filtered.map((record: any) => {
               const id = record.id || record._id;
               const hasPrescription = record.prescription?.length > 0;
@@ -228,70 +273,78 @@ const MedicalRecords: React.FC = () => {
 
               return (
                 <div key={id}
-                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-all">
-                  {/* Blue accent */}
-                  <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-700" />
+                  className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden hover:border-blue-300 hover:shadow-xl transition-all transform hover:-translate-y-1">
+                  {/* Gradient accent */}
+                  <div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
 
-                  <div className="p-5">
-                    <div className="flex items-start gap-4">
-                      {/* Icon */}
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-6">
+                    <div className="flex items-start gap-5">
+                      {/* Icon with gradient */}
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                           <div>
-                            <p className="font-bold text-gray-900 text-base">{record.diagnosis || 'Consultation'}</p>
-                            <p className="text-sm text-blue-600 font-medium mt-0.5">{record.provider}</p>
+                            <h3 className="font-bold text-gray-900 text-lg mb-1">{record.diagnosis || 'General Consultation'}</h3>
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              <p className="text-sm text-blue-600 font-semibold">{record.provider}</p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-xs text-gray-400">
+                          <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-xl border border-gray-200">
+                            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-sm font-semibold text-gray-700">
                               {record.date ? format(new Date(record.date), 'MMM d, yyyy') : '—'}
                             </span>
                           </div>
                         </div>
 
-                        {/* Chips */}
-                        <div className="flex flex-wrap gap-2 mt-2.5">
+                        {/* Enhanced chips */}
+                        <div className="flex flex-wrap gap-2 mb-4">
                           {record.appointmentMode && (
-                            <span className="text-xs bg-gray-50 border border-gray-200 text-gray-600 px-2.5 py-1 rounded-full">
+                            <span className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 text-gray-700 px-3 py-1.5 rounded-full font-medium">
                               {MODE_LABELS[record.appointmentMode] || record.appointmentMode}
                             </span>
                           )}
                           {hasPrescription && (
-                            <span className="text-xs bg-green-50 border border-green-200 text-green-700 px-2.5 py-1 rounded-full font-medium">
-                              💊 {record.prescription.length} prescription{record.prescription.length !== 1 ? 's' : ''}
+                            <span className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300 text-green-700 px-3 py-1.5 rounded-full font-semibold">
+                              💊 {record.prescription.length} Prescription{record.prescription.length !== 1 ? 's' : ''}
                             </span>
                           )}
                           {hasNotes && (
-                            <span className="text-xs bg-blue-50 border border-blue-200 text-blue-600 px-2.5 py-1 rounded-full">
-                              📝 Notes
+                            <span className="inline-flex items-center gap-1.5 text-xs bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-300 text-blue-700 px-3 py-1.5 rounded-full font-medium">
+                              📝 Clinical Notes
                             </span>
                           )}
                         </div>
 
-                        {/* Notes preview */}
+                        {/* Notes preview with better styling */}
                         {hasNotes && (
-                          <p className="text-xs text-gray-500 mt-2 italic line-clamp-2">"{record.notes}"</p>
+                          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+                            <p className="text-sm text-gray-700 italic line-clamp-2">"{record.notes}"</p>
+                          </div>
                         )}
 
-                        {/* Actions */}
-                        <div className="flex gap-2 mt-4">
-                          <button onClick={() => setSelectedRecord(record)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            View & Print
-                          </button>
-                        </div>
+                        {/* Enhanced action button */}
+                        <button onClick={() => setSelectedRecord(record)}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Full Record & Print
+                        </button>
                       </div>
                     </div>
                   </div>
