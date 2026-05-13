@@ -66,7 +66,7 @@ const BrowseGymPhysio: React.FC = () => {
         page: currentPage,
         pageSize,
         search: searchQuery || undefined,
-        type: 'gym-physio', // Always filter for gym-physio
+        // Don't filter by type - let backend return all, we'll filter on frontend
         specialty: filters.specialty.length > 0 ? filters.specialty.join(',') : undefined,
         location: filters.location || undefined,
         minRating: filters.minRating > 0 ? filters.minRating : undefined,
@@ -75,9 +75,21 @@ const BrowseGymPhysio: React.FC = () => {
 
       const response = await servicesApi.getServices(params);
       const resData = response.data?.data ?? response.data ?? {};
-      setServices(Array.isArray(resData.data) ? resData.data : Array.isArray(resData) ? resData : []);
+      const allServices = Array.isArray(resData.data) ? resData.data : Array.isArray(resData) ? resData : [];
+      
+      // Filter to only show gym-physio services
+      const gymPhysioOnly = allServices.filter((service: any) => 
+        service.providerType === 'gym-physio' || 
+        service.provider?.type === 'gym-physio' ||
+        service.type === 'gym-physio' ||
+        service.type === 'fitness' ||
+        service.category === 'gym-physio' ||
+        service.category === 'fitness'
+      );
+      
+      setServices(gymPhysioOnly);
       setTotalPages(resData.totalPages || 1);
-      setTotalResults(resData.total || 0);
+      setTotalResults(gymPhysioOnly.length);
     } catch (err: any) {
       console.error('Error fetching gym/physio services:', err);
       setError('Failed to load gym & physiotherapy services. Please try again.');

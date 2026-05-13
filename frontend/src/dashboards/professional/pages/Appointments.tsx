@@ -301,15 +301,19 @@ const AppointmentModal: React.FC<ModalProps> = ({ appointment, onClose, onUpdate
     }
     setLoading(true);
     try {
-      await apiClient.post(`/professionals/appointments/${appointment.id}/notify-patient`, {
+      // Use the correct API endpoint
+      const response = await apiClient.post(`/professionals/appointments/${appointment.id}/notify-patient`, {
         message: message.trim(),
         type: 'message_from_provider',
       });
+      
+      console.log('Message sent response:', response.data);
       toast.success('Message sent to patient successfully!');
       setMessage('');
       onClose();
-    } catch {
-      toast.error('Failed to send message');
+    } catch (error: any) {
+      console.error('Failed to send message:', error);
+      toast.error(error?.message || 'Failed to send message');
     } finally {
       setLoading(false);
     }

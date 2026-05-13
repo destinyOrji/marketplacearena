@@ -9,20 +9,36 @@ const User = require('../models/User');
 router.get('/dashboard-stats', protect, async (req, res) => {
     try {
         const Appointment = require('../models/Appointment');
+        const Payment = require('../models/Subscription');
+        
         const client = await Client.findOne({ user: req.user._id });
+        
         const totalAppointments = await Appointment.countDocuments({ client: client?._id });
         const upcomingAppointments = await Appointment.countDocuments({
             client: client?._id,
             status: { $in: ['scheduled', 'confirmed'] },
             scheduledDate: { $gte: new Date() }
         });
+        
+        // Count completed appointments as medical records
+        const totalRecords = await Appointment.countDocuments({
+            client: client?._id,
+            status: 'completed'
+        });
+        
+        // Count pending payments (appointments with pending payment status)
+        const pendingPayments = await Appointment.countDocuments({
+            client: client?._id,
+            paymentStatus: 'pending'
+        });
+        
         res.json({
             success: true,
             data: {
                 totalAppointments,
                 upcomingAppointments,
-                pendingPayments: 0,
-                totalRecords: 0,
+                pendingPayments,
+                totalRecords,
             }
         });
     } catch (error) {
