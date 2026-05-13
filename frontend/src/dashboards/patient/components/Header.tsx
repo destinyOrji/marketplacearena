@@ -108,19 +108,27 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+              <div className="fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto mt-2 w-auto sm:w-80 max-w-md bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                   <h3 className="font-semibold text-gray-800">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {loading ? (
                     <div className="px-4 py-8 text-center text-gray-500">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="mt-2">Loading notifications...</p>
+                      <p className="mt-2 text-sm">Loading notifications...</p>
                     </div>
                   ) : notifications.length === 0 ? (
                     <div className="px-4 py-8 text-center text-gray-500">
-                      No notifications
+                      <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      <p className="text-sm">No notifications</p>
                     </div>
                   ) : (
                     notifications.map((notification) => (
@@ -141,7 +149,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                             <p className="font-medium text-gray-800 text-sm">
                               {notification.title}
                             </p>
-                            <p className="text-gray-600 text-sm mt-1">
+                            <p className="text-gray-600 text-sm mt-1 line-clamp-2">
                               {notification.message}
                             </p>
                             <p className="text-gray-400 text-xs mt-1">
@@ -166,6 +174,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 {notifications.length > 0 && (
                   <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
                     <a href="/patient/notifications"
+                      onClick={() => setShowNotifications(false)}
                       className="text-blue-600 hover:text-blue-700 text-sm font-medium w-full text-center block">
                       View all notifications
                     </a>
