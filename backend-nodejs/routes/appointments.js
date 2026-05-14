@@ -238,29 +238,6 @@ router.put('/:id/payment', protect, async (req, res) => {
         }
 
         res.json({ success: true, message: 'Payment status updated', data: appointment });
-            },
-            { new: true }
-        );
-
-        if (!appointment) {
-            return res.status(404).json({ success: false, message: 'Appointment not found' });
-        }
-
-        // Update gym-physio stats if applicable
-        if (appointment.gymPhysio && paymentStatus === 'paid') {
-            const GymPhysio = require('../models/GymPhysio');
-            await GymPhysio.findByIdAndUpdate(
-                appointment.gymPhysio,
-                {
-                    $inc: {
-                        totalBookings: 1,
-                        totalRevenue: appointment.consultationFee || 0
-                    }
-                }
-            );
-        }
-
-        res.json({ success: true, message: 'Payment updated', data: appointment });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
