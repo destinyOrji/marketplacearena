@@ -45,7 +45,7 @@ const VideoCall: React.FC = () => {
               || (apt.client?.user
                 ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
                 : 'Client'),
-            serviceTitle: apt.service?.title || apt.serviceName || 'Session',
+            serviceTitle: apt.service?.title || (apt as any).serviceName || 'Session',
           });
         } else {
           toast.error('Appointment not found');
