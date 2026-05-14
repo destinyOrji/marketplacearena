@@ -67,7 +67,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({
   const [markingAll, setMarkingAll] = useState(false);
 
   const getToken = () =>
-    localStorage.getItem(tokenKey) || localStorage.getItem('authToken') || '';
+    localStorage.getItem(tokenKey) || '';
 
   const fetchNotifications = useCallback(async () => {
     try {

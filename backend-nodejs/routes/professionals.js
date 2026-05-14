@@ -889,6 +889,100 @@ router.put('/settings/update', protect, async (req, res) => {
     res.json({ success: true, message: 'Settings updated' });
 });
 
+// Patient Records — completed appointments from the professional's perspective
+router.get('/patient-records', protect, async (req, res) => {
+    try {
+        const professional = await Professional.findOne({ user: req.user._id });
+        if (!professional) return res.json({ success: true, data: [] });
+
+        const { search, page = 1, limit = 20 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const query = {
+            professional: professional._id,
+            status: 'completed',
+        };
+
+        const appointments = await Appointment.find(query)
+            .populate({
+                path: 'client',
+                populate: { path: 'user', select: 'firstName lastName email phone' }
+            })
+            .populate('service', 'title category price')
+            .sort({ scheduledDate: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Appointment.countDocuments(query);
+
+        const data = appointments
+            .map(apt => {
+                const patientName = apt.client?.user
+                    ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
+                    : 'Patient';
+                const patientEmail = apt.client?.user?.email || '';
+                const patientPhone = apt.client?.user?.phone || '';
+
+                return {
+                    id: apt._id,
+                    date: apt.scheduledDate || apt.createdAt,
+                    patient: {
+                        id: apt.client?._id,
+                        name: patientName,
+                        email: patientEmail,
+                        phone: patientPhone,
+                        initials: patientName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase(),
+                    },
+                    service: apt.service?.title || apt.reasonForVisit || 'Consultation',
+                    serviceCategory: apt.service?.category || '',
+                    diagnosis: apt.reasonForVisit || 'General Consultation',
+                    notes: apt.professionalNotes || apt.clientNotes || '',
+                    prescription: apt.prescription || [],
+                    appointmentMode: apt.appointmentMode || 'in_person',
+                    fee: apt.consultationFee || apt.service?.price || 0,
+                    paymentStatus: apt.paymentStatus || 'pending',
+                };
+            })
+            .filter(r => {
+                if (!search) return true;
+                const q = search.toLowerCase();
+                return r.patient.name.toLowerCase().includes(q)
+                    || r.diagnosis.toLowerCase().includes(q)
+                    || r.service.toLowerCase().includes(q)
+                    || r.notes.toLowerCase().includes(q);
+            });
+
+        res.json({
+            success: true,
+            data,
+            pagination: { page: parseInt(page), limit: parseInt(limit), total },
+        });
+    } catch (error) {
+        console.error('Patient records error:', error);
+        res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0 } });
+    }
+});
+
+// Add/update professional notes on a completed appointment
+router.put('/patient-records/:id/notes', protect, async (req, res) => {
+    try {
+        const professional = await Professional.findOne({ user: req.user._id });
+        if (!professional) return res.status(404).json({ success: false, message: 'Professional not found' });
+
+        const apt = await Appointment.findOneAndUpdate(
+            { _id: req.params.id, professional: professional._id },
+            { $set: { professionalNotes: req.body.notes, prescription: req.body.prescription || [] } },
+            { new: true }
+        );
+
+        if (!apt) return res.status(404).json({ success: false, message: 'Record not found' });
+
+        res.json({ success: true, message: 'Notes saved', data: apt });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 router.post('/change-password', protect, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;

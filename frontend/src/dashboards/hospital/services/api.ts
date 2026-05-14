@@ -31,7 +31,7 @@ class HospitalApiService {
 
     // Add auth token to requests
     this.api.interceptors.request.use((config) => {
-      const token = localStorage.getItem('hospitalToken') || localStorage.getItem('authToken');
+      const token = localStorage.getItem('hospitalToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

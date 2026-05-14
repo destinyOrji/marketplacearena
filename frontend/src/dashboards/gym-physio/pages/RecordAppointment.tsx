@@ -1,6 +1,7 @@
 // Record Appointment Page - For confirmed appointments with video/call/location features
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAppointments } from '../services/api';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
@@ -9,6 +10,7 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 const RecordAppointment: React.FC = () => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
@@ -77,8 +79,7 @@ const RecordAppointment: React.FC = () => {
   };
 
   const handleVideoCall = (appointmentId: string) => {
-    // Open video call in new window
-    window.open(`/gym-physio/video-call/${appointmentId}`, '_blank');
+    navigate(`/gym-physio/video-call/${appointmentId}`);
   };
 
   const handlePhoneCall = (phone: string) => {

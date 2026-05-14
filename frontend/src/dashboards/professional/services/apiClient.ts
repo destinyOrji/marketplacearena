@@ -22,7 +22,7 @@ const apiClient: AxiosInstance = axios.create({
  */
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('professionalToken') || localStorage.getItem('authToken');
+    const token = localStorage.getItem('professionalToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -43,13 +43,11 @@ apiClient.interceptors.response.use(
 
     // Handle authentication errors — only redirect if token is truly missing/expired
     if (appError.type === ErrorType.AUTH_ERROR) {
-      const token = localStorage.getItem('professionalToken') || localStorage.getItem('authToken');
+      const token = localStorage.getItem('professionalToken');
       if (!token) {
         // No token at all — redirect to login
         localStorage.removeItem('professionalToken');
         localStorage.removeItem('professional');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
         window.location.href = '/login';
       }
       // If token exists but got 401, let the error bubble up to the caller
