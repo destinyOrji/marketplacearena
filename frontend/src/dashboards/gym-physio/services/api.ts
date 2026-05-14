@@ -33,7 +33,7 @@ apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  (error: any) => {
     // Handle HTML responses (404, 500, etc.)
     if (error.response?.headers['content-type']?.includes('text/html')) {
       console.error('API returned HTML instead of JSON:', error.config.url);
