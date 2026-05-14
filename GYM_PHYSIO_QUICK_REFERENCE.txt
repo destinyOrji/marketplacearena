@@ -1,0 +1,254 @@
+═══════════════════════════════════════════════════════════════════════════════
+  GYM-PHYSIO API QUICK REFERENCE GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 BASE URL: https://healthmarketarena.com/api
+🔐 AUTH: Bearer Token in Authorization header
+
+═══════════════════════════════════════════════════════════════════════════════
+  DASHBOARD & STATS
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/dashboard-stats
+Response: {
+  totalEarnings, pendingPayments, upcomingAppointments,
+  activeServices, totalServices, completedBookings,
+  totalBookings, completionRate, averageRating, totalReviews
+}
+
+═══════════════════════════════════════════════════════════════════════════════
+  PROFILE MANAGEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/profile
+Response: Full GymPhysio profile with user details
+
+PUT /gym-physio/profile/update
+Body: { businessName, businessType, phone, city, state, bio, ... }
+
+POST /gym-physio/upload-photo
+Body: FormData with 'photo' file
+Response: { photoUrl }
+
+═══════════════════════════════════════════════════════════════════════════════
+  SERVICES
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/services
+Response: Array of services
+
+POST /gym-physio/services/create
+Body: {
+  title, description, category, price, duration,
+  status, images, tags, availability
+}
+
+PUT /gym-physio/services/:id/update
+Body: Service fields to update
+
+DELETE /gym-physio/services/:id/delete
+
+═══════════════════════════════════════════════════════════════════════════════
+  APPOINTMENTS
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/appointments
+Response: Array of appointments with patient & service details
+
+PUT /gym-physio/appointments/:id/confirm
+Body: { notes } (optional)
+→ Sends notification to patient
+
+PUT /gym-physio/appointments/:id/cancel
+Body: { reason }
+→ Sends notification to patient
+
+PUT /gym-physio/appointments/:id/complete
+→ Sends notification to patient
+
+POST /gym-physio/appointments/:id/notify-patient
+Body: { message, type }
+Types: 'appointment_confirmed', 'appointment_rejected', 
+       'message_from_provider', 'location_info'
+
+═══════════════════════════════════════════════════════════════════════════════
+  SCHEDULE & AVAILABILITY
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/schedule
+Response: {
+  monday: { isAvailable, timeSlots: [{ startTime, endTime }] },
+  tuesday: { ... }, ...
+}
+
+PUT /gym-physio/schedule/update
+Body: Full schedule object
+
+GET /gym-physio/schedule/blocked-dates
+Response: Array of blocked dates
+
+POST /gym-physio/schedule/block-date
+Body: { date: 'YYYY-MM-DD', reason: 'Vacation' }
+
+DELETE /gym-physio/schedule/blocked-dates/:id
+
+═══════════════════════════════════════════════════════════════════════════════
+  PAYMENTS & EARNINGS
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/earnings
+Response: {
+  totalEarnings, pendingPayments, completedPayments,
+  platformFees (10%), netEarnings
+}
+
+GET /gym-physio/payments
+Response: Array of payment transactions with details
+
+GET /gym-physio/payments/stats
+Response: {
+  totalTransactions, completedPayments, failedPayments,
+  pendingPayments, totalEarnings, platformFees, netEarnings
+}
+
+GET /gym-physio/bank-account
+Response: { bankName, accountNumber, accountName, bankCode }
+
+PUT /gym-physio/bank-account
+Body: { bankName, accountNumber, accountName, bankCode }
+
+═══════════════════════════════════════════════════════════════════════════════
+  ANALYTICS
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/analytics
+Response: {
+  totalBookings, completedBookings, cancelledBookings,
+  completionRate, averageRating, totalReviews,
+  activeServices, totalRevenue,
+  popularServices: [
+    { serviceName, bookings, revenue, averageRating }
+  ]
+}
+
+═══════════════════════════════════════════════════════════════════════════════
+  SUBSCRIPTION
+═══════════════════════════════════════════════════════════════════════════════
+
+POST /gym-physio/subscribe
+Body: {
+  plan: 'basic' | 'professional' | 'premium',
+  amount: 2000 | 8000 | 14000,
+  transactionReference: 'PAYSTACK_REF'
+}
+→ Sends notification to admin
+
+GET /gym-physio/subscription/status
+Response: {
+  plan, status, startDate, endDate, amount, transactionReference
+}
+
+PLANS:
+- Basic: ₦2,000/month
+- Professional: ₦8,000/6 months
+- Premium: ₦14,000/year
+
+═══════════════════════════════════════════════════════════════════════════════
+  SETTINGS
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /gym-physio/settings
+Response: Settings object
+
+PUT /gym-physio/settings/update
+Body: { businessName, businessType, phone, city, ... }
+→ Sends notification to admin
+
+POST /gym-physio/change-password
+Body: { currentPassword, newPassword }
+
+═══════════════════════════════════════════════════════════════════════════════
+  ADMIN ENDPOINTS
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /admin/gym-physio
+Query: ?page=1&page_size=10&verification_status=verified|pending
+
+GET /admin/gym-physio/stats
+Response: Overall statistics for all gym-physios
+
+GET /admin/gym-physio/:id
+Response: Full gym-physio details
+
+POST /admin/gym-physio/:id/verify
+→ Verifies gym-physio and updates user status
+
+POST /admin/gym-physio/:id/reject
+→ Rejects verification
+
+GET /admin/gym-physio/:id/services
+Response: All services for this gym-physio
+
+GET /admin/gym-physio/:id/appointments
+Response: All appointments for this gym-physio
+
+GET /admin/gym-physio/:id/earnings
+Response: Earnings breakdown
+
+GET /admin/gym-physio/:id/analytics
+Response: Detailed analytics
+
+GET /admin/gym-physio/:id/subscription
+Response: Subscription details
+
+PUT /admin/gym-physio/:id/subscription
+Body: { plan, status, startDate, endDate, amount }
+
+═══════════════════════════════════════════════════════════════════════════════
+  NOTIFICATION TYPES
+═══════════════════════════════════════════════════════════════════════════════
+
+TO PATIENT:
+- 'appointment' → Booking confirmed/completed
+- 'application_status' → Booking rejected
+- 'general' → Messages from provider
+- 'payment' → Payment received
+
+TO GYM-PHYSIO:
+- 'appointment' → New booking from patient
+- 'payment' → Payment received
+
+TO ADMIN:
+- 'payment' → New subscription
+- 'system' → Profile updates
+
+═══════════════════════════════════════════════════════════════════════════════
+  ERROR RESPONSES
+═══════════════════════════════════════════════════════════════════════════════
+
+Success: { success: true, data: {...}, message: '...' }
+Error: { success: false, message: 'Error description' }
+
+Status Codes:
+200 - Success
+201 - Created
+400 - Bad Request
+401 - Unauthorized
+404 - Not Found
+500 - Server Error
+
+═══════════════════════════════════════════════════════════════════════════════
+  FRONTEND USAGE EXAMPLE
+═══════════════════════════════════════════════════════════════════════════════
+
+import { getAppointments, confirmAppointment } from '../services/api';
+
+// Get appointments
+const appointments = await getAppointments();
+
+// Confirm appointment
+await confirmAppointment(appointmentId);
+
+// All API functions return typed data matching TypeScript interfaces
+
+═══════════════════════════════════════════════════════════════════════════════

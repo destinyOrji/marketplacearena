@@ -77,18 +77,19 @@ const BrowseGymPhysio: React.FC = () => {
       const resData = response.data?.data ?? response.data ?? {};
       const allServices = Array.isArray(resData.data) ? resData.data : Array.isArray(resData) ? resData : [];
       
-      // Filter to only show gym-physio services
+      // Filter to ONLY show gym-physio services
       const gymPhysioOnly = allServices.filter((service: any) => 
         service.providerType === 'gym-physio' || 
         service.provider?.type === 'gym-physio' ||
         service.type === 'gym-physio' ||
         service.type === 'fitness' ||
         service.category === 'gym-physio' ||
-        service.category === 'fitness'
+        service.category === 'fitness' ||
+        service.category === 'physiotherapy'
       );
       
       setServices(gymPhysioOnly);
-      setTotalPages(resData.totalPages || 1);
+      setTotalPages(Math.ceil(gymPhysioOnly.length / pageSize) || 1);
       setTotalResults(gymPhysioOnly.length);
     } catch (err: any) {
       console.error('Error fetching gym/physio services:', err);

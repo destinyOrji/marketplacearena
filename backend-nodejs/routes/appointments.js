@@ -100,6 +100,47 @@ router.post('/book', protect, async (req, res) => {
             { path: 'service' }
         ]);
 
+        // Send notification to provider (gym-physio, professional, or hospital)
+        const Notification = require('../models/Notification');
+        const GymPhysio = require('../models/GymPhysio');
+        
+        if (gymPhysioId) {
+            const gymPhysio = await GymPhysio.findById(gymPhysioId).populate('user');
+            if (gymPhysio && gymPhysio.user) {
+                const clientName = `${client.user?.firstName || ''} ${client.user?.lastName || ''}`.trim() || 'A patient';
+                await Notification.create({
+                    user: gymPhysio.user._id,
+                    title: 'New Appointment Booking',
+                    message: `${clientName} has booked an appointment for ${new Date(scheduledDate).toLocaleDateString()} at ${scheduledTime}`,
+                    type: 'appointment',
+                    data: {
+                        appointmentId: appointment._id,
+                        clientName,
+                        scheduledDate,
+                        scheduledTime,
+                        service: appointment.service?.title || 'Session'
+                    }
+                });
+            }
+        } else if (professionalId) {
+            const professional = await Professional.findById(professionalId).populate('user');
+            if (professional && professional.user) {
+                const clientName = `${client.user?.firstName || ''} ${client.user?.lastName || ''}`.trim() || 'A patient';
+                await Notification.create({
+                    user: professional.user._id,
+                    title: 'New Appointment Booking',
+                    message: `${clientName} has booked an appointment for ${new Date(scheduledDate).toLocaleDateString()} at ${scheduledTime}`,
+                    type: 'appointment',
+                    data: {
+                        appointmentId: appointment._id,
+                        clientName,
+                        scheduledDate,
+                        scheduledTime
+                    }
+                });
+            }
+        }
+
         res.status(201).json({
             success: true,
             message: 'Appointment booked successfully',
@@ -148,6 +189,55 @@ router.put('/:id/payment', protect, async (req, res) => {
                 transactionId,
                 paymentMethod,
                 ...(paymentStatus === 'paid' && { status: 'confirmed', confirmedAt: new Date() })
+            },
+            { new: true }
+        ).populate([
+            { path: 'client', populate: { path: 'user', select: 'firstName lastName' } },
+            { path: 'gymPhysio', populate: { path: 'user', select: '_id' } },
+            { path: 'professional', populate: { path: 'user', select: '_id' } },
+            { path: 'service', select: 'title' }
+        ]);
+
+        if (!appointment) {
+            return res.status(404).json({ success: false, message: 'Appointment not found' });
+        }
+
+        // Send payment notification to provider when payment is successful
+        if (paymentStatus === 'paid') {
+            const Notification = require('../models/Notification');
+            const GymPhysio = require('../models/GymPhysio');
+            
+            let providerUserId = null;
+            let providerName = 'Provider';
+            
+            if (appointment.gymPhysio) {
+                providerUserId = appointment.gymPhysio.user?._id;
+                const gymPhysio = await GymPhysio.findById(appointment.gymPhysio._id);
+                providerName = gymPhysio?.businessName || 'Gym/Physio';
+            } else if (appointment.professional) {
+                providerUserId = appointment.professional.user?._id;
+                providerName = 'Professional';
+            }
+
+            if (providerUserId) {
+                const clientName = `${appointment.client?.user?.firstName || ''} ${appointment.client?.user?.lastName || ''}`.trim() || 'A patient';
+                await Notification.create({
+                    user: providerUserId,
+                    title: 'Payment Received',
+                    message: `Payment of ₦${appointment.consultationFee?.toLocaleString() || 0} received from ${clientName}`,
+                    type: 'payment',
+                    data: {
+                        appointmentId: appointment._id,
+                        amount: appointment.consultationFee,
+                        transactionId,
+                        clientName,
+                        service: appointment.service?.title || 'Session'
+                    }
+                });
+            }
+        }
+
+        res.json({ success: true, message: 'Payment status updated', data: appointment });
             },
             { new: true }
         );

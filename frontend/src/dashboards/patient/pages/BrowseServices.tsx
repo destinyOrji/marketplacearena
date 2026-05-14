@@ -78,9 +78,21 @@ const BrowseServices: React.FC = () => {
 
       const response = await servicesApi.getServices(params);
       const resData = response.data?.data ?? response.data ?? {};
-      setServices(Array.isArray(resData.data) ? resData.data : Array.isArray(resData) ? resData : []);
+      const allServices = Array.isArray(resData.data) ? resData.data : Array.isArray(resData) ? resData : [];
+      
+      // Filter OUT gym-physio services - only show healthcare professionals (doctors, hospitals, ambulances)
+      const healthcareOnly = allServices.filter((service: any) => 
+        service.providerType !== 'gym-physio' && 
+        service.provider?.type !== 'gym-physio' &&
+        service.type !== 'gym-physio' &&
+        service.type !== 'fitness' &&
+        service.category !== 'gym-physio' &&
+        service.category !== 'fitness'
+      );
+      
+      setServices(healthcareOnly);
       setTotalPages(resData.totalPages || 1);
-      setTotalResults(resData.total || 0);
+      setTotalResults(healthcareOnly.length);
     } catch (err: any) {
       console.error('Error fetching services:', err);
       setError('Failed to load services. Please try again.');

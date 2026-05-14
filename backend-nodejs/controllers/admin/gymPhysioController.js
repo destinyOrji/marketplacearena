@@ -196,3 +196,125 @@ exports.getGymPhysioEarnings = async (req, res) => {
         res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 };
+
+// Get analytics for a gym/physio provider
+exports.getGymPhysioAnalytics = async (req, res) => {
+    try {
+        const item = await GymPhysio.findById(req.params.id);
+        if (!item) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Not found' });
+
+        const totalBookings = await Appointment.countDocuments({ gymPhysio: item._id });
+        const completedBookings = await Appointment.countDocuments({ gymPhysio: item._id, status: 'completed' });
+        const cancelledBookings = await Appointment.countDocuments({ gymPhysio: item._id, status: 'cancelled' });
+        const activeServices = await Service.countDocuments({ gymPhysio: item._id, status: 'active' });
+
+        const completionRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+
+        const completedApts = await Appointment.find({ 
+            gymPhysio: item._id, 
+            status: 'completed',
+            paymentStatus: 'paid'
+        });
+        const totalRevenue = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
+
+        res.json({ 
+            statuscode: 0, 
+            status: 'success', 
+            data: {
+                totalBookings,
+                completedBookings,
+                cancelledBookings,
+                completionRate,
+                activeServices,
+                totalRevenue,
+                averageRating: item.averageRating || 0,
+                totalReviews: item.totalReviews || 0,
+                subscription: item.subscription || { plan: 'none', status: 'none' }
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};
+
+// Get subscription details for a gym/physio provider
+exports.getGymPhysioSubscription = async (req, res) => {
+    try {
+        const item = await GymPhysio.findById(req.params.id);
+        if (!item) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Not found' });
+
+        res.json({ 
+            statuscode: 0, 
+            status: 'success', 
+            data: item.subscription || { plan: 'none', status: 'none' }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};
+
+// Update subscription for a gym/physio provider
+exports.updateGymPhysioSubscription = async (req, res) => {
+    try {
+        const { plan, status, startDate, endDate, amount } = req.body;
+        
+        const item = await GymPhysio.findByIdAndUpdate(
+            req.params.id,
+            { 
+                $set: { 
+                    subscription: { plan, status, startDate, endDate, amount }
+                }
+            },
+            { new: true }
+        );
+        
+        if (!item) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Not found' });
+        
+        res.json({ statuscode: 0, status: 'success', message: 'Subscription updated', data: item.subscription });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};
+
+// Get all gym/physio statistics for dashboard
+exports.getGymPhysioStats = async (req, res) => {
+    try {
+        const totalGymPhysios = await GymPhysio.countDocuments();
+        const verifiedGymPhysios = await GymPhysio.countDocuments({ isVerified: true });
+        const pendingVerification = await GymPhysio.countDocuments({ isVerified: false });
+        
+        const activeSubscriptions = await GymPhysio.countDocuments({ 
+            'subscription.status': 'active',
+            'subscription.endDate': { $gte: new Date() }
+        });
+
+        const totalServices = await Service.countDocuments({ 
+            gymPhysio: { $exists: true, $ne: null }
+        });
+
+        const totalAppointments = await Appointment.countDocuments({ 
+            gymPhysio: { $exists: true, $ne: null }
+        });
+
+        const completedAppointments = await Appointment.countDocuments({ 
+            gymPhysio: { $exists: true, $ne: null },
+            status: 'completed'
+        });
+
+        res.json({ 
+            statuscode: 0, 
+            status: 'success', 
+            data: {
+                totalGymPhysios,
+                verifiedGymPhysios,
+                pendingVerification,
+                activeSubscriptions,
+                totalServices,
+                totalAppointments,
+                completedAppointments
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};

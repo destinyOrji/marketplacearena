@@ -49,28 +49,56 @@ router.get('/dashboard-stats', protect, async (req, res) => {
     try {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
 
-        // Get real counts from DB
-        const activeServices = gymPhysio
-            ? await Service.countDocuments({ gymPhysio: gymPhysio._id, status: 'active' })
-            : 0;
+        if (!gymPhysio) {
+            return res.json({
+                success: true,
+                data: {
+                    totalEarnings: 0,
+                    pendingPayments: 0,
+                    upcomingAppointments: 0,
+                    activeServices: 0,
+                    totalServices: 0,
+                    completedBookings: 0,
+                    totalBookings: 0,
+                    completionRate: 0,
+                    averageRating: 0,
+                    totalReviews: 0,
+                    isVerified: false,
+                }
+            });
+        }
 
-        const totalServices = gymPhysio
-            ? await Service.countDocuments({ gymPhysio: gymPhysio._id })
-            : 0;
+        // Get real counts from DB - check both professional and gymPhysio fields
+        const activeServices = await Service.countDocuments({ 
+            $or: [
+                { professional: gymPhysio._id },
+                { gymPhysio: gymPhysio._id }
+            ],
+            status: 'active' 
+        });
 
-        const upcomingAppointments = gymPhysio
-            ? await Appointment.countDocuments({
-                gymPhysio: gymPhysio._id,
-                status: { $in: ['scheduled', 'confirmed'] },
-                scheduledDate: { $gte: new Date() }
-              })
-            : 0;
+        const totalServices = await Service.countDocuments({ 
+            $or: [
+                { professional: gymPhysio._id },
+                { gymPhysio: gymPhysio._id }
+            ]
+        });
 
-        const completedAppointments = gymPhysio
-            ? await Appointment.countDocuments({ gymPhysio: gymPhysio._id, status: 'completed' })
-            : 0;
+        const upcomingAppointments = await Appointment.countDocuments({
+            gymPhysio: gymPhysio._id,
+            status: { $in: ['scheduled', 'confirmed'] },
+            scheduledDate: { $gte: new Date() }
+        });
 
-        const totalBookings = gymPhysio ? (gymPhysio.totalBookings || completedAppointments) : 0;
+        const completedAppointments = await Appointment.countDocuments({ 
+            gymPhysio: gymPhysio._id, 
+            status: 'completed' 
+        });
+
+        const totalBookings = await Appointment.countDocuments({ 
+            gymPhysio: gymPhysio._id 
+        });
+
         const completionRate = totalBookings > 0
             ? Math.round((completedAppointments / totalBookings) * 100) : 0;
 
@@ -85,12 +113,13 @@ router.get('/dashboard-stats', protect, async (req, res) => {
                 completedBookings: completedAppointments,
                 totalBookings,
                 completionRate,
-                averageRating: gymPhysio ? gymPhysio.averageRating : 0,
-                totalReviews: gymPhysio ? gymPhysio.totalReviews : 0,
-                isVerified: gymPhysio ? gymPhysio.isVerified : false,
+                averageRating: gymPhysio.averageRating || 0,
+                totalReviews: gymPhysio.totalReviews || 0,
+                isVerified: gymPhysio.isVerified || false,
             }
         });
     } catch (error) {
+        console.error('Dashboard stats error:', error);
         res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, upcomingAppointments: 0, activeServices: 0, completionRate: 0, averageRating: 0, totalReviews: 0, totalBookings: 0, completedBookings: 0 } });
     }
 });
@@ -170,8 +199,13 @@ router.get('/services', protect, async (req, res) => {
             return res.json({ success: true, data: [] });
         }
         
-        const services = await Service.find({ professional: gymPhysio._id })
-            .sort({ createdAt: -1 });
+        // Find services where either professional or gymPhysio field matches
+        const services = await Service.find({ 
+            $or: [
+                { professional: gymPhysio._id },
+                { gymPhysio: gymPhysio._id }
+            ]
+        }).sort({ createdAt: -1 });
         
         const formattedServices = services.map(service => ({
             id: service._id.toString(),
@@ -406,9 +440,30 @@ router.put('/appointments/:id/confirm', protect, async (req, res) => {
     try {
         const apt = await Appointment.findByIdAndUpdate(
             req.params.id,
-            { status: 'confirmed', professionalNotes: req.body.notes },
+            { status: 'confirmed', professionalNotes: req.body.notes, confirmedAt: new Date() },
             { new: true }
-        );
+        ).populate({ path: 'client', populate: { path: 'user', select: '_id firstName lastName' } });
+
+        // Send notification to patient
+        if (apt && apt.client?.user?._id) {
+            const Notification = require('../models/Notification');
+            const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+            const providerName = gymPhysio?.businessName || 'Your provider';
+
+            await Notification.create({
+                user: apt.client.user._id,
+                title: 'Appointment Confirmed',
+                message: `Your appointment with ${providerName} has been confirmed for ${new Date(apt.scheduledDate).toLocaleDateString()}`,
+                type: 'appointment',
+                data: {
+                    appointmentId: apt._id,
+                    providerName,
+                    scheduledDate: apt.scheduledDate,
+                    scheduledTime: apt.scheduledTime
+                }
+            });
+        }
+
         res.json({ success: true, data: apt, message: 'Appointment confirmed' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -434,12 +489,33 @@ router.put('/appointments/:id/complete', protect, async (req, res) => {
             req.params.id,
             { status: 'completed', completedAt: new Date() },
             { new: true }
-        );
+        ).populate({ path: 'client', populate: { path: 'user', select: '_id firstName lastName' } });
+
         // Update gym-physio stats
         await GymPhysio.findOneAndUpdate(
             { user: req.user._id },
             { $inc: { completedBookings: 1 } }
         );
+
+        // Send notification to patient
+        if (apt && apt.client?.user?._id) {
+            const Notification = require('../models/Notification');
+            const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+            const providerName = gymPhysio?.businessName || 'Your provider';
+
+            await Notification.create({
+                user: apt.client.user._id,
+                title: 'Appointment Completed',
+                message: `Your appointment with ${providerName} has been marked as completed. Please rate your experience!`,
+                type: 'appointment',
+                data: {
+                    appointmentId: apt._id,
+                    providerName,
+                    canRate: true
+                }
+            });
+        }
+
         res.json({ success: true, data: apt, message: 'Appointment completed' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -463,19 +539,33 @@ router.post('/appointments/:id/notify-patient', protect, async (req, res) => {
 
         const { message, type } = req.body;
         const isRejected = type === 'appointment_rejected';
+        const isMessage = type === 'message_from_provider' || type === 'location_info';
+
+        // Determine notification title and type
+        let notificationTitle = 'Booking Confirmed';
+        let notificationType = 'appointment';
+        
+        if (isRejected) {
+            notificationTitle = 'Booking Request Declined';
+            notificationType = 'application_status';
+        } else if (isMessage) {
+            notificationTitle = `Message from ${providerName}`;
+            notificationType = 'general';
+        }
 
         await Notification.create({
             user: patientUserId,
-            title: isRejected ? 'Booking Request Declined' : 'Booking Confirmed',
+            title: notificationTitle,
             message: message || (isRejected
                 ? `Your booking with ${providerName} has been declined.`
                 : `Your booking with ${providerName} has been confirmed.`),
-            type: isRejected ? 'application_status' : 'appointment',
+            type: notificationType,
             data: {
                 appointmentId: apt._id,
                 providerName,
                 scheduledDate: apt.scheduledDate,
                 scheduledTime: apt.scheduledTime,
+                gymPhysioId: gymPhysio._id
             }
         });
 
@@ -566,6 +656,87 @@ router.put('/schedule/update', protect, async (req, res) => {
     }
 });
 
+// Blocked Dates Management
+router.get('/schedule/blocked-dates', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ success: true, data: [] });
+        }
+
+        const blockedDates = await BlockedDate.find({ professional: gymPhysio._id })
+            .sort({ date: 1 });
+
+        res.json({ success: true, data: blockedDates });
+    } catch (error) {
+        console.error('Error fetching blocked dates:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.post('/schedule/block-date', protect, async (req, res) => {
+    try {
+        const { date, reason } = req.body;
+        
+        if (!date || !reason) {
+            return res.status(400).json({ success: false, message: 'Date and reason are required' });
+        }
+
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Gym/Physio not found' });
+        }
+
+        // Check if date is already blocked
+        const existing = await BlockedDate.findOne({ 
+            professional: gymPhysio._id, 
+            date: new Date(date) 
+        });
+
+        if (existing) {
+            return res.status(400).json({ success: false, message: 'Date is already blocked' });
+        }
+
+        const blockedDate = await BlockedDate.create({
+            professional: gymPhysio._id,
+            date: new Date(date),
+            reason
+        });
+
+        res.status(201).json({ 
+            success: true, 
+            data: blockedDate,
+            message: 'Date blocked successfully' 
+        });
+    } catch (error) {
+        console.error('Error blocking date:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.delete('/schedule/blocked-dates/:id', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Gym/Physio not found' });
+        }
+
+        const blockedDate = await BlockedDate.findOneAndDelete({ 
+            _id: req.params.id, 
+            professional: gymPhysio._id 
+        });
+
+        if (!blockedDate) {
+            return res.status(404).json({ success: false, message: 'Blocked date not found' });
+        }
+
+        res.json({ success: true, message: 'Date unblocked successfully' });
+    } catch (error) {
+        console.error('Error unblocking date:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Earnings & Payments
 router.get('/earnings', protect, async (req, res) => {
     try {
@@ -600,34 +771,242 @@ router.get('/earnings', protect, async (req, res) => {
 router.get('/analytics', protect, async (req, res) => {
     try {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
-        if (!gymPhysio) return res.json({ success: true, data: { totalBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, activeServices: 0, popularServices: [] } });
+        if (!gymPhysio) {
+            return res.json({ 
+                success: true, 
+                data: { 
+                    totalBookings: 0, 
+                    completedBookings: 0,
+                    cancelledBookings: 0,
+                    completionRate: 0, 
+                    averageRating: 0, 
+                    totalReviews: 0, 
+                    activeServices: 0, 
+                    totalRevenue: 0,
+                    popularServices: [] 
+                } 
+            });
+        }
 
-        const activeServices = await Service.countDocuments({ professional: gymPhysio._id, status: 'active' });
-        const services = await Service.find({ professional: gymPhysio._id }).sort({ bookingCount: -1 }).limit(5);
-        const popularServices = services.map(s => ({
-            serviceId: s._id,
-            serviceName: s.title,
-            bookings: s.bookingCount || 0,
-            revenue: (s.bookingCount || 0) * (s.price || 0)
+        // Get actual appointment counts
+        const totalBookings = await Appointment.countDocuments({ gymPhysio: gymPhysio._id });
+        const completedBookings = await Appointment.countDocuments({ gymPhysio: gymPhysio._id, status: 'completed' });
+        const cancelledBookings = await Appointment.countDocuments({ gymPhysio: gymPhysio._id, status: 'cancelled' });
+        
+        const completionRate = totalBookings > 0
+            ? Math.round((completedBookings / totalBookings) * 100) : 0;
+
+        // Get active services count
+        const activeServices = await Service.countDocuments({ 
+            $or: [
+                { professional: gymPhysio._id },
+                { gymPhysio: gymPhysio._id }
+            ],
+            status: 'active' 
+        });
+
+        // Get all services with booking counts
+        const services = await Service.find({ 
+            $or: [
+                { professional: gymPhysio._id },
+                { gymPhysio: gymPhysio._id }
+            ]
+        }).sort({ bookingCount: -1 }).limit(10);
+
+        // Calculate revenue from completed appointments
+        const completedApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id, 
+            status: 'completed',
+            paymentStatus: 'paid'
+        });
+        const totalRevenue = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
+
+        // Build popular services with actual data
+        const popularServices = await Promise.all(services.map(async (s) => {
+            // Count appointments for this service
+            const serviceBookings = await Appointment.countDocuments({ 
+                gymPhysio: gymPhysio._id,
+                service: s._id
+            });
+
+            // Calculate revenue for this service
+            const serviceApts = await Appointment.find({ 
+                gymPhysio: gymPhysio._id,
+                service: s._id,
+                status: 'completed',
+                paymentStatus: 'paid'
+            });
+            const serviceRevenue = serviceApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
+
+            // Get average rating for this service
+            const ratedApts = await Appointment.find({ 
+                gymPhysio: gymPhysio._id,
+                service: s._id,
+                clientRating: { $exists: true, $ne: null }
+            });
+            const avgRating = ratedApts.length > 0
+                ? ratedApts.reduce((sum, apt) => sum + (apt.clientRating || 0), 0) / ratedApts.length
+                : 0;
+
+            return {
+                serviceId: s._id,
+                serviceName: s.title,
+                title: s.title,
+                bookings: serviceBookings,
+                revenue: serviceRevenue,
+                averageRating: avgRating
+            };
         }));
 
-        const completionRate = gymPhysio.totalBookings > 0
-            ? Math.round((gymPhysio.completedBookings / gymPhysio.totalBookings) * 100) : 0;
+        // Sort by bookings and take top 5
+        popularServices.sort((a, b) => b.bookings - a.bookings);
+        const topServices = popularServices.slice(0, 5);
 
         res.json({
             success: true,
             data: {
-                totalBookings: gymPhysio.totalBookings || 0,
-                completedBookings: gymPhysio.completedBookings || 0,
+                totalBookings,
+                completedBookings,
+                cancelledBookings,
                 completionRate,
                 averageRating: gymPhysio.averageRating || 0,
                 totalReviews: gymPhysio.totalReviews || 0,
                 activeServices,
-                popularServices
+                totalRevenue,
+                popularServices: topServices
             }
         });
     } catch (error) {
-        res.json({ success: true, data: { totalBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, activeServices: 0, popularServices: [] } });
+        console.error('Analytics error:', error);
+        res.json({ 
+            success: true, 
+            data: { 
+                totalBookings: 0, 
+                completedBookings: 0,
+                cancelledBookings: 0,
+                completionRate: 0, 
+                averageRating: 0, 
+                totalReviews: 0, 
+                activeServices: 0, 
+                totalRevenue: 0,
+                popularServices: [] 
+            } 
+        });
+    }
+});
+
+// Payments - Get payment history
+router.get('/payments', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ success: true, data: [] });
+        }
+
+        // Get all completed and paid appointments
+        const appointments = await Appointment.find({ 
+            gymPhysio: gymPhysio._id,
+            status: 'completed',
+            paymentStatus: 'paid'
+        })
+        .populate({
+            path: 'client',
+            populate: {
+                path: 'user',
+                select: 'firstName lastName'
+            }
+        })
+        .populate('service', 'title')
+        .sort({ completedAt: -1 });
+
+        const payments = appointments.map(apt => {
+            const grossAmount = apt.consultationFee || 0;
+            const platformFee = Math.round(grossAmount * 0.10); // 10% platform fee
+            const netAmount = grossAmount - platformFee;
+
+            return {
+                _id: apt._id,
+                date: apt.completedAt || apt.scheduledDate,
+                patient: apt.client?.user 
+                    ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
+                    : 'Client',
+                client: apt.client?.user 
+                    ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim()
+                    : 'Client',
+                service: apt.service?.title || 'Service',
+                grossAmount,
+                amount: grossAmount,
+                platformFee,
+                netAmount,
+                status: 'completed',
+                transactionId: apt.transactionId || ''
+            };
+        });
+
+        res.json({ success: true, data: payments });
+    } catch (error) {
+        console.error('Payments error:', error);
+        res.json({ success: true, data: [] });
+    }
+});
+
+// Payment Stats
+router.get('/payments/stats', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ 
+                success: true, 
+                data: { 
+                    totalTransactions: 0, 
+                    completedPayments: 0, 
+                    failedPayments: 0,
+                    totalGross: 0,
+                    totalFees: 0,
+                    totalNet: 0
+                } 
+            });
+        }
+
+        const completedApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id,
+            status: 'completed',
+            paymentStatus: 'paid'
+        });
+
+        const failedApts = await Appointment.find({ 
+            gymPhysio: gymPhysio._id,
+            paymentStatus: 'failed'
+        });
+
+        const totalGross = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
+        const totalFees = Math.round(totalGross * 0.10);
+        const totalNet = totalGross - totalFees;
+
+        res.json({ 
+            success: true, 
+            data: { 
+                totalTransactions: completedApts.length + failedApts.length,
+                completedPayments: completedApts.length,
+                failedPayments: failedApts.length,
+                totalGross,
+                totalFees,
+                totalNet
+            } 
+        });
+    } catch (error) {
+        console.error('Payment stats error:', error);
+        res.json({ 
+            success: true, 
+            data: { 
+                totalTransactions: 0, 
+                completedPayments: 0, 
+                failedPayments: 0,
+                totalGross: 0,
+                totalFees: 0,
+                totalNet: 0
+            } 
+        });
     }
 });
 
@@ -677,7 +1056,51 @@ router.get('/settings', protect, async (req, res) => {
 });
 
 router.put('/settings/update', protect, async (req, res) => {
-    res.json({ success: true, message: 'Settings updated' });
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+
+        // Update allowed fields
+        const allowedFields = ['businessName', 'businessType', 'phone', 'city', 'state', 'address', 'bio', 'specialization', 'profilePicture'];
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                gymPhysio[field] = req.body[field];
+            }
+        });
+
+        await gymPhysio.save();
+
+        // Notify admin of profile update
+        const Notification = require('../models/Notification');
+        const Admin = require('../models/Admin');
+        const admins = await Admin.find({});
+        
+        for (const admin of admins) {
+            if (admin.user) {
+                await Notification.create({
+                    user: admin.user,
+                    title: 'Gym/Physio Profile Updated',
+                    message: `${gymPhysio.businessName} (${gymPhysio.businessType}) updated their profile settings`,
+                    type: 'system',
+                    data: {
+                        gymPhysioId: gymPhysio._id,
+                        businessName: gymPhysio.businessName,
+                        businessType: gymPhysio.businessType,
+                        phone: gymPhysio.phone,
+                        city: gymPhysio.city,
+                        state: gymPhysio.state
+                    }
+                });
+            }
+        }
+
+        res.json({ success: true, message: 'Settings updated successfully' });
+    } catch (error) {
+        console.error('Settings update error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // Subscription endpoints
@@ -716,6 +1139,31 @@ router.post('/subscribe', protect, async (req, res) => {
         };
 
         await gymPhysio.save();
+
+        // Notify admin of new subscription
+        const Notification = require('../models/Notification');
+        const Admin = require('../models/Admin');
+        const admins = await Admin.find({});
+        
+        for (const admin of admins) {
+            if (admin.user) {
+                await Notification.create({
+                    user: admin.user,
+                    title: 'New Gym/Physio Subscription',
+                    message: `${gymPhysio.businessName} subscribed to ${plan.toUpperCase()} plan (₦${amount.toLocaleString()})`,
+                    type: 'payment',
+                    data: {
+                        gymPhysioId: gymPhysio._id,
+                        businessName: gymPhysio.businessName,
+                        plan,
+                        amount,
+                        transactionReference,
+                        startDate,
+                        endDate
+                    }
+                });
+            }
+        }
 
         res.json({ 
             success: true, 

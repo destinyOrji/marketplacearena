@@ -209,6 +209,7 @@ router.post('/ambulances/:id/reject', adminAuth, adminAmbulancesController.rejec
 
 // Gym & Physio Management Routes
 router.get('/gym-physio', adminAuth, adminGymPhysioController.getGymPhysios);
+router.get('/gym-physio/stats', adminAuth, adminGymPhysioController.getGymPhysioStats);
 router.get('/gym-physio/verification/pending', adminAuth, adminGymPhysioController.getPendingVerifications);
 router.get('/gym-physio/:id', adminAuth, adminGymPhysioController.getGymPhysioById);
 router.put('/gym-physio/:id/update', adminAuth, adminGymPhysioController.updateGymPhysio);
@@ -219,6 +220,9 @@ router.get('/gym-physio/:id/services', adminAuth, adminGymPhysioController.getGy
 router.patch('/gym-physio/:id/services/:serviceId', adminAuth, adminGymPhysioController.toggleGymPhysioServiceStatus);
 router.get('/gym-physio/:id/appointments', adminAuth, adminGymPhysioController.getGymPhysioAppointments);
 router.get('/gym-physio/:id/earnings', adminAuth, adminGymPhysioController.getGymPhysioEarnings);
+router.get('/gym-physio/:id/analytics', adminAuth, adminGymPhysioController.getGymPhysioAnalytics);
+router.get('/gym-physio/:id/subscription', adminAuth, adminGymPhysioController.getGymPhysioSubscription);
+router.put('/gym-physio/:id/subscription', adminAuth, adminGymPhysioController.updateGymPhysioSubscription);
 
 // ─── Settings Routes (stubs — return sensible defaults) ───────────────────────
 router.get('/settings/system', adminAuth, (req, res) => {

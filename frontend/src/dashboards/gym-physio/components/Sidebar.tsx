@@ -11,6 +11,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { gymPhysio, logout } = useAuth();
   const location = useLocation();
 
+  const API_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com';
+  const profilePhoto = gymPhysio?.profilePicture ? `${API_URL}${gymPhysio.profilePicture}` : null;
+
   const navItems = [
     { name: 'Dashboard', path: '/gym-physio/dashboard', icon: '🏠' },
     { name: 'Profile', path: '/gym-physio/profile', icon: '👤' },
@@ -50,11 +53,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <h2 className="text-xl font-bold text-blue-600">Gym & Physio</h2>
             {gymPhysio && (
               <div className="mt-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-semibold text-sm">
-                    {gymPhysio.businessName?.charAt(0).toUpperCase() || 'G'}
-                  </span>
-                </div>
+                {profilePhoto ? (
+                  <img 
+                    src={profilePhoto} 
+                    alt={gymPhysio.businessName || 'Profile'} 
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-blue-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-semibold text-sm">
+                      {gymPhysio.businessName?.charAt(0).toUpperCase() || 'G'}
+                    </span>
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{gymPhysio.businessName || 'My Business'}</p>
                   <p className="text-xs text-gray-500 capitalize">{gymPhysio.businessType || 'Gym/Physio'}</p>

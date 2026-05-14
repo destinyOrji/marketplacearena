@@ -14,6 +14,9 @@ const DashboardLayout: React.FC = () => {
   const { gymPhysio, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
+  const API_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com';
+  const profilePhoto = gymPhysio?.profilePicture ? `${API_URL}${gymPhysio.profilePicture}` : null;
+
   // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -155,11 +158,19 @@ const DashboardLayout: React.FC = () => {
                 <button onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   aria-label="Profile menu">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {gymPhysio?.businessName?.charAt(0).toUpperCase() || 'G'}
-                    </span>
-                  </div>
+                  {profilePhoto ? (
+                    <img 
+                      src={profilePhoto} 
+                      alt={gymPhysio?.businessName || 'Profile'} 
+                      className="w-8 h-8 rounded-full object-cover border-2 border-blue-200"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                      <span className="text-white font-semibold text-sm">
+                        {gymPhysio?.businessName?.charAt(0).toUpperCase() || 'G'}
+                      </span>
+                    </div>
+                  )}
                   <span className="hidden md:block text-sm font-medium text-gray-700">
                     {gymPhysio?.businessName || 'My Business'}
                   </span>
