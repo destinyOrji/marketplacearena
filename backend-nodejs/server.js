@@ -7,7 +7,9 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 
 // Load environment variables
-dotenv.config();
+// Load .env.production in production, otherwise .env
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
+dotenv.config({ path: envFile });
 
 const app = express();
 
