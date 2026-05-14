@@ -15,7 +15,6 @@ const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Notifications = lazy(() => import('./pages/Notifications'));
-const Subscription = lazy(() => import('./pages/Subscription'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -42,7 +41,6 @@ const GymPhysioRoutes: React.FC = () => {
           <Route path="/payments" element={<PaymentsEarnings />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/subscription" element={<Subscription />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
         <Route path="*" element={<Navigate to="/gym-physio/dashboard" replace />} />

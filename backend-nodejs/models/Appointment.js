@@ -26,6 +26,10 @@ const appointmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Hospital'
     },
+    service: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service'
+    },
     
     // Appointment Details
     appointmentType: {

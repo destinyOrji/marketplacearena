@@ -83,6 +83,11 @@ router.post('/book', protect, async (req, res) => {
             appointmentData.hospital = hospitalId;
         }
 
+        // Add service reference if provided
+        if (serviceId) {
+            appointmentData.service = serviceId;
+        }
+
         // Create appointment
         const appointment = await Appointment.create(appointmentData);
 
@@ -91,7 +96,8 @@ router.post('/book', protect, async (req, res) => {
             { path: 'client', populate: { path: 'user', select: 'firstName lastName email phone' } },
             { path: 'professional', populate: { path: 'user', select: 'firstName lastName' } },
             { path: 'gymPhysio', populate: { path: 'user', select: 'firstName lastName' } },
-            { path: 'hospital' }
+            { path: 'hospital' },
+            { path: 'service' }
         ]);
 
         res.status(201).json({
