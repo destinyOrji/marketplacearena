@@ -804,9 +804,11 @@ router.post('/payments', protect, async (req, res) => {
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         if (!user.email) return res.status(400).json({ success: false, message: 'User email is required for payment' });
 
-        // Verify Paystack key is configured
+        // Log key status for debugging (never log the actual key)
+        console.log(`PAYSTACK_SECRET_KEY present: ${!!process.env.PAYSTACK_SECRET_KEY}`);
+
         if (!process.env.PAYSTACK_SECRET_KEY) {
-            console.error('PAYSTACK_SECRET_KEY is not set');
+            console.error('PAYSTACK_SECRET_KEY is not set — check .env.production on the server');
             return res.status(500).json({ success: false, message: 'Payment gateway not configured. Please contact support.' });
         }
 
@@ -856,7 +858,11 @@ router.post('/payments/verify/:reference', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Payment verification failed' });
         }
 
+        const paidAmount = paystackResponse.data.amount / 100; // kobo → naira
         const appointmentId = paystackResponse.data.metadata?.appointmentId;
+
+        let invoiceData = null;
+
         if (appointmentId) {
             await Appointment.findByIdAndUpdate(appointmentId, {
                 paymentStatus: 'paid',
@@ -864,25 +870,50 @@ router.post('/payments/verify/:reference', protect, async (req, res) => {
                 paymentMethod: 'paystack',
             });
 
-            // Notify patient that payment was received
-            const Notification = require('../models/Notification');
+            // Fetch appointment for invoice + notification
             const apt = await Appointment.findById(appointmentId)
-                .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName' } });
+                .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
+                .populate({ path: 'gymPhysio', select: 'businessName businessType' })
+                .populate('service', 'title category');
+
             if (apt) {
                 const providerName = apt.professional?.user
                     ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}`.trim()
-                    : 'your provider';
+                    : apt.gymPhysio?.businessName || 'Healthcare Provider';
+
+                // Build invoice data for frontend
+                invoiceData = {
+                    reference: req.params.reference,
+                    amount: paidAmount,
+                    currency: 'NGN',
+                    paidAt: paystackResponse.data.paid_at || new Date().toISOString(),
+                    appointmentId: apt._id,
+                    service: apt.service?.title || apt.reasonForVisit || 'Consultation',
+                    provider: providerName,
+                    scheduledDate: apt.scheduledDate,
+                    scheduledTime: apt.scheduledTime,
+                    appointmentMode: apt.appointmentMode,
+                    patientEmail: paystackResponse.data.customer?.email || '',
+                    channel: paystackResponse.data.channel || 'card',
+                };
+
+                // Notify patient
+                const Notification = require('../models/Notification');
                 await Notification.create({
                     user: req.user._id,
                     title: 'Payment Confirmed',
-                    message: `Your payment of ₦${(paystackResponse.data.amount / 100).toLocaleString()} for your appointment with ${providerName} has been received.`,
+                    message: `Your payment of ₦${paidAmount.toLocaleString()} for your appointment with ${providerName} has been received.`,
                     type: 'payment',
-                    data: { appointmentId, reference: req.params.reference, amount: paystackResponse.data.amount / 100 }
+                    data: { appointmentId, reference: req.params.reference, amount: paidAmount }
                 }).catch(() => {});
             }
         }
 
-        res.json({ success: true, data: { reference: req.params.reference }, message: 'Payment verified' });
+        res.json({
+            success: true,
+            data: { reference: req.params.reference, invoice: invoiceData },
+            message: 'Payment verified'
+        });
     } catch (error) {
         console.error('Payment verify error:', error);
         res.status(500).json({ success: false, message: error.message });

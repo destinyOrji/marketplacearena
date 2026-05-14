@@ -7,9 +7,10 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 
 // Load environment variables
-// Load .env.production in production, otherwise .env
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env';
-dotenv.config({ path: envFile });
+// Always load .env first, then .env.production overrides (if present)
+// This ensures PAYSTACK_SECRET_KEY and other production vars are always available
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.production', override: true });
 
 const app = express();
 
