@@ -272,13 +272,13 @@ const MyAppointments: React.FC = () => {
                           {/* Video Call Button for video appointments */}
                           {isUpcoming && (mode === 'video_call' || mode === 'video') && status === 'confirmed' && (
                             <button
-                              onClick={() => window.open(`/patient/video-call/${id}`, '_blank')}
+                              onClick={() => navigate(`/patient/video-call/${id}`)}
                               className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-semibold rounded-lg sm:rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md flex-1 sm:flex-initial">
                               <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                   d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                               </svg>
-                              <span className="hidden sm:inline">Start Video Call</span>
+                              <span className="hidden sm:inline">Join Video Call</span>
                               <span className="sm:hidden">Video</span>
                             </button>
                           )}

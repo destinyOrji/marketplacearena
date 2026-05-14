@@ -34,7 +34,7 @@ const DashboardHome: React.FC = () => {
     { to: '/professional/services', label: 'Add Service', emoji: '➕' },
     { to: '/professional/jobs', label: 'Browse Jobs', emoji: '💼' },
     { to: '/professional/schedule', label: 'Set Schedule', emoji: '📅' },
-    { to: '/professional/profile', label: 'Edit Profile', emoji: '👤' },
+    { to: '/professional/patient-records', label: 'Patient Records', emoji: '📋' },
   ];
 
   return (

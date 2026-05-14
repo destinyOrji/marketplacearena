@@ -351,7 +351,7 @@ export const analyticsApi = {
 export const notificationsApi = {
   getNotifications: async (): Promise<Notification[]> => {
     try {
-      const response = await apiClient.get('/users/notifications');
+      const response = await apiClient.get('/notifications');
       const payload = response.data?.data ?? response.data;
       return Array.isArray(payload) ? payload : [];
     } catch {
@@ -360,11 +360,11 @@ export const notificationsApi = {
   },
 
   markAsRead: async (id: string): Promise<void> => {
-    await apiClient.put(`/users/notifications/${id}/read`);
+    await apiClient.put(`/notifications/${id}/read`);
   },
 
   markAllAsRead: async (): Promise<void> => {
-    await apiClient.put('/users/notifications/read-all');
+    await apiClient.put('/notifications/read-all');
   },
 };
 

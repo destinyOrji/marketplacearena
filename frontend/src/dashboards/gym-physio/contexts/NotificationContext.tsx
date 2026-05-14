@@ -40,7 +40,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [loading, setLoading] = useState(false);
 
   const getToken = () =>
-    localStorage.getItem('gymPhysioToken') || localStorage.getItem('authToken') || '';
+    localStorage.getItem('gymPhysioToken') || '';
 
   const fetchNotifications = useCallback(async () => {
     const token = getToken();

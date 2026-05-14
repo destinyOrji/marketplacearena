@@ -14,6 +14,7 @@ const ScheduleAvailability = lazy(() => import('./pages/ScheduleAvailability'));
 const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Subscription = lazy(() => import('./pages/Subscription'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const VideoCall = lazy(() => import('./pages/VideoCall'));
 
@@ -41,10 +42,12 @@ const GymPhysioRoutes: React.FC = () => {
           <Route path="/schedule" element={<ScheduleAvailability />} />
           <Route path="/payments" element={<PaymentsEarnings />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/subscription" element={<Subscription />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/video-call/:appointmentId" element={<VideoCall />} />
         </Route>
+        {/* Video call is full-screen — outside DashboardLayout */}
+        <Route path="/video-call/:appointmentId" element={<VideoCall />} />
         <Route path="*" element={<Navigate to="/gym-physio/dashboard" replace />} />
       </Routes>
     </Suspense>

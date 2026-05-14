@@ -1,6 +1,7 @@
-// Appointments Page — with Accept/Reject + patient notification
+// Appointments Page — with Accept/Reject + patient notification + video call
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Appointment } from '../types';
 import { appointmentsApi } from '../services/api';
 import { toast } from 'react-toastify';
@@ -24,6 +25,7 @@ const STATUS_TABS = [
 ];
 
 const Appointments: React.FC = () => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -201,6 +203,16 @@ const Appointments: React.FC = () => {
                           )}
                           {apt.status === 'confirmed' && (
                             <>
+                              {(apt.type === 'video_call' || apt.type === 'video') && (
+                                <button onClick={() => navigate(`/professional/video-call/${apt.id}`)}
+                                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                  <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                  <span className="hidden xs:inline">Join Call</span>
+                                </button>
+                              )}
                               <button onClick={() => setSelectedAppointment({ ...apt, _action: 'message' })}
                                 className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
                                 <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,6 +294,7 @@ interface ModalProps {
 }
 
 const AppointmentModal: React.FC<ModalProps> = ({ appointment, onClose, onUpdate }) => {
+  const navigate = useNavigate();
   const [notes, setNotes] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [message, setMessage] = useState('');
@@ -549,6 +562,18 @@ const AppointmentModal: React.FC<ModalProps> = ({ appointment, onClose, onUpdate
 
           {!isRejectMode && !isMessageMode && appointment.status === 'confirmed' && (
             <>
+              {(appointment.type === 'video_call' || appointment.type === 'video') && (
+                <button
+                  onClick={() => { onClose(); navigate(`/professional/video-call/${appointment.id}`); }}
+                  disabled={loading}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Join Video Call
+                </button>
+              )}
               <button onClick={handleComplete} disabled={loading}
                 className="flex-1 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
                 Mark Completed

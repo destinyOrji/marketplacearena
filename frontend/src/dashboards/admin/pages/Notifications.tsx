@@ -3,7 +3,7 @@ import NotificationsPage from '../../../components/NotificationsPage';
 
 const Notifications: React.FC = () => (
   <NotificationsPage
-    tokenKey="adminToken"
+    tokenKey="admin_access_token"
     backPath="/admin/overview"
     dashboardName="Admin Dashboard"
   />

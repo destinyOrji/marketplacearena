@@ -7,3 +7,4 @@ export { default as ScheduleAvailability } from './ScheduleAvailability';
 export { default as PaymentsEarnings } from './PaymentsEarnings';
 export { default as Analytics } from './Analytics';
 export { default as Settings } from './Settings';
+export { default as Subscription } from './Subscription';

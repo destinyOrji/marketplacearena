@@ -10,6 +10,7 @@ const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Schedule = require('../models/Schedule');
 const BlockedDate = require('../models/BlockedDate');
+const { sendNotification, notifyAllAdmins } = require('../utils/notificationHelper');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -445,13 +446,13 @@ router.put('/appointments/:id/confirm', protect, async (req, res) => {
         ).populate({ path: 'client', populate: { path: 'user', select: '_id firstName lastName' } });
 
         // Send notification to patient
-        if (apt && apt.client?.user?._id) {
-            const Notification = require('../models/Notification');
+        if (apt && apt.client?._id) {
             const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
             const providerName = gymPhysio?.businessName || 'Your provider';
 
-            await Notification.create({
-                user: apt.client.user._id,
+            await sendNotification({
+                recipientType: 'client',
+                recipientId: apt.client._id,
                 title: 'Appointment Confirmed',
                 message: `Your appointment with ${providerName} has been confirmed for ${new Date(apt.scheduledDate).toLocaleDateString()}`,
                 type: 'appointment',
@@ -498,13 +499,13 @@ router.put('/appointments/:id/complete', protect, async (req, res) => {
         );
 
         // Send notification to patient
-        if (apt && apt.client?.user?._id) {
-            const Notification = require('../models/Notification');
+        if (apt && apt.client?._id) {
             const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
             const providerName = gymPhysio?.businessName || 'Your provider';
 
-            await Notification.create({
-                user: apt.client.user._id,
+            await sendNotification({
+                recipientType: 'client',
+                recipientId: apt.client._id,
                 title: 'Appointment Completed',
                 message: `Your appointment with ${providerName} has been marked as completed. Please rate your experience!`,
                 type: 'appointment',
@@ -525,14 +526,14 @@ router.put('/appointments/:id/complete', protect, async (req, res) => {
 // Notify patient when gym-physio accepts or rejects appointment
 router.post('/appointments/:id/notify-patient', protect, async (req, res) => {
     try {
-        const Notification = require('../models/Notification');
         const apt = await Appointment.findById(req.params.id)
             .populate({ path: 'client', populate: { path: 'user', select: '_id firstName lastName' } });
 
         if (!apt) return res.status(404).json({ success: false, message: 'Appointment not found' });
 
-        const patientUserId = apt.client?.user?._id;
-        if (!patientUserId) return res.status(400).json({ success: false, message: 'Patient user not found' });
+        if (!apt.client?._id) {
+            return res.status(400).json({ success: false, message: 'Patient not found' });
+        }
 
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
         const providerName = gymPhysio?.businessName || 'Your provider';
@@ -553,8 +554,9 @@ router.post('/appointments/:id/notify-patient', protect, async (req, res) => {
             notificationType = 'general';
         }
 
-        await Notification.create({
-            user: patientUserId,
+        await sendNotification({
+            recipientType: 'client',
+            recipientId: apt.client._id,
             title: notificationTitle,
             message: message || (isRejected
                 ? `Your booking with ${providerName} has been declined.`
@@ -1072,29 +1074,20 @@ router.put('/settings/update', protect, async (req, res) => {
 
         await gymPhysio.save();
 
-        // Notify admin of profile update
-        const Notification = require('../models/Notification');
-        const Admin = require('../models/Admin');
-        const admins = await Admin.find({});
-        
-        for (const admin of admins) {
-            if (admin.user) {
-                await Notification.create({
-                    user: admin.user,
-                    title: 'Gym/Physio Profile Updated',
-                    message: `${gymPhysio.businessName} (${gymPhysio.businessType}) updated their profile settings`,
-                    type: 'system',
-                    data: {
-                        gymPhysioId: gymPhysio._id,
-                        businessName: gymPhysio.businessName,
-                        businessType: gymPhysio.businessType,
-                        phone: gymPhysio.phone,
-                        city: gymPhysio.city,
-                        state: gymPhysio.state
-                    }
-                });
+        // Notify all admins of profile update
+        await notifyAllAdmins(
+            'Gym/Physio Profile Updated',
+            `${gymPhysio.businessName} (${gymPhysio.businessType}) updated their profile settings`,
+            'system',
+            {
+                gymPhysioId: gymPhysio._id,
+                businessName: gymPhysio.businessName,
+                businessType: gymPhysio.businessType,
+                phone: gymPhysio.phone,
+                city: gymPhysio.city,
+                state: gymPhysio.state
             }
-        }
+        );
 
         res.json({ success: true, message: 'Settings updated successfully' });
     } catch (error) {
@@ -1140,30 +1133,21 @@ router.post('/subscribe', protect, async (req, res) => {
 
         await gymPhysio.save();
 
-        // Notify admin of new subscription
-        const Notification = require('../models/Notification');
-        const Admin = require('../models/Admin');
-        const admins = await Admin.find({});
-        
-        for (const admin of admins) {
-            if (admin.user) {
-                await Notification.create({
-                    user: admin.user,
-                    title: 'New Gym/Physio Subscription',
-                    message: `${gymPhysio.businessName} subscribed to ${plan.toUpperCase()} plan (₦${amount.toLocaleString()})`,
-                    type: 'payment',
-                    data: {
-                        gymPhysioId: gymPhysio._id,
-                        businessName: gymPhysio.businessName,
-                        plan,
-                        amount,
-                        transactionReference,
-                        startDate,
-                        endDate
-                    }
-                });
+        // Notify all admins of new subscription
+        await notifyAllAdmins(
+            'New Gym/Physio Subscription',
+            `${gymPhysio.businessName} subscribed to ${plan.toUpperCase()} plan (₦${amount.toLocaleString()})`,
+            'payment',
+            {
+                gymPhysioId: gymPhysio._id,
+                businessName: gymPhysio.businessName,
+                plan,
+                amount,
+                transactionReference,
+                startDate,
+                endDate
             }
-        }
+        );
 
         res.json({ 
             success: true, 

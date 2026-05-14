@@ -16,6 +16,8 @@ const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Notifications = lazy(() => import('./pages/Notifications'));
+const PatientRecords = lazy(() => import('./pages/PatientRecords'));
+const VideoCall = lazy(() => import('./pages/VideoCall'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -42,9 +44,12 @@ const ProfessionalRoutes: React.FC = () => {
           <Route path="/schedule" element={<ScheduleAvailability />} />
           <Route path="/payments" element={<PaymentsEarnings />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/patient-records" element={<PatientRecords />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
+        {/* Video call is full-screen — outside DashboardLayout */}
+        <Route path="/video-call/:appointmentId" element={<VideoCall />} />
         <Route path="*" element={<Navigate to="/professional/dashboard" replace />} />
       </Routes>
     </Suspense>

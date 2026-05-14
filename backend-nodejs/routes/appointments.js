@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const Appointment = require('../models/Appointment');
+const { sendNotification } = require('../utils/notificationHelper');
 const Client = require('../models/Client');
 const Professional = require('../models/Professional');
 
@@ -204,25 +205,29 @@ router.put('/:id/payment', protect, async (req, res) => {
 
         // Send payment notification to provider when payment is successful
         if (paymentStatus === 'paid') {
-            const Notification = require('../models/Notification');
             const GymPhysio = require('../models/GymPhysio');
             
-            let providerUserId = null;
+            let recipientType = null;
+            let recipientId = null;
             let providerName = 'Provider';
             
             if (appointment.gymPhysio) {
-                providerUserId = appointment.gymPhysio.user?._id;
+                recipientType = 'gym-physio';
+                recipientId = appointment.gymPhysio._id;
                 const gymPhysio = await GymPhysio.findById(appointment.gymPhysio._id);
                 providerName = gymPhysio?.businessName || 'Gym/Physio';
             } else if (appointment.professional) {
-                providerUserId = appointment.professional.user?._id;
+                recipientType = 'professional';
+                recipientId = appointment.professional._id;
                 providerName = 'Professional';
             }
 
-            if (providerUserId) {
+            if (recipientType && recipientId) {
                 const clientName = `${appointment.client?.user?.firstName || ''} ${appointment.client?.user?.lastName || ''}`.trim() || 'A patient';
-                await Notification.create({
-                    user: providerUserId,
+                
+                await sendNotification({
+                    recipientType,
+                    recipientId,
                     title: 'Payment Received',
                     message: `Payment of ₦${appointment.consultationFee?.toLocaleString() || 0} received from ${clientName}`,
                     type: 'payment',

@@ -119,11 +119,11 @@ export const medicalRecordsApi = {
 // Notifications API
 export const notificationsApi = {
   getNotifications: (params?: any) =>
-    apiClient.get<ApiResponse<PaginatedResponse<Notification>>>('/users/notifications', { params }),
+    apiClient.get<ApiResponse<PaginatedResponse<Notification>>>('/notifications', { params }),
   markAsRead: (id: string) =>
-    apiClient.put<ApiResponse<Notification>>(`/users/notifications/${id}/read`),
+    apiClient.put<ApiResponse<Notification>>(`/notifications/${id}/read`),
   markAllAsRead: () =>
-    apiClient.put<ApiResponse<null>>('/users/notifications/read-all'),
+    apiClient.put<ApiResponse<null>>('/notifications/read-all'),
 };
 
 export default {

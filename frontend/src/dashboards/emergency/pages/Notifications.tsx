@@ -3,7 +3,7 @@ import NotificationsPage from '../../../components/NotificationsPage';
 
 const Notifications: React.FC = () => (
   <NotificationsPage
-    tokenKey="ambulanceToken"
+    tokenKey="emergency_token"
     backPath="/ambulance/dashboard"
     dashboardName="Ambulance Dashboard"
   />
