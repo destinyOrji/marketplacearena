@@ -11,16 +11,53 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 seconds timeout
 });
 
 // Add auth token to requests
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('gymPhysioToken') || localStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('gymPhysioToken') || localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Add response interceptor for better error handling
+apiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // Handle HTML responses (404, 500, etc.)
+    if (error.response?.headers['content-type']?.includes('text/html')) {
+      console.error('API returned HTML instead of JSON:', error.config.url);
+      return Promise.reject(new Error('Server error: Invalid response format. Please check if the API endpoint exists.'));
+    }
+
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error:', error.message);
+      return Promise.reject(new Error('Network error: Unable to connect to server'));
+    }
+
+    // Handle authentication errors
+    if (error.response?.status === 401) {
+      console.error('Authentication error');
+      // Optionally redirect to login
+      // window.location.href = '/login';
+    }
+
+    // Handle other errors
+    const message = error.response?.data?.message || error.message || 'An error occurred';
+    return Promise.reject(new Error(message));
+  }
+);
 
 // Dashboard Stats
 export const getDashboardStats = async (): Promise<DashboardStats> => {
