@@ -89,27 +89,49 @@ export interface Service {
 
 export interface Appointment {
   id: string;
+  _id?: string;
   date: Date;
+  scheduledDate?: Date;
   time: string;
+  scheduledTime?: string;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
-  type: 'in-person' | 'video';
-  client: {
+  type: 'in-person' | 'video_call' | 'phone_call' | 'video' | 'in_person';
+  appointmentMode?: string;
+  client?: {
+    _id?: string;
+    user?: {
+      _id?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+    };
+    phone?: string;
+  };
+  patient?: {
     id: string;
     name: string;
     email: string;
+    phone?: string;
     photo?: string;
   };
   service?: {
     id: string;
+    _id?: string;
     title: string;
     price: number;
+    images?: string[];
   };
-  payment: {
+  payment?: {
     amount: number;
-    status: 'pending' | 'completed' | 'refunded';
+    status: 'pending' | 'completed' | 'refunded' | 'paid';
   };
+  paymentStatus?: string;
+  consultationFee?: number;
   reason?: string;
+  reasonForVisit?: string;
   notes?: string;
+  clientNotes?: string;
 }
 
 export interface Schedule {
