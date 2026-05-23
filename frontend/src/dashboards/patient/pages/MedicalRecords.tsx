@@ -1,43 +1,30 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '../components';
 import { medicalRecordsApi } from '../services/api';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { showErrorToast } from '../utils/toast';
 import { useNavigate } from 'react-router-dom';
 
-const MODE_LABELS: Record<string, string> = {
-  video_call: '📹 Video Call', video: '📹 Video Call',
-  phone_call: '📞 Phone', chat: '📞 Phone',
-  in_person: '🏥 In-Person', 'in-person': '🏥 In-Person',
+const MODE_META: Record<string, { label: string; icon: string; color: string }> = {
+  video_call: { label: 'Video Call',  icon: '📹', color: 'bg-violet-100 text-violet-700' },
+  video:      { label: 'Video Call',  icon: '📹', color: 'bg-violet-100 text-violet-700' },
+  phone_call: { label: 'Phone',       icon: '📞', color: 'bg-sky-100 text-sky-700' },
+  chat:       { label: 'Phone',       icon: '📞', color: 'bg-sky-100 text-sky-700' },
+  in_person:  { label: 'In-Person',   icon: '🏥', color: 'bg-emerald-100 text-emerald-700' },
+  'in-person':{ label: 'In-Person',   icon: '🏥', color: 'bg-emerald-100 text-emerald-700' },
 };
 
-// ─── Record Modal ─────────────────────────────────────────────────────────────
+const safeDate = (d: any) => {
+  try { return d ? new Date(d) : null; } catch { return null; }
+};
+
+// ─── Record Detail Modal ──────────────────────────────────────────────────────
 const RecordModal: React.FC<{ record: any; onClose: () => void }> = ({ record, onClose }) => {
   const printRef = useRef<HTMLDivElement>(null);
-
-  const handlePrint = () => {
-    const content = printRef.current?.innerHTML;
-    if (!content) return;
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`
-      <html><head><title>Medical Record</title>
-      <style>
-        body{font-family:Arial,sans-serif;padding:32px;color:#111}
-        h1{color:#2563eb;font-size:18px;margin-bottom:2px}
-        .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
-        .lbl{color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
-        .val{font-weight:600;font-size:13px;margin-top:2px}
-        table{width:100%;border-collapse:collapse;margin-top:8px}
-        th{background:#f9fafb;padding:7px 10px;text-align:left;font-size:11px;color:#6b7280}
-        td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}
-        .notes{background:#eff6ff;border-left:3px solid #2563eb;padding:10px;border-radius:4px;font-size:12px}
-        .footer{margin-top:32px;text-align:center;color:#9ca3af;font-size:10px;border-top:1px solid #f3f4f6;padding-top:12px}
-      </style></head><body>${content}</body></html>
-    `);
-    win.document.close();
-    win.print();
-  };
+  const date = safeDate(record.date);
+  const mode = MODE_META[record.appointmentMode] || null;
+  const hasPrescription = record.prescription?.length > 0;
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -45,17 +32,47 @@ const RecordModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
     return () => document.removeEventListener('keydown', h);
   }, [onClose]);
 
-  const hasPrescription = record.prescription?.length > 0;
+  const handlePrint = () => {
+    const content = printRef.current?.innerHTML;
+    if (!content) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<html><head><title>Medical Record</title><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:Arial,sans-serif;padding:36px;color:#111;background:#fff}
+      .brand{font-size:20px;font-weight:800;color:#2563eb}
+      .sub{font-size:11px;color:#6b7280;margin-top:2px}
+      .divider{border-top:1px solid #e5e7eb;margin:16px 0}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+      .field label{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em}
+      .field p{font-size:13px;font-weight:600;color:#111;margin-top:3px}
+      .notes{background:#eff6ff;border-left:3px solid #2563eb;padding:12px;border-radius:4px;font-size:12px;color:#374151;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f9fafb;padding:8px 10px;text-align:left;font-size:11px;color:#6b7280;border-bottom:1px solid #e5e7eb}
+      td{padding:8px 10px;font-size:12px;border-bottom:1px solid #f3f4f6}
+      .footer{margin-top:36px;text-align:center;font-size:10px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:12px}
+    </style></head><body>${content}</body></html>`);
+    win.document.close();
+    win.print();
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh]">
+      <div className="bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[94vh] overflow-hidden">
+
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 sm:hidden flex-shrink-0">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 flex-shrink-0">
           <div>
-            <h3 className="text-base font-bold text-gray-900">Medical Record</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{record.date ? format(new Date(record.date), 'MMMM d, yyyy') : '—'}</p>
+            <h2 className="text-base font-bold text-gray-900">Medical Record</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {date ? format(date, 'MMMM d, yyyy') : '—'}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handlePrint}
@@ -67,7 +84,7 @@ const RecordModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
               Print
             </button>
             <button onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -75,75 +92,61 @@ const RecordModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
           </div>
         </div>
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-5">
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 sm:px-6 pb-6">
           <div ref={printRef}>
-            <h1 style={{ color: '#2563eb', fontSize: '18px', marginBottom: '2px' }}>Health Market Arena</h1>
-            <p style={{ color: '#6b7280', fontSize: '11px' }}>Medical Record</p>
+            {/* Brand */}
+            <div className="brand" style={{ fontSize: '18px', fontWeight: 800, color: '#2563eb' }}>Health Market Arena</div>
+            <div className="sub" style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>Official Medical Record</div>
 
             <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '14px', paddingTop: '14px' }}>
-              {/* 2-col grid on print, stacked on mobile */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Info grid */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
                 {[
-                  { label: 'Date', value: record.date ? format(new Date(record.date), 'MMM d, yyyy') : '—' },
-                  { label: 'Provider', value: record.provider },
+                  { label: 'Date', value: date ? format(date, 'MMM d, yyyy') : '—' },
+                  { label: 'Provider', value: record.provider || '—' },
                   { label: 'Diagnosis', value: record.diagnosis || 'General Consultation' },
-                  { label: 'Mode', value: MODE_LABELS[record.appointmentMode] || record.appointmentMode || '—' },
+                  { label: 'Mode', value: mode ? `${mode.icon} ${mode.label}` : record.appointmentMode || '—' },
                 ].map(({ label, value }) => (
-                  <div key={label} className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-                    <p className="font-semibold text-gray-900 text-sm mt-0.5 leading-snug">{value}</p>
+                  <div key={label} className="bg-gray-50 rounded-2xl p-3">
+                    <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">{label}</p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1 leading-snug">{value}</p>
                   </div>
                 ))}
               </div>
 
+              {/* Notes */}
               {record.notes && (
-                <div className="mb-4">
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Clinical Notes</p>
-                  <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3">
+                <div className="mb-5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Clinical Notes</p>
+                  <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
                     <p className="text-sm text-gray-700 leading-relaxed">{record.notes}</p>
                   </div>
                 </div>
               )}
 
+              {/* Prescriptions */}
               {hasPrescription && (
                 <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
-                    Prescriptions ({record.prescription.length})
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Prescriptions · {record.prescription.length}
                   </p>
-                  {/* Mobile: stacked cards; Print: table */}
-                  <div className="space-y-2 sm:hidden">
+                  <div className="space-y-2">
                     {record.prescription.map((p: any, i: number) => (
-                      <div key={i} className="bg-purple-50 border border-purple-100 rounded-xl p-3">
-                        <p className="font-semibold text-gray-900 text-sm">{p.medicationName || p.medication || '—'}</p>
-                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
-                          {p.dosage && <span className="text-xs text-gray-500">Dose: {p.dosage}</span>}
-                          {p.frequency && <span className="text-xs text-gray-500">Freq: {p.frequency}</span>}
-                          {p.duration && <span className="text-xs text-gray-500">Duration: {p.duration}</span>}
+                      <div key={i} className="flex items-start gap-3 bg-purple-50 border border-purple-100 rounded-2xl p-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-base">💊</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-900">{p.medicationName || p.medication || '—'}</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                            {p.dosage && <span className="text-xs text-purple-600 font-medium">{p.dosage}</span>}
+                            {p.frequency && <span className="text-xs text-gray-500">{p.frequency}</span>}
+                            {p.duration && <span className="text-xs text-gray-400">{p.duration}</span>}
+                          </div>
                         </div>
                       </div>
                     ))}
-                  </div>
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ background: '#f9fafb' }}>
-                          {['Medication', 'Dosage', 'Frequency', 'Duration'].map(h => (
-                            <th key={h} style={{ padding: '7px 10px', textAlign: 'left', fontSize: '11px', color: '#6b7280' }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {record.prescription.map((p: any, i: number) => (
-                          <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                            <td style={{ padding: '7px 10px', fontSize: '12px', fontWeight: 600 }}>{p.medicationName || p.medication || '—'}</td>
-                            <td style={{ padding: '7px 10px', fontSize: '12px' }}>{p.dosage || '—'}</td>
-                            <td style={{ padding: '7px 10px', fontSize: '12px' }}>{p.frequency || '—'}</td>
-                            <td style={{ padding: '7px 10px', fontSize: '12px' }}>{p.duration || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
                 </div>
               )}
@@ -156,9 +159,9 @@ const RecordModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
         </div>
 
         {/* Footer */}
-        <div className="px-4 sm:px-6 py-4 border-t border-gray-100 flex-shrink-0">
+        <div className="px-5 sm:px-6 py-4 border-t border-gray-100 flex-shrink-0">
           <button onClick={onClose}
-            className="w-full py-3 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+            className="w-full py-3 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors">
             Close
           </button>
         </div>
@@ -168,53 +171,79 @@ const RecordModal: React.FC<{ record: any; onClose: () => void }> = ({ record, o
 };
 
 // ─── Record Card ──────────────────────────────────────────────────────────────
-const RecordCard: React.FC<{ record: any; onView: () => void }> = ({ record, onView }) => {
+const RecordCard: React.FC<{ record: any; index: number; onView: () => void }> = ({ record, index, onView }) => {
+  const date = safeDate(record.date);
+  const mode = MODE_META[record.appointmentMode] || null;
   const hasPrescription = record.prescription?.length > 0;
-  const hasNotes = !!record.notes;
-  const id = record.id || record._id;
+  const hasNotes = !!record.notes?.trim();
+
+  // Cycle through accent colors
+  const accents = [
+    { from: 'from-blue-500', to: 'to-indigo-600', ring: 'ring-blue-200', dot: 'bg-blue-500' },
+    { from: 'from-violet-500', to: 'to-purple-600', ring: 'ring-violet-200', dot: 'bg-violet-500' },
+    { from: 'from-emerald-500', to: 'to-teal-600', ring: 'ring-emerald-200', dot: 'bg-emerald-500' },
+    { from: 'from-rose-500', to: 'to-pink-600', ring: 'ring-rose-200', dot: 'bg-rose-500' },
+    { from: 'from-amber-500', to: 'to-orange-600', ring: 'ring-amber-200', dot: 'bg-amber-500' },
+  ];
+  const accent = accents[index % accents.length];
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden active:scale-[0.99] transition-all hover:shadow-md hover:border-blue-200">
-      {/* Top accent */}
-      <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+    <div
+      onClick={onView}
+      className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden"
+    >
+      {/* Colored top strip */}
+      <div className={`h-1.5 bg-gradient-to-r ${accent.from} ${accent.to}`} />
 
-      <div className="p-4 sm:p-5">
-        {/* Top row: diagnosis + date */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug truncate">
-              {record.diagnosis || 'General Consultation'}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <svg className="w-2.5 h-2.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <p className="text-xs text-blue-600 font-medium truncate">{record.provider}</p>
-            </div>
+      <div className="p-5">
+        {/* Top row */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          {/* Icon */}
+          <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${accent.from} ${accent.to} flex items-center justify-center flex-shrink-0 shadow-md ring-4 ${accent.ring}`}>
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
           </div>
-          <div className="flex-shrink-0 text-right">
-            <p className="text-xs font-semibold text-gray-700 bg-gray-100 px-2.5 py-1 rounded-lg whitespace-nowrap">
-              {record.date ? format(new Date(record.date), 'MMM d, yyyy') : '—'}
+
+          {/* Date badge */}
+          <div className="text-right flex-shrink-0">
+            <p className="text-xs font-bold text-gray-700">
+              {date ? format(date, 'MMM d, yyyy') : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {date ? formatDistanceToNow(date, { addSuffix: true }) : ''}
             </p>
           </div>
         </div>
 
-        {/* Chips row */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {record.appointmentMode && (
-            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-              {MODE_LABELS[record.appointmentMode] || record.appointmentMode}
+        {/* Diagnosis */}
+        <h3 className="font-bold text-gray-900 text-base leading-snug mb-1 group-hover:text-blue-700 transition-colors">
+          {record.diagnosis || 'General Consultation'}
+        </h3>
+
+        {/* Provider */}
+        <div className="flex items-center gap-1.5 mb-3">
+          <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <p className="text-xs text-gray-500 font-medium truncate">{record.provider || 'Healthcare Provider'}</p>
+        </div>
+
+        {/* Chips */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {mode && (
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${mode.color}`}>
+              {mode.icon} {mode.label}
             </span>
           )}
           {hasPrescription && (
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">
               💊 {record.prescription.length} Rx
             </span>
           )}
           {hasNotes && (
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 text-blue-700">
               📝 Notes
             </span>
           )}
@@ -222,25 +251,46 @@ const RecordCard: React.FC<{ record: any; onView: () => void }> = ({ record, onV
 
         {/* Notes preview */}
         {hasNotes && (
-          <div className="bg-blue-50 border-l-3 border-blue-400 rounded-lg px-3 py-2 mb-3">
-            <p className="text-xs text-gray-600 italic line-clamp-2">"{record.notes}"</p>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl px-3.5 py-2.5 mb-4 border border-blue-100">
+            <p className="text-xs text-gray-600 italic line-clamp-2 leading-relaxed">"{record.notes}"</p>
           </div>
         )}
 
-        {/* Action */}
-        <button
-          onClick={onView}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          View Full Record
-        </button>
+        {/* CTA */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-400">Tap to view full record</span>
+          <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${accent.from} ${accent.to} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+};
+
+// ─── Stats Bar ────────────────────────────────────────────────────────────────
+const StatsBar: React.FC<{ records: any[] }> = ({ records }) => {
+  const withPrescription = records.filter(r => r.prescription?.length > 0).length;
+  const withNotes = records.filter(r => r.notes?.trim()).length;
+  const lastDate = records[0]?.date ? safeDate(records[0].date) : null;
+
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {[
+        { label: 'Total Records', value: records.length, icon: '📋', color: 'bg-blue-50 text-blue-600' },
+        { label: 'With Prescriptions', value: withPrescription, icon: '💊', color: 'bg-purple-50 text-purple-600' },
+        { label: 'With Notes', value: withNotes, icon: '📝', color: 'bg-emerald-50 text-emerald-600' },
+      ].map(s => (
+        <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 sm:p-4 text-center">
+          <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mx-auto mb-2`}>
+            {s.icon}
+          </div>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900">{s.value}</p>
+          <p className="text-xs text-gray-400 mt-0.5 leading-tight">{s.label}</p>
+        </div>
+      ))}
     </div>
   );
 };
@@ -278,42 +328,52 @@ const MedicalRecords: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-5 sm:space-y-6 max-w-4xl mx-auto">
 
-        {/* ── Header ── */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 sm:p-8 text-white shadow-lg">
-          <div className="flex items-start justify-between gap-3">
+        {/* ── Hero Header ── */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 rounded-3xl p-6 sm:p-8 text-white shadow-xl">
+          {/* Decorative circles */}
+          <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full" />
+          <div className="absolute -bottom-12 -left-6 w-52 h-52 bg-white/5 rounded-full" />
+
+          <div className="relative flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2.5 mb-1.5">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold leading-tight">Medical Records</h1>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm">Your complete health history</p>
-              <div className="flex flex-wrap items-center gap-3 mt-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                  <span className="text-xs sm:text-sm font-medium">{records.length} Records</span>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold leading-tight">Medical Records</h1>
+                  <p className="text-blue-200 text-xs sm:text-sm mt-0.5">Your complete health history</p>
                 </div>
-                {records.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-xs sm:text-sm">
-                      Last: {format(new Date(records[0]?.date || new Date()), 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                )}
               </div>
+
+              {records.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 mt-2">
+                  <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1.5">
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                    <span className="text-xs font-semibold">{records.length} Records</span>
+                  </div>
+                  {records[0]?.date && (
+                    <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1.5">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs font-semibold">
+                        Last: {format(new Date(records[0].date), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
             <button
               onClick={() => navigate('/patient/appointments')}
-              className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-white text-blue-600 text-xs sm:text-sm font-bold rounded-xl hover:bg-blue-50 transition-colors shadow-md"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-white text-blue-700 text-xs sm:text-sm font-bold rounded-2xl hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl active:scale-95"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -324,21 +384,26 @@ const MedicalRecords: React.FC = () => {
           </div>
         </div>
 
+        {/* ── Stats ── */}
+        {!loading && records.length > 0 && <StatsBar records={records} />}
+
         {/* ── Search ── */}
         <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <div className="absolute left-4 top-1/2 -translate-y-1/2">
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search diagnosis, provider, notes..."
-            className="w-full pl-10 pr-9 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+            placeholder="Search by diagnosis, provider, or notes..."
+            className="w-full pl-11 pr-10 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm placeholder-gray-400"
           />
           {search && (
             <button onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-lg">
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -348,45 +413,61 @@ const MedicalRecords: React.FC = () => {
 
         {/* ── Content ── */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-52 bg-white rounded-2xl border border-gray-200">
-            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent" />
-            <p className="text-sm text-gray-500 mt-3">Loading records...</p>
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-4 border-indigo-100 border-t-indigo-500 animate-spin" style={{ animationDirection: 'reverse' }} />
+              </div>
+            </div>
+            <p className="text-sm font-medium text-gray-500 mt-5">Loading your health records...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-10 sm:p-16 text-center">
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">📋</span>
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 sm:p-16 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-inner">
+              <span className="text-4xl">{records.length === 0 ? '🏥' : '🔍'}</span>
             </div>
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
-              {records.length === 0 ? 'No records yet' : 'No results'}
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              {records.length === 0 ? 'No records yet' : 'No results found'}
             </h3>
-            <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">
+            <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
               {records.length === 0
-                ? 'Records appear after completed appointments'
-                : 'Try different search terms'}
+                ? 'Your medical records will appear here after you complete appointments with healthcare providers.'
+                : `No records match "${search}". Try a different search term.`}
             </p>
             {records.length === 0 ? (
               <button onClick={() => navigate('/patient/browse-services')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors">
-                Book Consultation
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold rounded-2xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl active:scale-95">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Book a Consultation
               </button>
             ) : (
               <button onClick={() => setSearch('')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-600 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-colors">
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 text-sm font-bold rounded-2xl hover:bg-gray-200 transition-colors">
                 Clear Search
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {filtered.map((record: any) => (
-              <RecordCard
-                key={record.id || record._id}
-                record={record}
-                onView={() => setSelectedRecord(record)}
-              />
-            ))}
-          </div>
+          <>
+            {search && (
+              <p className="text-sm text-gray-500 px-1">
+                {filtered.length} result{filtered.length !== 1 ? 's' : ''} for "<span className="font-semibold text-gray-700">{search}</span>"
+              </p>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filtered.map((record: any, i: number) => (
+                <RecordCard
+                  key={record.id || record._id}
+                  record={record}
+                  index={i}
+                  onView={() => setSelectedRecord(record)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
