@@ -1,9 +1,12 @@
 // Formatting utility functions
 
 /**
- * Format currency amount
+ * Format currency amount — defaults to Nigerian Naira (NGN)
  */
-export const formatCurrency = (amount: number, currency: string = 'USD'): string => {
+export const formatCurrency = (amount: number, currency: string = 'NGN'): string => {
+  if (currency === 'NGN') {
+    return `₦${amount.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,

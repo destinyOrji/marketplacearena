@@ -166,10 +166,16 @@ exports.register = async (req, res) => {
                 });
             } else if (userRole === 'hospital') {
                 const Hospital = require('../models/Hospital');
+                // Ensure registrationNumber is unique — append timestamp if duplicate
+                let regNum = registrationNumber || `REG-${Date.now()}`;
+                const existingHospital = await Hospital.findOne({ registrationNumber: regNum });
+                if (existingHospital) {
+                    regNum = `${regNum}-${Date.now()}`;
+                }
                 await Hospital.create({
                     user: user._id,
                     hospitalName: hospitalName || `${firstName} ${lastName}`,
-                    registrationNumber: registrationNumber || `REG-${Date.now()}`,
+                    registrationNumber: regNum,
                     hospitalType: hospitalType || 'General Hospital',
                     phone: phone || '',
                     email: email,
@@ -181,11 +187,16 @@ exports.register = async (req, res) => {
                 });
             } else if (userRole === 'ambulance') {
                 const Ambulance = require('../models/Ambulance');
+                let ambRegNum = registrationNumber || `AMB-${Date.now()}`;
+                const existingAmb = await Ambulance.findOne({ registrationNumber: ambRegNum });
+                if (existingAmb) {
+                    ambRegNum = `${ambRegNum}-${Date.now()}`;
+                }
                 await Ambulance.create({
                     user: user._id,
                     serviceName: serviceName || `${firstName} ${lastName}`,
                     emergencyNumber: emergencyNumber || phone,
-                    registrationNumber: registrationNumber || `AMB-${Date.now()}`,
+                    registrationNumber: ambRegNum,
                     serviceType: serviceType || 'Basic Life Support (BLS)',
                     phone: phone || '',
                     baseAddress: {

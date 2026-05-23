@@ -1000,17 +1000,6 @@ router.post('/change-password', protect, async (req, res) => {
 // Settings
 router.get('/settings', protect, async (req, res) => {
     res.json({ success: true, data: { notifications: { email: true, sms: true, inApp: true, jobAlerts: true }, privacy: { profileVisibility: 'public', showRatings: true } } });
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await User.findById(req.user._id);
-        const isValid = await user.comparePassword(currentPassword);
-        if (!isValid) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
-        user.password = newPassword;
-        await user.save();
-        res.json({ success: true, message: 'Password changed successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
 });
 
 // Change password

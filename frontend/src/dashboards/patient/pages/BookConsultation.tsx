@@ -5,6 +5,7 @@ import { servicesApi, appointmentsApi } from '../services/api';
 import { ServiceProvider, TimeSlot } from '../types';
 import { showSuccessToast, showErrorToast, showWarningToast, showInfoToast } from '../utils/toast';
 import { format, addDays, startOfDay, isSameDay } from 'date-fns';
+import apiClient from '../services/apiClient';
 
 // ─── Provider Avatar ──────────────────────────────────────────────────────────
 const Avatar: React.FC<{ name: string; photo?: string | null; size?: string }> = ({
@@ -79,8 +80,24 @@ const BookConsultation: React.FC = () => {
   const [updatingSlots, setUpdatingSlots] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [confirmedAppointment, setConfirmedAppointment] = useState<any>(null);
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null); // null = not checked yet
+  const [showSubGate, setShowSubGate] = useState(false);
 
   const calendarDays = Array.from({ length: 30 }, (_, i) => addDays(startOfDay(new Date()), i));
+
+  // Check subscription status on mount
+  useEffect(() => {
+    apiClient.get('/subscriptions/status')
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        const active = data?.isActive || data?.status === 'active' || data?.hasActiveSubscription;
+        setHasSubscription(!!active);
+      })
+      .catch(() => {
+        // If endpoint fails, let the backend enforce it on booking
+        setHasSubscription(null);
+      });
+  }, []);
 
   useEffect(() => {
     if (!preSelectedProviderId) fetchProviders();
@@ -143,6 +160,13 @@ const BookConsultation: React.FC = () => {
 
   const handleConfirmBooking = async () => {
     if (!selectedProvider || !selectedTimeSlot || !selectedDate) return;
+
+    // Subscription gate — show modal if we know they don't have one
+    if (hasSubscription === false) {
+      setShowSubGate(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await appointmentsApi.createAppointment({
@@ -160,8 +184,9 @@ const BookConsultation: React.FC = () => {
       else setTimeout(() => navigate('/patient/appointments'), 1500);
     } catch (err: any) {
       if (err.response?.status === 403) {
-        showErrorToast('Subscription required. Redirecting...', { autoClose: 3000 });
-        setTimeout(() => navigate('/patient/subscription'), 2000);
+        // Backend confirmed no subscription
+        setHasSubscription(false);
+        setShowSubGate(true);
       } else if (err.response?.status === 409) {
         showErrorToast('Slot just booked. Please pick another time.');
         fetchTimeSlots(); setSelectedTimeSlot(null); setStep('datetime');
@@ -480,6 +505,37 @@ const BookConsultation: React.FC = () => {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Subscription Gate Modal */}
+        {showSubGate && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            onClick={e => { if (e.target === e.currentTarget) setShowSubGate(false); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Subscription Required</h3>
+              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                You need an active subscription plan to book consultations with healthcare professionals.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowSubGate(false)}
+                  className="flex-1 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => navigate('/patient/subscription')}
+                  className="flex-1 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors">
+                  View Plans →
+                </button>
+              </div>
             </div>
           </div>
         )}
