@@ -16,6 +16,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Subscription = lazy(() => import('./pages/Subscription'));
 const Notifications = lazy(() => import('./pages/Notifications'));
+const ClientRecords = lazy(() => import('./pages/ClientRecords'));
 const VideoCall = lazy(() => import('./pages/VideoCall'));
 
 // Loading component
@@ -45,6 +46,7 @@ const GymPhysioRoutes: React.FC = () => {
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/client-records" element={<ClientRecords />} />
         </Route>
         {/* Video call is full-screen — outside DashboardLayout */}
         <Route path="/video-call/:appointmentId" element={<VideoCall />} />

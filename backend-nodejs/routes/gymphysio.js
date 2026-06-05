@@ -1350,4 +1350,115 @@ router.post('/services/upload-images', protect, upload.array('images', 5), async
     }
 });
 
+// ─── Client Records ───────────────────────────────────────────────────────────
+
+// GET /gym-physio/client-records — fetch completed sessions with notes
+router.get('/client-records', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.json({ success: true, data: [], pagination: { total: 0 } });
+        }
+
+        const { search, limit = 50, page = 1 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Base query: completed appointments for this gym/physio
+        const query = {
+            gymPhysio: gymPhysio._id,
+            status: 'completed'
+        };
+
+        const appointments = await Appointment.find(query)
+            .populate({
+                path: 'client',
+                populate: { path: 'user', select: 'firstName lastName email phone' }
+            })
+            .populate('service', 'title category')
+            .sort({ scheduledDate: -1 });
+
+        // Build records array
+        let records = appointments.map(apt => {
+            const firstName = apt.client?.user?.firstName || '';
+            const lastName = apt.client?.user?.lastName || '';
+            const fullName = `${firstName} ${lastName}`.trim() || 'Client';
+            const initials = (firstName.charAt(0) + (lastName.charAt(0) || '')).toUpperCase() || 'C';
+
+            return {
+                id: apt._id.toString(),
+                date: apt.scheduledDate,
+                service: apt.service?.title || 'Session',
+                sessionType: apt.service?.category || apt.reasonForVisit || '',
+                appointmentMode: apt.appointmentMode || 'in_person',
+                fee: apt.consultationFee || apt.service?.price || 0,
+                paymentStatus: apt.paymentStatus || 'pending',
+                notes: apt.sessionNotes || apt.professionalNotes || '',
+                exercises: apt.exercises || [],
+                client: {
+                    id: apt.client?._id?.toString() || '',
+                    name: fullName,
+                    initials,
+                    email: apt.client?.user?.email || '',
+                    phone: apt.client?.user?.phone || apt.client?.phone || ''
+                }
+            };
+        });
+
+        // Client-side search filter
+        if (search) {
+            const q = search.toLowerCase();
+            records = records.filter(r =>
+                r.client.name.toLowerCase().includes(q) ||
+                r.service.toLowerCase().includes(q) ||
+                r.sessionType.toLowerCase().includes(q) ||
+                r.notes.toLowerCase().includes(q)
+            );
+        }
+
+        const total = records.length;
+        const paginated = records.slice(skip, skip + parseInt(limit));
+
+        res.json({
+            success: true,
+            data: paginated,
+            pagination: { total, page: parseInt(page), limit: parseInt(limit) }
+        });
+    } catch (error) {
+        console.error('Client records error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /gym-physio/client-records/:id/notes — save session notes & exercise plan
+router.put('/client-records/:id/notes', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+
+        const { notes, exercises } = req.body;
+
+        const apt = await Appointment.findOneAndUpdate(
+            { _id: req.params.id, gymPhysio: gymPhysio._id },
+            {
+                $set: {
+                    sessionNotes: notes || '',
+                    exercises: Array.isArray(exercises) ? exercises : []
+                }
+            },
+            { new: true }
+        );
+
+        if (!apt) {
+            return res.status(404).json({ success: false, message: 'Record not found' });
+        }
+
+        res.json({ success: true, message: 'Notes saved successfully' });
+    } catch (error) {
+        console.error('Save notes error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;

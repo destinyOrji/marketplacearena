@@ -73,6 +73,13 @@ const appointmentSchema = new mongoose.Schema({
     symptoms: [String],
     clientNotes: String,
     professionalNotes: String,
+    sessionNotes: String,  // Gym/Physio session notes
+    exercises: [{          // Gym/Physio exercise plan
+        name: String,
+        sets: String,
+        reps: String,
+        duration: String
+    }],
     
     // Payment Information
     consultationFee: {

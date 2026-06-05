@@ -19,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Profile', path: '/gym-physio/profile', icon: '👤' },
     { name: 'My Services', path: '/gym-physio/services', icon: '💪' },
     { name: 'Appointments', path: '/gym-physio/appointments', icon: '📅' },
+    { name: 'Client Records', path: '/gym-physio/client-records', icon: '📋' },
     { name: 'Record Sessions', path: '/gym-physio/record-appointment', icon: '🎥' },
     { name: 'Schedule', path: '/gym-physio/schedule', icon: '⏰' },
     { name: 'Payments', path: '/gym-physio/payments', icon: '💰' },
