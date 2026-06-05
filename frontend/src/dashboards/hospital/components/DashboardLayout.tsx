@@ -12,6 +12,7 @@ import {
   FiMenu,
   FiX,
   FiLogOut,
+  FiBarChart2,
 } from 'react-icons/fi';
 import { useHospital } from '../contexts/HospitalContext';
 
@@ -129,11 +130,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/hospital/dashboard', icon: FiHome },
-    { name: 'Profile', href: '/hospital/profile', icon: FiUser },
-    { name: 'Vacancies', href: '/hospital/vacancies', icon: FiFileText },
+    { name: 'Dashboard',    href: '/hospital/dashboard',    icon: FiHome },
+    { name: 'Profile',      href: '/hospital/profile',      icon: FiUser },
+    { name: 'Vacancies',    href: '/hospital/vacancies',    icon: FiFileText },
     { name: 'Applications', href: '/hospital/applications', icon: FiFileText },
-    { name: 'Billing', href: '/hospital/billing', icon: FiCreditCard },
+    { name: 'Analytics',    href: '/hospital/analytics',    icon: FiBarChart2 },
+    { name: 'Billing',      href: '/hospital/billing',      icon: FiCreditCard },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -257,7 +259,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             {/* Page title */}
             <div className="flex flex-1 items-center">
               <h2 className="text-lg font-semibold text-gray-900">
-                {navigation.find((item) => isActive(item.href))?.name || 'Hospital Dashboard'}
+                {navigation.find((item) => location.pathname.startsWith(item.href))?.name || 'Hospital Dashboard'}
               </h2>
             </div>
 

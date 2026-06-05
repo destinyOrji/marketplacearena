@@ -776,128 +776,57 @@ router.get('/analytics', protect, async (req, res) => {
         if (!gymPhysio) {
             return res.json({ 
                 success: true, 
-                data: { 
-                    totalBookings: 0, 
-                    completedBookings: 0,
-                    cancelledBookings: 0,
-                    completionRate: 0, 
-                    averageRating: 0, 
-                    totalReviews: 0, 
-                    activeServices: 0, 
-                    totalRevenue: 0,
-                    popularServices: [] 
-                } 
+                data: { totalBookings: 0, completedBookings: 0, cancelledBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, activeServices: 0, totalRevenue: 0, popularServices: [] }
             });
         }
 
-        // Get actual appointment counts
-        const totalBookings = await Appointment.countDocuments({ gymPhysio: gymPhysio._id });
-        const completedBookings = await Appointment.countDocuments({ gymPhysio: gymPhysio._id, status: 'completed' });
-        const cancelledBookings = await Appointment.countDocuments({ gymPhysio: gymPhysio._id, status: 'cancelled' });
-        
-        const completionRate = totalBookings > 0
-            ? Math.round((completedBookings / totalBookings) * 100) : 0;
+        const { period = 'month' } = req.query;
+        const now = new Date();
+        const cutoff = new Date();
+        if (period === 'week') cutoff.setDate(now.getDate() - 7);
+        else if (period === 'month') cutoff.setMonth(now.getMonth() - 1);
+        else if (period === 'quarter') cutoff.setMonth(now.getMonth() - 3);
+        else cutoff.setFullYear(now.getFullYear() - 1);
 
-        // Get active services count
-        const activeServices = await Service.countDocuments({ 
-            $or: [
-                { professional: gymPhysio._id },
-                { gymPhysio: gymPhysio._id }
-            ],
-            status: 'active' 
+        const periodQuery = { gymPhysio: gymPhysio._id, createdAt: { $gte: cutoff } };
+
+        const totalBookings = await Appointment.countDocuments(periodQuery);
+        const completedBookings = await Appointment.countDocuments({ ...periodQuery, status: 'completed' });
+        const cancelledBookings = await Appointment.countDocuments({ ...periodQuery, status: 'cancelled' });
+        const completionRate = totalBookings > 0 ? Math.round((completedBookings / totalBookings) * 100) : 0;
+
+        const activeServices = await Service.countDocuments({
+            $or: [{ professional: gymPhysio._id }, { gymPhysio: gymPhysio._id }],
+            status: 'active'
         });
 
-        // Get all services with booking counts
-        const services = await Service.find({ 
-            $or: [
-                { professional: gymPhysio._id },
-                { gymPhysio: gymPhysio._id }
-            ]
-        }).sort({ bookingCount: -1 }).limit(10);
+        const paidApts = await Appointment.find({ ...periodQuery, status: 'completed', paymentStatus: 'paid' });
+        const totalRevenue = paidApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
 
-        // Calculate revenue from completed appointments
-        const completedApts = await Appointment.find({ 
-            gymPhysio: gymPhysio._id, 
-            status: 'completed',
-            paymentStatus: 'paid'
-        });
-        const totalRevenue = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
+        const services = await Service.find({ $or: [{ professional: gymPhysio._id }, { gymPhysio: gymPhysio._id }] });
 
-        // Build popular services with actual data
-        const popularServices = await Promise.all(services.map(async (s) => {
-            // Count appointments for this service
-            const serviceBookings = await Appointment.countDocuments({ 
-                gymPhysio: gymPhysio._id,
-                service: s._id
-            });
-
-            // Calculate revenue for this service
-            const serviceApts = await Appointment.find({ 
-                gymPhysio: gymPhysio._id,
-                service: s._id,
-                status: 'completed',
-                paymentStatus: 'paid'
-            });
+        const popularServicesRaw = await Promise.all(services.map(async (s) => {
+            const serviceBookings = await Appointment.countDocuments({ ...periodQuery, service: s._id });
+            const serviceApts = await Appointment.find({ ...periodQuery, service: s._id, status: 'completed', paymentStatus: 'paid' });
             const serviceRevenue = serviceApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
-
-            // Get average rating for this service
-            const ratedApts = await Appointment.find({ 
-                gymPhysio: gymPhysio._id,
-                service: s._id,
-                clientRating: { $exists: true, $ne: null }
-            });
-            const avgRating = ratedApts.length > 0
-                ? ratedApts.reduce((sum, apt) => sum + (apt.clientRating || 0), 0) / ratedApts.length
-                : 0;
-
-            return {
-                serviceId: s._id,
-                serviceName: s.title,
-                title: s.title,
-                bookings: serviceBookings,
-                revenue: serviceRevenue,
-                averageRating: avgRating
-            };
+            const ratedApts = await Appointment.find({ ...periodQuery, service: s._id, clientRating: { $exists: true, $ne: null } });
+            const avgRating = ratedApts.length > 0 ? ratedApts.reduce((sum, apt) => sum + (apt.clientRating || 0), 0) / ratedApts.length : 0;
+            return { serviceId: s._id, serviceName: s.title, title: s.title, bookings: serviceBookings, revenue: serviceRevenue, averageRating: avgRating };
         }));
 
-        // Sort by bookings and take top 5
-        popularServices.sort((a, b) => b.bookings - a.bookings);
-        const topServices = popularServices.slice(0, 5);
+        const popularServices = popularServicesRaw.sort((a, b) => b.bookings - a.bookings).slice(0, 5);
 
         res.json({
             success: true,
-            data: {
-                totalBookings,
-                completedBookings,
-                cancelledBookings,
-                completionRate,
-                averageRating: gymPhysio.averageRating || 0,
-                totalReviews: gymPhysio.totalReviews || 0,
-                activeServices,
-                totalRevenue,
-                popularServices: topServices
-            }
+            data: { totalBookings, completedBookings, cancelledBookings, completionRate, averageRating: gymPhysio.averageRating || 0, totalReviews: gymPhysio.totalReviews || 0, activeServices, totalRevenue, popularServices }
         });
     } catch (error) {
-        console.error('Analytics error:', error);
-        res.json({ 
-            success: true, 
-            data: { 
-                totalBookings: 0, 
-                completedBookings: 0,
-                cancelledBookings: 0,
-                completionRate: 0, 
-                averageRating: 0, 
-                totalReviews: 0, 
-                activeServices: 0, 
-                totalRevenue: 0,
-                popularServices: [] 
-            } 
-        });
+        console.error('Gym-physio analytics error:', error);
+        res.json({ success: true, data: { totalBookings: 0, completedBookings: 0, cancelledBookings: 0, completionRate: 0, averageRating: 0, totalReviews: 0, activeServices: 0, totalRevenue: 0, popularServices: [] } });
     }
 });
 
-// Payments - Get payment history
+// Payments - Get payment history// Payments - Get payment history
 router.get('/payments', protect, async (req, res) => {
     try {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });

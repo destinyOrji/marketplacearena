@@ -953,4 +953,141 @@ router.put('/profile/password', protect, async (req, res) => {
     }
 });
 
+// ─── Hospital Analytics ────────────────────────────────────────────────────────
+router.get('/analytics', protect, async (req, res) => {
+    try {
+        const Job = require('../models/Job');
+        const JobApplication = require('../models/JobApplication');
+
+        const hospital = await Hospital.findOne({ user: req.user._id });
+        if (!hospital) {
+            return res.json({
+                success: true,
+                data: {
+                    totalVacancies: 0, activeVacancies: 0, closedVacancies: 0,
+                    totalApplications: 0, pendingApplications: 0, shortlistedApplications: 0,
+                    acceptedApplications: 0, rejectedApplications: 0,
+                    acceptanceRate: 0, fillRate: 0,
+                    bedOccupancyRate: 0, totalBeds: 0, availableBeds: 0, icuBeds: 0,
+                    averageRating: 0, totalReviews: 0,
+                    topDepartments: [], vacancyTrend: []
+                }
+            });
+        }
+
+        const { period = 'month' } = req.query;
+        const now = new Date();
+        const cutoff = new Date();
+        if (period === 'week') cutoff.setDate(now.getDate() - 7);
+        else if (period === 'month') cutoff.setMonth(now.getMonth() - 1);
+        else if (period === 'quarter') cutoff.setMonth(now.getMonth() - 3);
+        else cutoff.setFullYear(now.getFullYear() - 1);
+
+        // All-time job counts
+        const allJobs      = await Job.find({ hospital: hospital._id });
+        const jobIds       = allJobs.map(j => j._id);
+        const totalVacancies   = allJobs.length;
+        const activeVacancies  = allJobs.filter(j => j.status === 'active').length;
+        const closedVacancies  = allJobs.filter(j => j.status !== 'active').length;
+
+        // Period job counts
+        const periodJobs   = allJobs.filter(j => new Date(j.createdAt) >= cutoff);
+        const periodJobIds = periodJobs.map(j => j._id);
+
+        // Applications within period
+        const periodApps  = await JobApplication.find({ job: { $in: periodJobIds } });
+        const allApps     = await JobApplication.find({ job: { $in: jobIds } });
+
+        const totalApplications      = periodApps.length;
+        const pendingApplications    = periodApps.filter(a => a.status === 'pending').length;
+        const shortlistedApplications = periodApps.filter(a => a.status === 'shortlisted').length;
+        const acceptedApplications   = periodApps.filter(a => a.status === 'accepted' || a.status === 'hired').length;
+        const rejectedApplications   = periodApps.filter(a => a.status === 'rejected').length;
+
+        const acceptanceRate = totalApplications > 0
+            ? Math.round((acceptedApplications / totalApplications) * 100) : 0;
+
+        // Fill rate = active vacancies that got at least one application
+        const vacanciesWithApps = new Set(periodApps.map(a => a.job?.toString())).size;
+        const fillRate = periodJobIds.length > 0
+            ? Math.round((vacanciesWithApps / periodJobIds.length) * 100) : 0;
+
+        // Bed occupancy
+        const totalBeds    = hospital.totalBeds || 0;
+        const availableBeds = hospital.availableBeds || 0;
+        const icuBeds      = hospital.icuBeds || 0;
+        const bedOccupancyRate = totalBeds > 0
+            ? Math.round(((totalBeds - availableBeds) / totalBeds) * 100) : 0;
+
+        // Department breakdown (from all jobs in period)
+        const deptMap: Record<string, number> = {};
+        periodJobs.forEach((j: any) => {
+            const dept = j.department || j.specialty || 'General';
+            deptMap[dept] = (deptMap[dept] || 0) + 1;
+        });
+        const topDepartments = Object.entries(deptMap)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8)
+            .map(([department, vacancies]) => {
+                const deptJobIds = periodJobs
+                    .filter((j: any) => (j.department || j.specialty || 'General') === department)
+                    .map((j: any) => j._id.toString());
+                const deptApps = periodApps.filter(a => deptJobIds.includes(a.job?.toString()));
+                return {
+                    department,
+                    vacancies,
+                    applications: deptApps.length,
+                    accepted: deptApps.filter(a => a.status === 'accepted' || a.status === 'hired').length,
+                };
+            });
+
+        // Monthly trend (last 6 months)
+        const vacancyTrend = [];
+        for (let i = 5; i >= 0; i--) {
+            const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthEnd   = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+            const label = monthStart.toLocaleString('default', { month: 'short', year: '2-digit' });
+            const monthVacancies = allJobs.filter(j => {
+                const d = new Date(j.createdAt);
+                return d >= monthStart && d <= monthEnd;
+            }).length;
+            const monthAppIds = allJobs
+                .filter(j => { const d = new Date(j.createdAt); return d >= monthStart && d <= monthEnd; })
+                .map(j => j._id);
+            const monthApps = await JobApplication.countDocuments({ job: { $in: monthAppIds } });
+            vacancyTrend.push({ label, vacancies: monthVacancies, applications: monthApps });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                totalVacancies, activeVacancies, closedVacancies,
+                totalApplications, pendingApplications, shortlistedApplications,
+                acceptedApplications, rejectedApplications,
+                acceptanceRate, fillRate,
+                bedOccupancyRate, totalBeds, availableBeds, icuBeds,
+                averageRating: hospital.averageRating || 0,
+                totalReviews: hospital.totalReviews || 0,
+                allTimeApplications: allApps.length,
+                topDepartments,
+                vacancyTrend,
+            }
+        });
+    } catch (error) {
+        console.error('Hospital analytics error:', error);
+        res.json({
+            success: true,
+            data: {
+                totalVacancies: 0, activeVacancies: 0, closedVacancies: 0,
+                totalApplications: 0, pendingApplications: 0, shortlistedApplications: 0,
+                acceptedApplications: 0, rejectedApplications: 0,
+                acceptanceRate: 0, fillRate: 0,
+                bedOccupancyRate: 0, totalBeds: 0, availableBeds: 0, icuBeds: 0,
+                averageRating: 0, totalReviews: 0, allTimeApplications: 0,
+                topDepartments: [], vacancyTrend: []
+            }
+        });
+    }
+});
+
 module.exports = router;

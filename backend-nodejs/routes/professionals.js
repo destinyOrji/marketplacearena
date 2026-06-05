@@ -789,31 +789,60 @@ router.get('/payments', protect, async (req, res) => {
 // Analytics
 router.get('/analytics', protect, async (req, res) => {
     try {
+        const Appointment = require('../models/Appointment');
         const professional = await Professional.findOne({ user: req.user._id });
-        if (!professional) return res.json({ success: true, data: { totalAppointments: 0, completionRate: 0, averageRating: 0, totalReviews: 0, responseTime: 0, popularServices: [] } });
+        if (!professional) return res.json({ success: true, data: { totalAppointments: 0, completedAppointments: 0, cancelledAppointments: 0, completionRate: 0, averageRating: 0, totalReviews: 0, totalRevenue: 0, responseTime: 0, popularServices: [] } });
 
-        const services = await Service.find({ professional: professional._id }).sort({ bookingCount: -1 }).limit(5);
-        const popularServices = services.map(s => ({
-            serviceId: s._id,
-            serviceName: s.title,
-            bookings: s.bookingCount || 0,
-            revenue: (s.bookingCount || 0) * (s.price || 0)
+        const { period = 'month' } = req.query;
+        const now = new Date();
+        const cutoff = new Date();
+        if (period === 'week') cutoff.setDate(now.getDate() - 7);
+        else if (period === 'month') cutoff.setMonth(now.getMonth() - 1);
+        else if (period === 'quarter') cutoff.setMonth(now.getMonth() - 3);
+        else cutoff.setFullYear(now.getFullYear() - 1);
+
+        const periodQuery = { professional: professional._id, createdAt: { $gte: cutoff } };
+
+        const [totalAppointments, completedAppointments, cancelledAppointments, paidApts] = await Promise.all([
+            Appointment.countDocuments(periodQuery),
+            Appointment.countDocuments({ ...periodQuery, status: 'completed' }),
+            Appointment.countDocuments({ ...periodQuery, status: 'cancelled' }),
+            Appointment.find({ ...periodQuery, status: 'completed', paymentStatus: 'paid' }),
+        ]);
+
+        const totalRevenue = paidApts.reduce((sum, a) => sum + (a.consultationFee || 0), 0);
+        const completionRate = totalAppointments > 0 ? Math.round((completedAppointments / totalAppointments) * 100) : 0;
+
+        // Popular services by actual appointments in period
+        const services = await Service.find({ professional: professional._id });
+        const popularServicesRaw = await Promise.all(services.map(async (s) => {
+            const serviceBookings = await Appointment.countDocuments({ ...periodQuery, service: s._id });
+            const serviceApts = await Appointment.find({ ...periodQuery, service: s._id, status: 'completed', paymentStatus: 'paid' });
+            const serviceRevenue = serviceApts.reduce((sum, a) => sum + (a.consultationFee || 0), 0);
+            return { serviceId: s._id, serviceName: s.title, bookings: serviceBookings, revenue: serviceRevenue };
         }));
+        const popularServices = popularServicesRaw.filter(s => s.bookings > 0).sort((a, b) => b.bookings - a.bookings).slice(0, 5);
+        // Fallback: if no appointments yet, use service bookingCount
+        const fallbackServices = services.sort((a, b) => (b.bookingCount || 0) - (a.bookingCount || 0)).slice(0, 5)
+            .map(s => ({ serviceId: s._id, serviceName: s.title, bookings: s.bookingCount || 0, revenue: (s.bookingCount || 0) * (s.price || 0) }));
 
         res.json({
             success: true,
             data: {
-                totalAppointments: professional.totalAppointments || 0,
-                completionRate: professional.totalAppointments > 0
-                    ? Math.round((professional.completedAppointments / professional.totalAppointments) * 100) : 0,
+                totalAppointments,
+                completedAppointments,
+                cancelledAppointments,
+                completionRate,
                 averageRating: professional.averageRating || 0,
                 totalReviews: professional.totalReviews || 0,
+                totalRevenue,
                 responseTime: 2,
-                popularServices
+                popularServices: popularServices.length > 0 ? popularServices : fallbackServices,
             }
         });
     } catch (error) {
-        res.json({ success: true, data: { totalAppointments: 0, completionRate: 0, averageRating: 0, totalReviews: 0, responseTime: 0, popularServices: [] } });
+        console.error('Professional analytics error:', error);
+        res.json({ success: true, data: { totalAppointments: 0, completedAppointments: 0, cancelledAppointments: 0, completionRate: 0, averageRating: 0, totalReviews: 0, totalRevenue: 0, responseTime: 0, popularServices: [] } });
     }
 });
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { PerformanceMetrics } from '../types';
-import { analyticsApi } from '../services/api';
 import apiClient from '../services/apiClient';
 import { toast } from 'react-toastify';
 
@@ -25,7 +24,10 @@ const Analytics: React.FC = () => {
         totalReviews: data?.totalReviews || 0,
         responseTime: data?.responseTime || 0,
         popularServices: data?.popularServices || [],
-      });
+        completedAppointments: data?.completedAppointments || 0,
+        cancelledAppointments: data?.cancelledAppointments || 0,
+        totalRevenue: data?.totalRevenue || 0,
+      } as any);
     } catch (error) {
       setMetrics({ totalAppointments: 0, completionRate: 0, averageRating: 0, totalReviews: 0, responseTime: 0, popularServices: [] });
     } finally {
@@ -33,19 +35,34 @@ const Analytics: React.FC = () => {
     }
   };
 
-  const handleExport = async (format: 'pdf' | 'csv') => {
+  const handleExport = (format: 'pdf' | 'csv') => {
+    if (!metrics) { toast.error('No data to export'); return; }
     try {
-      const blob = await analyticsApi.exportReport(format, period);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `analytics-report-${period}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success(`Report exported as ${format.toUpperCase()}`);
-    } catch (error) {
+      if (format === 'csv') {
+        const rows = [
+          ['Metric', 'Value'],
+          ['Total Appointments', metrics.totalAppointments],
+          ['Completion Rate (%)', metrics.completionRate],
+          ['Average Rating', metrics.averageRating.toFixed(1)],
+          ['Total Reviews', metrics.totalReviews],
+          ['Response Time (h)', metrics.responseTime],
+          [],
+          ['Service Name', 'Bookings', 'Revenue'],
+          ...metrics.popularServices.map((s: any) => [s.serviceName, s.bookings, s.revenue]),
+        ];
+        const csv = rows.map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `analytics-${period}.csv`;
+        document.body.appendChild(a); a.click();
+        URL.revokeObjectURL(url); document.body.removeChild(a);
+        toast.success('Report exported as CSV');
+      } else {
+        window.print();
+        toast.success('Print dialog opened for PDF export');
+      }
+    } catch {
       toast.error('Failed to export report');
     }
   };
@@ -166,23 +183,18 @@ const Analytics: React.FC = () => {
               <p className="text-xs text-yellow-700 mt-2">{metrics.totalReviews} reviews</p>
             </div>
 
-            {/* Response Time */}
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-sm border border-purple-200 p-6">
+            {/* Total Revenue */}
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl shadow-sm border border-emerald-200 p-6">
               <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-purple-600 rounded-lg">
+                <div className="p-2 bg-emerald-600 rounded-lg">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <h3 className="text-sm font-medium text-purple-900 mb-1">Avg Response Time</h3>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-purple-900">{metrics.responseTime}</p>
-                <span className="text-purple-700 text-sm">hours</span>
-              </div>
-              <p className="text-xs text-purple-700 mt-2">
-                {metrics.responseTime < 24 ? 'Excellent' : metrics.responseTime < 48 ? 'Good' : 'Needs improvement'}
-              </p>
+              <h3 className="text-sm font-medium text-emerald-900 mb-1">Total Revenue</h3>
+              <p className="text-3xl font-bold text-emerald-900">₦{((metrics as any).totalRevenue || 0).toLocaleString()}</p>
+              <p className="text-xs text-emerald-700 mt-2">This {period}</p>
             </div>
           </div>
 
@@ -260,7 +272,7 @@ const Analytics: React.FC = () => {
                             <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span className="text-sm font-semibold text-green-600">${service.revenue.toLocaleString()}</span>
+                            <span className="text-sm font-semibold text-green-600">₦{service.revenue.toLocaleString()}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -304,6 +316,14 @@ const Analytics: React.FC = () => {
                   <span className="font-semibold text-gray-900">{metrics.totalAppointments}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Completed</span>
+                  <span className="font-semibold text-green-600">{(metrics as any).completedAppointments ?? 0}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">Cancelled</span>
+                  <span className="font-semibold text-red-500">{(metrics as any).cancelledAppointments ?? 0}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm text-gray-600">Success Rate</span>
                   <span className="font-semibold text-green-600">{metrics.completionRate}%</span>
                 </div>
@@ -327,9 +347,9 @@ const Analytics: React.FC = () => {
                   <span className="text-sm text-blue-900">Active Services</span>
                   <span className="font-semibold text-blue-900">{metrics.popularServices.length}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                  <span className="text-sm text-purple-900">Avg Response</span>
-                  <span className="font-semibold text-purple-900">{metrics.responseTime}h</span>
+                <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg">
+                  <span className="text-sm text-emerald-900">Total Revenue</span>
+                  <span className="font-semibold text-emerald-900">₦{((metrics as any).totalRevenue || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <span className="text-sm text-green-900">Total Reviews</span>
