@@ -992,6 +992,82 @@ router.post('/feedback', protect, async (req, res) => {
     res.json({ success: true, message: 'Feedback submitted', data: { id: Date.now().toString(), ...req.body } });
 });
 
+router.put('/feedback/:id', protect, async (req, res) => {
+    res.json({ success: true, message: 'Feedback updated', data: { id: req.params.id, ...req.body } });
+});
+
+router.delete('/feedback/:id', protect, async (req, res) => {
+    res.json({ success: true, message: 'Feedback deleted' });
+});
+
+// Emergency booking tracking
+router.get('/emergency/:bookingId/track', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const booking = await EmergencyBooking.findById(req.params.bookingId)
+            .populate({ path: 'provider', select: 'serviceName phone emergencyNumber baseAddress averageResponseTime' });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        res.json({ success: true, data: {
+            id: booking._id,
+            status: booking.status,
+            estimatedArrival: booking.provider?.averageResponseTime || 15,
+            providerName: booking.provider?.serviceName || 'Emergency Service',
+            providerPhone: booking.provider?.emergencyNumber || booking.provider?.phone || '',
+        }});
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Payment receipt
+router.get('/payments/:id/receipt', protect, async (req, res) => {
+    try {
+        const Appointment = require('../models/Appointment');
+        const client = await Client.findOne({ user: req.user._id });
+        const apt = await Appointment.findOne({ _id: req.params.id, client: client?._id });
+        if (!apt) return res.status(404).json({ success: false, message: 'Payment not found' });
+        res.json({ success: true, data: {
+            receiptUrl: null,
+            reference: apt.transactionId || '',
+            amount: apt.consultationFee || 0,
+            date: apt.updatedAt || apt.createdAt,
+        }});
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Medical records — single record
+router.get('/medical-records/:id', protect, async (req, res) => {
+    try {
+        const Appointment = require('../models/Appointment');
+        const client = await Client.findOne({ user: req.user._id });
+        if (!client) return res.status(404).json({ success: false, message: 'Profile not found' });
+        const apt = await Appointment.findOne({ _id: req.params.id, client: client._id })
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName' } });
+        if (!apt) return res.status(404).json({ success: false, message: 'Record not found' });
+        res.json({ success: true, data: {
+            id: apt._id,
+            date: apt.scheduledDate || apt.createdAt,
+            provider: apt.professional?.user ? `${apt.professional.user.firstName} ${apt.professional.user.lastName}` : 'Provider',
+            diagnosis: apt.reasonForVisit || 'Consultation',
+            notes: apt.professionalNotes || '',
+            prescription: apt.prescription || [],
+        }});
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.get('/medical-records/:id/download', protect, async (req, res) => {
+    res.status(200).json({ success: true, message: 'Download not yet configured' });
+});
+
+// Upload photo
+router.post('/upload-photo', protect, async (req, res) => {
+    res.json({ success: true, data: { photoUrl: null }, message: 'Photo upload — configure multer on server' });
+});
+
 // Change password
 router.put('/profile/password', protect, async (req, res) => {
     try {

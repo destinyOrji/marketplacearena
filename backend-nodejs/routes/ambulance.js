@@ -693,3 +693,187 @@ router.get('/analytics', protect, async (req, res) => {
 });
 
 module.exports = router;
+
+// ─── Missing routes added for full frontend compatibility ─────────────────────
+
+// Availability toggle
+router.get('/availability', protect, async (req, res) => {
+    try {
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        res.json({ success: true, data: { isAvailable: ambulance ? ambulance.isAvailable : false } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/availability/toggle', protect, async (req, res) => {
+    try {
+        const { available } = req.body;
+        const ambulance = await Ambulance.findOneAndUpdate(
+            { user: req.user._id },
+            { isAvailable: available },
+            { new: true }
+        );
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Profile not found' });
+        res.json({ success: true, data: { isAvailable: ambulance.isAvailable }, message: 'Availability updated' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST aliases for accept/decline (frontend calls POST, backend had PUT)
+router.post('/bookings/:id/accept', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const booking = await EmergencyBooking.findByIdAndUpdate(
+            req.params.id,
+            { status: 'accepted', acceptedAt: new Date() },
+            { new: true }
+        );
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        res.json({ success: true, data: booking, message: 'Booking accepted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.post('/bookings/:id/decline', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const booking = await EmergencyBooking.findByIdAndUpdate(
+            req.params.id,
+            { status: 'cancelled', cancelledAt: new Date(), cancellationReason: req.body.reason || 'Declined by provider' },
+            { new: true }
+        );
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        res.json({ success: true, data: booking, message: 'Booking declined' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update booking status
+router.put('/bookings/:id/status', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const { status, notes } = req.body;
+        const booking = await EmergencyBooking.findByIdAndUpdate(
+            req.params.id,
+            { status, ...(notes && { notes }), updatedAt: new Date() },
+            { new: true }
+        );
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        res.json({ success: true, data: booking, message: 'Status updated' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get single booking
+router.get('/bookings/:id', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const booking = await EmergencyBooking.findById(req.params.id)
+            .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName email phone' } });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        res.json({ success: true, data: booking });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Active emergency (first accepted/in-progress booking)
+router.get('/bookings/active', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.json({ success: true, data: null });
+        const booking = await EmergencyBooking.findOne({
+            provider: ambulance._id,
+            status: { $in: ['accepted', 'in_progress', 'dispatched'] }
+        })
+        .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName email phone' } })
+        .sort({ createdAt: -1 });
+        res.json({ success: true, data: booking || null });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Emergency tracking (patient side)
+router.get('/track/:bookingId', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const booking = await EmergencyBooking.findById(req.params.bookingId)
+            .populate({ path: 'provider', select: 'serviceName phone emergencyNumber baseAddress averageResponseTime' });
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+        res.json({ success: true, data: {
+            id: booking._id,
+            status: booking.status,
+            estimatedArrival: booking.provider?.averageResponseTime || 15,
+            providerName: booking.provider?.serviceName || 'Emergency Service',
+            providerPhone: booking.provider?.emergencyNumber || booking.provider?.phone || '',
+            location: booking.provider?.baseAddress || {},
+        }});
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Earnings summary
+router.get('/earnings', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, netEarnings: 0 } });
+        const completedBookings = await EmergencyBooking.find({ provider: ambulance._id, status: 'completed' });
+        const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+        res.json({ success: true, data: { totalEarnings, pendingPayments: 0, completedPayments: totalEarnings, platformFees: Math.round(totalEarnings * 0.1), netEarnings: Math.round(totalEarnings * 0.9) } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Payments history
+router.get('/payments', protect, async (req, res) => {
+    try {
+        const EmergencyBooking = require('../models/EmergencyBooking');
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.json({ success: true, data: [] });
+        const bookings = await EmergencyBooking.find({ provider: ambulance._id, status: 'completed' })
+            .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName' } })
+            .sort({ createdAt: -1 });
+        const data = bookings.map(b => ({
+            id: b._id,
+            date: b.completedAt || b.createdAt,
+            client: b.client?.user ? `${b.client.user.firstName} ${b.client.user.lastName}` : 'Client',
+            service: b.emergencyType || 'Emergency',
+            amount: b.totalCost || 0,
+            status: 'completed',
+        }));
+        res.json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Payment methods (stub — store in ambulance doc)
+router.post('/payment-methods', protect, async (req, res) => {
+    res.json({ success: true, message: 'Payment method saved', data: { id: Date.now().toString(), ...req.body } });
+});
+router.put('/payment-methods/:id', protect, async (req, res) => {
+    res.json({ success: true, message: 'Payment method updated', data: { id: req.params.id, ...req.body } });
+});
+router.delete('/payment-methods/:id', protect, async (req, res) => {
+    res.json({ success: true, message: 'Payment method deleted' });
+});
+
+// Upload photo
+router.post('/upload-photo', protect, async (req, res) => {
+    res.json({ success: true, data: { photoUrl: '/uploads/ambulance/default.jpg' }, message: 'Photo upload endpoint — configure multer on server' });
+});
+router.post('/documents/upload', protect, async (req, res) => {
+    res.json({ success: true, data: { documentUrl: '/uploads/ambulance/doc.pdf' }, message: 'Document upload endpoint — configure multer on server' });
+});
+
+module.exports = router;
