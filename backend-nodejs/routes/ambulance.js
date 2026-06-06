@@ -692,8 +692,6 @@ router.get('/analytics', protect, async (req, res) => {
     }
 });
 
-module.exports = router;
-
 // ─── Missing routes added for full frontend compatibility ─────────────────────
 
 // Availability toggle

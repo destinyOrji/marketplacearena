@@ -1049,4 +1049,138 @@ router.post('/change-password', protect, async (req, res) => {
     }
 });
 
+// ─── Additional routes for full frontend compatibility ────────────────────────
+
+// Profile password change (PUT /professionals/profile/password)
+router.put('/profile/password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Both passwords are required' });
+        }
+        const user = await User.findById(req.user._id);
+        const isValid = await user.comparePassword(currentPassword);
+        if (!isValid) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+        user.password = newPassword;
+        await user.save();
+        res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Job-applications alias (frontend calls /job-applications instead of /applications)
+router.get('/job-applications', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const professional = await Professional.findOne({ user: req.user._id });
+        if (!professional) return res.json({ success: true, data: [] });
+
+        const applications = await JobApplication.find({ professional: professional._id })
+            .populate({
+                path: 'job',
+                populate: { path: 'hospital', select: 'hospitalName address' }
+            })
+            .sort({ createdAt: -1 });
+
+        const data = applications.map(app => ({
+            id: app._id,
+            status: app.status,
+            coverLetter: app.coverLetter,
+            appliedDate: app.createdAt,
+            reviewedAt: app.reviewedAt,
+            reviewNotes: app.reviewNotes,
+            offerDetails: app.offerDetails || null,
+            job: {
+                id: app.job?._id,
+                title: app.job?.jobTitle || 'N/A',
+                specialty: app.job?.department || '',
+                location: [app.job?.hospital?.address?.city, app.job?.hospital?.address?.state].filter(Boolean).join(', ') || 'On-site',
+                jobType: (app.job?.employmentType || 'full_time').replace(/_/g, '-'),
+                hospitalName: app.job?.hospital?.hospitalName || '',
+                compensation: {
+                    type: app.job?.salaryRangeMin ? 'fixed' : 'negotiable',
+                    amount: app.job?.salaryRangeMin
+                }
+            }
+        }));
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Get job-applications error:', error);
+        res.json({ success: true, data: [] });
+    }
+});
+
+// Accept job offer (PUT /professionals/job-applications/:id/accept)
+router.put('/job-applications/:id/accept', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const app = await JobApplication.findByIdAndUpdate(
+            req.params.id,
+            { status: 'accepted', acceptedAt: new Date() },
+            { new: true }
+        );
+        if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+        res.json({ success: true, data: app, message: 'Offer accepted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Decline job offer (PUT /professionals/job-applications/:id/decline)
+router.put('/job-applications/:id/decline', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const app = await JobApplication.findByIdAndUpdate(
+            req.params.id,
+            { status: 'declined', declinedAt: new Date(), declineReason: req.body.reason || '' },
+            { new: true }
+        );
+        if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+        res.json({ success: true, data: app, message: 'Offer declined' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Payments list (GET /professionals/payments)
+router.get('/payments', protect, async (req, res) => {
+    try {
+        const professional = await Professional.findOne({ user: req.user._id });
+        if (!professional) return res.json({ success: true, data: [] });
+
+        const completedApts = await Appointment.find({
+            professional: professional._id,
+            status: 'completed',
+            paymentStatus: 'paid',
+        })
+            .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName' } })
+            .populate('service', 'title')
+            .sort({ completedAt: -1 });
+
+        const data = completedApts.map(apt => {
+            const gross = apt.consultationFee || 0;
+            const fee = Math.round(gross * 0.10);
+            return {
+                _id: apt._id,
+                date: apt.completedAt || apt.scheduledDate,
+                patient: apt.client?.user ? `${apt.client.user.firstName} ${apt.client.user.lastName}`.trim() : 'Patient',
+                service: apt.service?.title || apt.reasonForVisit || 'Consultation',
+                grossAmount: gross,
+                amount: gross,
+                platformFee: fee,
+                netAmount: gross - fee,
+                status: 'completed',
+                transactionId: apt.transactionId || '',
+            };
+        });
+
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Professional payments error:', error);
+        res.json({ success: true, data: [] });
+    }
+});
+
 module.exports = router;

@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { getEarnings, getPayments } from '../services/api';
-import axios from 'axios';
+import apiClient from '../services/api';
 import { format } from 'date-fns';
-
-const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
-const PLATFORM_FEE = 0.10;
+import { toast } from 'react-toastify';
 
 type ActiveTab = 'earnings' | 'bank';
 
@@ -22,8 +20,8 @@ const PaymentsEarnings: React.FC = () => {
     Promise.all([
       getEarnings().then(setEarnings).catch(() => {}),
       getPayments().then(d => setPayments(Array.isArray(d) ? d : [])).catch(() => {}),
-      axios.get(`${API_URL}/gym-physio/bank-account`, { headers: { Authorization: `Bearer ${getToken()}` } })
-        .then(r => { const b = r.data?.data || {}; setBankAccount({ bankName: b.bankName || '', accountNumber: b.accountNumber || '', accountName: b.accountName || '', bankCode: b.bankCode || '' }); })
+      apiClient.get('/gym-physio/bank-account')
+        .then((r: any) => { const b = r.data?.data || {}; setBankAccount({ bankName: b.bankName || '', accountNumber: b.accountNumber || '', accountName: b.accountName || '', bankCode: b.bankCode || '' }); })
         .catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
@@ -31,10 +29,10 @@ const PaymentsEarnings: React.FC = () => {
   const saveBankAccount = async () => {
     setSavingBank(true);
     try {
-      await axios.put(`${API_URL}/gym-physio/bank-account`, bankAccount, { headers: { Authorization: `Bearer ${getToken()}` } });
-      alert('Bank account saved successfully');
+      await apiClient.put('/gym-physio/bank-account', bankAccount);
+      toast.success('Bank account saved successfully');
     } catch {
-      alert('Failed to save bank account');
+      toast.error('Failed to save bank account');
     } finally {
       setSavingBank(false);
     }

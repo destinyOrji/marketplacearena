@@ -89,8 +89,10 @@ const BrowseGymPhysio: React.FC = () => {
       );
       
       setServices(gymPhysioOnly);
-      setTotalPages(Math.ceil(gymPhysioOnly.length / pageSize) || 1);
-      setTotalResults(gymPhysioOnly.length);
+      // Use server pagination if available, otherwise compute from filtered results
+      const serverTotalPages = resData.totalPages ?? Math.ceil((resData.total ?? gymPhysioOnly.length) / pageSize);
+      setTotalPages(serverTotalPages || 1);
+      setTotalResults(resData.total ?? gymPhysioOnly.length);
     } catch (err: any) {
       console.error('Error fetching gym/physio services:', err);
       setError('Failed to load gym & physiotherapy services. Please try again.');

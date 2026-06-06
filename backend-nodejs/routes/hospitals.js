@@ -1090,4 +1090,147 @@ router.get('/analytics', protect, async (req, res) => {
     }
 });
 
+// ─── Missing hospital routes for full frontend compatibility ──────────────────
+
+// Onboarding (alias for profile update)
+router.post('/onboarding', protect, async (req, res) => {
+    try {
+        const hospital = await Hospital.findOneAndUpdate(
+            { user: req.user._id },
+            { $set: req.body },
+            { new: true, upsert: false }
+        );
+        if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
+        res.json({ success: true, data: hospital, message: 'Onboarding completed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Image upload (logo / facility photo)
+router.post('/upload-image', protect, async (req, res) => {
+    // Without multer configured, acknowledge gracefully
+    res.json({ success: true, data: { image_url: null }, message: 'Image upload — configure multer on server' });
+});
+
+// Application detail
+router.get('/applications/:id', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const hospital = await Hospital.findOne({ user: req.user._id });
+        if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
+
+        const app = await JobApplication.findById(req.params.id)
+            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email phone' } })
+            .populate({ path: 'job', select: 'jobTitle department' });
+
+        if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+        res.json({ success: true, data: app });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update application status (PATCH /applications/:id/status/)
+router.patch('/applications/:id/status', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const { status } = req.body;
+        const app = await JobApplication.findByIdAndUpdate(
+            req.params.id,
+            { status, reviewedAt: new Date() },
+            { new: true }
+        );
+        if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+        res.json({ success: true, data: app, message: 'Status updated' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Review application (POST /applications/:id/review/)
+router.post('/applications/:id/review', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const { application_status, review_notes } = req.body;
+        const app = await JobApplication.findByIdAndUpdate(
+            req.params.id,
+            { status: application_status || 'reviewed', reviewNotes: review_notes, reviewedAt: new Date() },
+            { new: true }
+        );
+        if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+        res.json({ success: true, data: app, message: 'Application reviewed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Send job offer (POST /applications/:id/send-offer/)
+router.post('/applications/:id/send-offer', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const app = await JobApplication.findByIdAndUpdate(
+            req.params.id,
+            { status: 'offer_sent', offerDetails: req.body, offerSentAt: new Date() },
+            { new: true }
+        );
+        if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+        res.json({ success: true, data: app, message: 'Offer sent' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Application stats summary
+router.get('/applications/stats', protect, async (req, res) => {
+    try {
+        const Job = require('../models/Job');
+        const JobApplication = require('../models/JobApplication');
+        const hospital = await Hospital.findOne({ user: req.user._id });
+        if (!hospital) return res.json({ success: true, data: {} });
+
+        const jobs = await Job.find({ hospital: hospital._id }).select('_id');
+        const jobIds = jobs.map(j => j._id);
+        const all = await JobApplication.find({ job: { $in: jobIds } });
+
+        const stats = {
+            total: all.length,
+            pending: all.filter(a => a.status === 'pending').length,
+            shortlisted: all.filter(a => a.status === 'shortlisted').length,
+            accepted: all.filter(a => a.status === 'accepted' || a.status === 'hired').length,
+            rejected: all.filter(a => a.status === 'rejected').length,
+            offer_sent: all.filter(a => a.status === 'offer_sent').length,
+        };
+        res.json({ success: true, data: stats });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Billing / Subscription stubs (returns empty data gracefully)
+router.get('/billing/subscription', protect, async (req, res) => {
+    const hospital = await Hospital.findOne({ user: req.user._id }).catch(() => null);
+    res.json({ success: true, data: hospital?.subscription || { plan: 'none', status: 'none' } });
+});
+
+router.post('/billing/subscribe', protect, async (req, res) => {
+    res.json({ success: true, message: 'Subscription initiated — integrate with Paystack', data: null });
+});
+
+router.get('/billing/payments', protect, async (req, res) => {
+    res.json({ success: true, data: { payments: [], pagination: { page: 1, page_size: 10, total_count: 0, total_pages: 1 } } });
+});
+
+router.get('/billing/payments/:id', protect, async (req, res) => {
+    res.json({ success: true, data: null });
+});
+
+router.post('/billing/payments/initiate', protect, async (req, res) => {
+    res.json({ success: true, message: 'Payment initiation — integrate with Paystack', data: null });
+});
+
+router.get('/billing/usage', protect, async (req, res) => {
+    res.json({ success: true, data: { vacanciesPosted: 0, applicationsReceived: 0 } });
+});
+
 module.exports = router;
