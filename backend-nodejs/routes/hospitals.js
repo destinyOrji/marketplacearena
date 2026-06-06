@@ -1020,8 +1020,8 @@ router.get('/analytics', protect, async (req, res) => {
             ? Math.round(((totalBeds - availableBeds) / totalBeds) * 100) : 0;
 
         // Department breakdown (from all jobs in period)
-        const deptMap: Record<string, number> = {};
-        periodJobs.forEach((j: any) => {
+        const deptMap = {};
+        periodJobs.forEach(j => {
             const dept = j.department || j.specialty || 'General';
             deptMap[dept] = (deptMap[dept] || 0) + 1;
         });
@@ -1030,8 +1030,8 @@ router.get('/analytics', protect, async (req, res) => {
             .slice(0, 8)
             .map(([department, vacancies]) => {
                 const deptJobIds = periodJobs
-                    .filter((j: any) => (j.department || j.specialty || 'General') === department)
-                    .map((j: any) => j._id.toString());
+                    .filter(j => (j.department || j.specialty || 'General') === department)
+                    .map(j => j._id.toString());
                 const deptApps = periodApps.filter(a => deptJobIds.includes(a.job?.toString()));
                 return {
                     department,
