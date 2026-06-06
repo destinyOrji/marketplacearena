@@ -34,10 +34,16 @@ app.use(helmet({
 // Rate limiting to prevent brute force attacks
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // Increased limit
+    max: 200,
     message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (req, res) => {
+        res.status(429).json({
+            success: false,
+            message: 'Too many requests from this IP, please try again after 15 minutes.'
+        });
+    },
 });
 
 // Apply rate limiter to all routes
@@ -46,20 +52,50 @@ app.use('/api/', limiter);
 // Stricter rate limit for auth routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50,
+    max: 100, // Increased from 50 — mobile networks share IPs
     message: { success: false, message: 'Too many login attempts, please try again after 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
     skipSuccessfulRequests: true,
+    handler: (req, res) => {
+        res.status(429).json({
+            success: false,
+            message: 'Too many login attempts, please try again after 15 minutes.'
+        });
+    },
 });
 
 // Data sanitization against NoSQL injection
 app.use(mongoSanitize());
 
-// CORS configuration
+// CORS configuration — allow the production domain, localhost variants, and requests
+// with no Origin header (mobile apps, Postman, direct API calls)
+const allowedOrigins = [
+    process.env.FRONTEND_URL || 'https://healthmarketarena.com',
+    'https://healthmarketarena.com',
+    'https://www.healthmarketarena.com',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, Postman, same-server requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        // Allow any subdomain of healthmarketarena.com
+        if (/^https?:\/\/([a-z0-9-]+\.)?healthmarketarena\.com$/.test(origin)) {
+            return callback(null, true);
+        }
+        // In development, allow everything
+        if (process.env.NODE_ENV !== 'production') return callback(null, true);
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    optionsSuccessStatus: 200, // Some mobile browsers choke on 204
 }));
 
 // ⚠️  Webhook route MUST be registered BEFORE express.json() so it receives the raw body
@@ -122,18 +158,23 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// 404 handler
+// 404 handler — always JSON, never HTML
 app.use('*', (req, res) => {
     res.status(404).json({
         success: false,
-        message: 'Route not found'
+        message: `Route not found: ${req.method} ${req.originalUrl}`
     });
 });
 
-// Error handling middleware
+// Global error handler — always JSON
 app.use((error, req, res, next) => {
     console.error('Error:', error);
-    
+
+    // CORS errors
+    if (error.message && error.message.startsWith('CORS:')) {
+        return res.status(403).json({ success: false, message: error.message });
+    }
+
     res.status(error.status || 500).json({
         success: false,
         message: error.message || 'Internal server error',
