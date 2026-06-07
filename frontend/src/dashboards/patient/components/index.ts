@@ -1,4 +1,5 @@
 export { default as ProtectedRoute } from './ProtectedRoute';
+export { default as SubscriptionGuard } from './SubscriptionGuard';
 export { default as DashboardLayout } from './DashboardLayout';
 export { default as Sidebar } from './Sidebar';
 export { default as Header } from './Header';

@@ -41,6 +41,7 @@ const sidebarMenu: SidebarMenuItem[] = [
       { id: 'patient-appointments',      label: 'Appointments',          icon: FiActivity, path: '/admin/patients/all-appointments' },
       { id: 'patient-medical-records',   label: 'Medical Records',       icon: FiActivity, path: '/admin/patients/all-records' },
       { id: 'patient-emergency',         label: 'Emergency Bookings',    icon: FiActivity, path: '/admin/patients/all-emergencies' },
+      { id: 'patient-payments',          label: 'Payments',              icon: FiActivity, path: '/admin/patients/all-payments' },
     ]
   },
 
@@ -64,6 +65,7 @@ const sidebarMenu: SidebarMenuItem[] = [
       { id: 'hospital-vacancies',        label: 'Job Vacancies',         icon: FiActivity, path: '/admin/hospitals/vacancies' },
       { id: 'hospital-applications',     label: 'Applications',          icon: FiActivity, path: '/admin/hospitals/all-applications' },
       { id: 'hospital-subscriptions',    label: 'Subscriptions',         icon: FiActivity, path: '/admin/hospitals/all-subscriptions' },
+      { id: 'hospital-earnings',         label: 'Earnings',              icon: FiActivity, path: '/admin/hospitals/all-earnings' },
     ]
   },
 
@@ -75,6 +77,7 @@ const sidebarMenu: SidebarMenuItem[] = [
       { id: 'ambulance-bookings',        label: 'Emergency Bookings',    icon: FiTruck, path: '/admin/ambulances/bookings' },
       { id: 'ambulance-availability',    label: 'Availability',          icon: FiTruck, path: '/admin/ambulances/availability' },
       { id: 'ambulance-fleet',           label: 'Fleet Management',      icon: FiTruck, path: '/admin/ambulances/all-fleet' },
+      { id: 'ambulance-earnings',        label: 'Earnings',              icon: FiTruck, path: '/admin/ambulances/all-earnings' },
     ]
   },
 

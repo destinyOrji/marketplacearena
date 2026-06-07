@@ -20,6 +20,7 @@ import PaymentVerify from './pages/PaymentVerify';
 import { AuthProvider } from './dashboards/patient/contexts/AuthContext';
 import { NotificationProvider } from './dashboards/patient/contexts/NotificationContext';
 import { ProtectedRoute } from './dashboards/patient/components';
+import { SubscriptionGuard } from './dashboards/patient/components';
 import { Loading } from './dashboards/patient/components';
 
 // Lazy load admin dashboard
@@ -160,7 +161,9 @@ function App() {
               path="/patient/browse-services" 
               element={
                 <ProtectedRoute>
-                  <BrowseServices />
+                  <SubscriptionGuard>
+                    <BrowseServices />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -168,7 +171,9 @@ function App() {
               path="/patient/browse-gym-physio" 
               element={
                 <ProtectedRoute>
-                  <BrowseGymPhysio />
+                  <SubscriptionGuard>
+                    <BrowseGymPhysio />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -176,7 +181,9 @@ function App() {
               path="/patient/book-consultation" 
               element={
                 <ProtectedRoute>
-                  <BookConsultation />
+                  <SubscriptionGuard>
+                    <BookConsultation />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -184,7 +191,9 @@ function App() {
               path="/patient/emergency" 
               element={
                 <ProtectedRoute>
-                  <EmergencyServices />
+                  <SubscriptionGuard>
+                    <EmergencyServices />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -192,7 +201,9 @@ function App() {
               path="/patient/appointments" 
               element={
                 <ProtectedRoute>
-                  <MyAppointments />
+                  <SubscriptionGuard>
+                    <MyAppointments />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -200,7 +211,9 @@ function App() {
               path="/patient/medical-records" 
               element={
                 <ProtectedRoute>
-                  <MedicalRecords />
+                  <SubscriptionGuard>
+                    <MedicalRecords />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -208,7 +221,9 @@ function App() {
               path="/patient/payments" 
               element={
                 <ProtectedRoute>
-                  <Payments />
+                  <SubscriptionGuard>
+                    <Payments />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -216,7 +231,9 @@ function App() {
               path="/patient/feedback" 
               element={
                 <ProtectedRoute>
-                  <Feedback />
+                  <SubscriptionGuard>
+                    <Feedback />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />
@@ -248,7 +265,9 @@ function App() {
               path="/patient/video-call/:appointmentId" 
               element={
                 <ProtectedRoute>
-                  <VideoCall />
+                  <SubscriptionGuard>
+                    <VideoCall />
+                  </SubscriptionGuard>
                 </ProtectedRoute>
               } 
             />

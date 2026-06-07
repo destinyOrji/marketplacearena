@@ -297,3 +297,96 @@ exports.rejectHospital = async (req, res) => {
         res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 };
+
+// Get subscription/billing earnings for a specific hospital
+exports.getHospitalEarnings = async (req, res) => {
+    try {
+        const Subscription = require('../../models/Subscription');
+        const Job = require('../../models/Job');
+        const JobApplication = require('../../models/JobApplication');
+
+        const hospital = await Hospital.findById(req.params.id);
+        if (!hospital) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital not found' });
+
+        // Subscription payments
+        const subscriptions = await Subscription.find({ user: hospital.user }).sort({ createdAt: -1 });
+        const totalSubscriptionRevenue = subscriptions
+            .filter(s => s.paymentStatus === 'completed' || s.status === 'active')
+            .reduce((sum, s) => sum + (s.amount || 0), 0);
+
+        // Vacancy counts
+        const jobs = await Job.find({ hospital: hospital._id });
+        const jobIds = jobs.map(j => j._id);
+        const totalApplications = await JobApplication.countDocuments({ job: { $in: jobIds } });
+        const acceptedApplications = await JobApplication.countDocuments({ job: { $in: jobIds }, status: { $in: ['accepted', 'hired'] } });
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data: {
+                totalSubscriptionRevenue,
+                platformFees: Math.round(totalSubscriptionRevenue * 0.10),
+                netRevenue: Math.round(totalSubscriptionRevenue * 0.90),
+                activeSubscription: hospital.subscription || subscriptions.find(s => s.status === 'active') || null,
+                totalVacancies: jobs.length,
+                totalApplications,
+                acceptedApplications,
+                subscriptions: subscriptions.map(s => ({
+                    id: s._id,
+                    plan: s.plan,
+                    status: s.status,
+                    amount: s.amount || 0,
+                    startDate: s.startDate || s.createdAt,
+                    endDate: s.endDate,
+                    paymentStatus: s.paymentStatus,
+                }))
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};
+
+// Aggregate all hospital earnings (for AllHospitalEarnings page)
+exports.getAllHospitalEarnings = async (req, res) => {
+    try {
+        const Subscription = require('../../models/Subscription');
+        const Job = require('../../models/Job');
+        const JobApplication = require('../../models/JobApplication');
+
+        const hospitals = await Hospital.find().select('_id hospitalName hospitalType user').lean();
+
+        const rows = await Promise.all(hospitals.map(async (h) => {
+            const subs = await Subscription.find({ user: h.user });
+            const totalRevenue = subs
+                .filter(s => s.paymentStatus === 'completed' || s.status === 'active')
+                .reduce((sum, s) => sum + (s.amount || 0), 0);
+
+            const jobCount = await Job.countDocuments({ hospital: h._id });
+            const jobs = await Job.find({ hospital: h._id }).select('_id');
+            const appCount = await JobApplication.countDocuments({ job: { $in: jobs.map(j => j._id) } });
+
+            return {
+                id: h._id,
+                name: h.hospitalName || '—',
+                type: h.hospitalType || '—',
+                totalRevenue,
+                platformFees: Math.round(totalRevenue * 0.10),
+                netRevenue: Math.round(totalRevenue * 0.90),
+                totalVacancies: jobCount,
+                totalApplications: appCount,
+            };
+        }));
+
+        rows.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+        const totalRevenue = rows.reduce((s, r) => s + r.totalRevenue, 0);
+        const totalFees = rows.reduce((s, r) => s + r.platformFees, 0);
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data: { hospitals: rows, totalRevenue, totalFees, netRevenue: totalRevenue - totalFees }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};

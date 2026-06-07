@@ -27,6 +27,7 @@ router.get('/dashboard/recent-activities', adminAuth, adminDashboardController.g
 
 // Patients Management Routes
 router.get('/patients', adminAuth, adminPatientsController.getPatients);
+router.get('/patients/all-payments', adminAuth, adminAmbulancesController.getPatientPaymentStats);
 router.get('/patients/:id', adminAuth, adminPatientsController.getPatientById);
 router.put('/patients/:id/update', adminAuth, adminPatientsController.updatePatient);
 router.delete('/patients/:id/delete', adminAuth, adminPatientsController.deletePatient);
@@ -180,6 +181,8 @@ router.post('/services/:id/reject', adminAuth, async (req, res) => {
 router.get('/hospitals', adminAuth, adminHospitalsController.getHospitals);
 // Static routes MUST come before /:id
 router.get('/hospitals/verification/pending', adminAuth, adminHospitalsController.getPendingVerifications);
+router.get('/hospitals/all-earnings', adminAuth, adminHospitalsController.getAllHospitalEarnings);
+router.get('/hospitals/patient-payments', adminAuth, adminAmbulancesController.getPatientPaymentStats);
 router.get('/hospitals/:id', adminAuth, adminHospitalsController.getHospitalById);
 router.put('/hospitals/:id/update', adminAuth, adminHospitalsController.updateHospital);
 router.delete('/hospitals/:id/delete', adminAuth, adminHospitalsController.deleteHospital);
@@ -189,6 +192,7 @@ router.get('/hospitals/:id/applications', adminAuth, adminHospitalsController.ge
 router.get('/hospitals/:id/subscription', adminAuth, adminHospitalsController.getHospitalSubscription);
 router.put('/hospitals/:id/subscription/update', adminAuth, adminHospitalsController.updateHospitalSubscription);
 router.get('/hospitals/:id/documents', adminAuth, adminHospitalsController.getHospitalDocuments);
+router.get('/hospitals/:id/earnings', adminAuth, adminHospitalsController.getHospitalEarnings);
 router.post('/hospitals/:id/verify', adminAuth, adminHospitalsController.verifyHospital);
 router.post('/hospitals/:id/reject', adminAuth, adminHospitalsController.rejectHospital);
 
@@ -198,12 +202,15 @@ router.get('/ambulances', adminAuth, adminAmbulancesController.getProviders);
 router.get('/ambulances/bookings', adminAuth, adminAmbulancesController.getEmergencyBookings);
 router.get('/ambulances/availability', adminAuth, adminAmbulancesController.getProviderAvailability);
 router.get('/ambulances/verification/pending', adminAuth, adminAmbulancesController.getPendingVerifications);
+router.get('/ambulances/all-earnings', adminAuth, adminAmbulancesController.getAllAmbulanceEarnings);
+router.get('/ambulances/patient-payments', adminAuth, adminAmbulancesController.getPatientPaymentStats);
 router.get('/ambulances/:id', adminAuth, adminAmbulancesController.getProviderById);
 router.put('/ambulances/:id/update', adminAuth, adminAmbulancesController.updateProvider);
 router.delete('/ambulances/:id/delete', adminAuth, adminAmbulancesController.deleteProvider);
 router.get('/ambulances/:id/vehicles', adminAuth, adminAmbulancesController.getProviderVehicles);
 router.patch('/ambulances/:id/vehicles/:vehicleId', adminAuth, adminAmbulancesController.toggleVehicleStatus);
 router.get('/ambulances/:id/documents', adminAuth, adminAmbulancesController.getProviderDocuments);
+router.get('/ambulances/:id/earnings', adminAuth, adminAmbulancesController.getProviderEarnings);
 router.post('/ambulances/:id/verify', adminAuth, adminAmbulancesController.verifyProvider);
 router.post('/ambulances/:id/reject', adminAuth, adminAmbulancesController.rejectProvider);
 

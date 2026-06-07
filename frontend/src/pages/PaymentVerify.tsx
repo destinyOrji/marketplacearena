@@ -17,7 +17,7 @@ const MODE_LABELS: Record<string, string> = {
 };
 
 // ─── Invoice Component ────────────────────────────────────────────────────────
-const Invoice: React.FC<{ invoice: any; onDone: () => void }> = ({ invoice, onDone }) => {
+const Invoice: React.FC<{ invoice: Record<string, any>; onDone: () => void }> = ({ invoice, onDone }) => {
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -213,7 +213,15 @@ const PaymentVerify: React.FC = () => {
           setMessage(isSub
             ? '🎉 Subscription activated! You now have full access to all features.'
             : '✅ Payment verified! Your appointment is confirmed.');
-          setTimeout(() => navigate(isSub ? '/patient/subscription' : '/patient/appointments'), 3000);
+
+          if (isSub) {
+            // Redirect back to the page the user was trying to access, or dashboard
+            const returnTo = sessionStorage.getItem('subscriptionReturnTo') || '/patient/dashboard';
+            sessionStorage.removeItem('subscriptionReturnTo');
+            setTimeout(() => navigate(returnTo), 3000);
+          } else {
+            setTimeout(() => navigate('/patient/appointments'), 3000);
+          }
         }
       } else {
         setStatus('failed');
@@ -223,9 +231,11 @@ const PaymentVerify: React.FC = () => {
       console.error('Payment verification error:', error);
       // Paystack already charged — treat as success
       if (isSub) {
+        const returnTo = sessionStorage.getItem('subscriptionReturnTo') || '/patient/dashboard';
+        sessionStorage.removeItem('subscriptionReturnTo');
         setStatus('success');
         setMessage('🎉 Payment received. Your subscription is being activated.');
-        setTimeout(() => navigate('/patient/subscription'), 3000);
+        setTimeout(() => navigate(returnTo), 3000);
       } else {
         // Show generic success without invoice
         setStatus('success');
@@ -235,8 +245,9 @@ const PaymentVerify: React.FC = () => {
     }
   };
 
-  const redirectPath = isSubscription ? '/patient/subscription' : '/patient/appointments';
-  const redirectLabel = isSubscription ? 'My Subscription' : 'My Appointments';
+  const returnToPath = sessionStorage.getItem('subscriptionReturnTo') || '/patient/dashboard';
+  const redirectPath = isSubscription ? returnToPath : '/patient/appointments';
+  const redirectLabel = isSubscription ? 'Continue →' : 'My Appointments';
 
   // Show invoice page
   if (status === 'invoice' && invoice) {

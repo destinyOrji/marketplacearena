@@ -3,6 +3,7 @@
  * Flow: Subscribe → initialize-payment → redirect to Paystack → /payment/verify
  */
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface SubscriptionPlan {
   id: string;
@@ -29,6 +30,7 @@ interface ActiveSubscription {
 const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 const Subscription: React.FC = () => {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +116,13 @@ const Subscription: React.FC = () => {
         return;
       }
 
+      // Store returnTo so PaymentVerify can redirect back after success
+      const returnTo = sessionStorage.getItem('subscriptionReturnTo');
+      if (!returnTo) {
+        // If not set by SubscriptionGuard, default to dashboard
+        sessionStorage.setItem('subscriptionReturnTo', '/patient/dashboard');
+      }
+
       // Redirect to Paystack
       window.location.href = authUrl;
     } catch (err: any) {
@@ -140,6 +149,24 @@ const Subscription: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      {/* New-user prompt banner */}
+      {!activeSubscription && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+          <div>
+            <h2 className="text-xl font-bold mb-1">👋 Welcome to Health Market Arena!</h2>
+            <p className="text-blue-100 text-sm leading-relaxed">
+              To book appointments, access emergency services, and view your medical records,
+              please choose a subscription plan below.
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="inline-block bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/30">
+              Step required to continue
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-3">Choose Your Plan</h1>

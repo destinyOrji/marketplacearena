@@ -309,3 +309,107 @@ exports.rejectProvider = async (req, res) => {
         res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 };
+
+// Get earnings for a specific ambulance provider
+exports.getProviderEarnings = async (req, res) => {
+    try {
+        const EmergencyBooking = require('../../models/EmergencyBooking');
+        const ambulance = await Ambulance.findById(req.params.id);
+        if (!ambulance) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Provider not found' });
+
+        const bookings = await EmergencyBooking.find({ provider: ambulance._id, status: 'completed' })
+            .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName' } })
+            .sort({ createdAt: -1 });
+
+        const totalEarnings = bookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+        const platformFees = Math.round(totalEarnings * 0.10);
+        const netEarnings = totalEarnings - platformFees;
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data: {
+                totalEarnings, platformFees, netEarnings,
+                completedBookings: bookings.length,
+                bookings: bookings.map(b => ({
+                    id: b._id,
+                    date: b.createdAt,
+                    client: b.client?.user ? `${b.client.user.firstName} ${b.client.user.lastName}` : 'Client',
+                    emergencyType: b.emergencyType || 'Emergency',
+                    amount: b.totalCost || 0,
+                    status: b.status,
+                }))
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};
+
+// Get aggregate patient payment data (total platform payments from patients)
+exports.getPatientPaymentStats = async (req, res) => {
+    try {
+        const paidApts = await require('../../models/Appointment').find({ paymentStatus: 'paid' })
+            .populate({ path: 'client', populate: { path: 'user', select: 'firstName lastName email' } })
+            .sort({ updatedAt: -1 });
+
+        const totalRevenue = paidApts.reduce((sum, a) => sum + (a.consultationFee || 0), 0);
+        const platformFees = Math.round(totalRevenue * 0.10);
+
+        // Group by patient
+        const patientMap = {};
+        paidApts.forEach(apt => {
+            const clientId = apt.client?._id?.toString() || 'unknown';
+            const name = apt.client?.user ? `${apt.client.user.firstName} ${apt.client.user.lastName}` : 'Patient';
+            const email = apt.client?.user?.email || '';
+            if (!patientMap[clientId]) {
+                patientMap[clientId] = { id: clientId, name, email, totalPaid: 0, appointments: 0 };
+            }
+            patientMap[clientId].totalPaid += apt.consultationFee || 0;
+            patientMap[clientId].appointments += 1;
+        });
+
+        const patients = Object.values(patientMap).sort((a, b) => b.totalPaid - a.totalPaid);
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data: { totalRevenue, platformFees, totalTransactions: paidApts.length, patients }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};
+
+// Aggregate all ambulance earnings (for AllAmbulanceEarnings page)
+exports.getAllAmbulanceEarnings = async (req, res) => {
+    try {
+        const EmergencyBooking = require('../../models/EmergencyBooking');
+        const providers = await Ambulance.find().select('_id serviceName serviceType').lean();
+
+        const rows = await Promise.all(providers.map(async (p) => {
+            const bookings = await EmergencyBooking.find({ provider: p._id, status: 'completed' });
+            const totalEarnings = bookings.reduce((sum, b) => sum + (b.totalCost || 0), 0);
+            const platformFees = Math.round(totalEarnings * 0.10);
+            return {
+                id: p._id,
+                name: p.serviceName || '—',
+                type: p.serviceType || '—',
+                completedBookings: bookings.length,
+                totalEarnings,
+                platformFees,
+                netEarnings: totalEarnings - platformFees,
+            };
+        }));
+
+        rows.sort((a, b) => b.totalEarnings - a.totalEarnings);
+
+        const totalRevenue = rows.reduce((s, r) => s + r.totalEarnings, 0);
+        const totalFees = rows.reduce((s, r) => s + r.platformFees, 0);
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data: { providers: rows, totalRevenue, totalFees, netRevenue: totalRevenue - totalFees }
+        });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+};

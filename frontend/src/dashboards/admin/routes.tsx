@@ -68,6 +68,7 @@ const AuditLogsPage = lazy(() => import('./pages/settings/AuditLogs'));
 const AllAppointmentsPage = lazy(() => import('./pages/patients/AllAppointments'));
 const AllMedicalRecordsPage = lazy(() => import('./pages/patients/AllMedicalRecords'));
 const AllEmergencyBookingsPage = lazy(() => import('./pages/patients/AllEmergencyBookings'));
+const AllPatientPaymentsPage = lazy(() => import('./pages/patients/AllPatientPayments'));
 
 // Professional aggregate pages
 const AllApplicationsPage = lazy(() => import('./pages/professionals/AllApplications'));
@@ -77,9 +78,11 @@ const AllEarningsPage = lazy(() => import('./pages/professionals/AllEarnings'));
 // Hospital aggregate pages
 const AllHospitalApplicationsPage = lazy(() => import('./pages/hospitals/AllHospitalApplications'));
 const AllHospitalSubscriptionsPage = lazy(() => import('./pages/hospitals/AllHospitalSubscriptions'));
+const AllHospitalEarningsPage = lazy(() => import('./pages/hospitals/AllHospitalEarnings'));
 
 // Ambulance aggregate pages
 const AllFleetPage = lazy(() => import('./pages/ambulances/AllFleet'));
+const AllAmbulanceEarningsPage = lazy(() => import('./pages/ambulances/AllAmbulanceEarnings'));
 
 // Gym aggregate pages
 const AllGymServicesPage = lazy(() => import('./pages/gym-physio/AllGymServices'));
@@ -113,6 +116,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/patients/all-appointments" element={<AllAppointmentsPage />} />
                   <Route path="/patients/all-records" element={<AllMedicalRecordsPage />} />
                   <Route path="/patients/all-emergencies" element={<AllEmergencyBookingsPage />} />
+                  <Route path="/patients/all-payments" element={<AllPatientPaymentsPage />} />
                   <Route path="/patients/:patientId" element={<PatientDetailPage />} />
                   <Route path="/patients/:patientId/edit" element={<PatientEditPage />} />
                   <Route path="/patients/:patientId/appointments" element={<PatientAppointmentsPage />} />
@@ -142,6 +146,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/hospitals/verification" element={<HospitalVerificationPage />} />
                   <Route path="/hospitals/all-applications" element={<AllHospitalApplicationsPage />} />
                   <Route path="/hospitals/all-subscriptions" element={<AllHospitalSubscriptionsPage />} />
+                  <Route path="/hospitals/all-earnings" element={<AllHospitalEarningsPage />} />
                   <Route path="/hospitals/:hospitalId" element={<HospitalDetailPage />} />
                   <Route path="/hospitals/:hospitalId/vacancies" element={<HospitalVacanciesPage />} />
                   <Route path="/hospitals/:hospitalId/applications" element={<HospitalApplicationsPage />} />
@@ -154,6 +159,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/ambulances/availability" element={<AvailabilityMonitoringPage />} />
                   <Route path="/ambulances/verification" element={<AmbulanceVerificationPage />} />
                   <Route path="/ambulances/all-fleet" element={<AllFleetPage />} />
+                  <Route path="/ambulances/all-earnings" element={<AllAmbulanceEarningsPage />} />
                   <Route path="/ambulances/:providerId" element={<ProviderDetailPage />} />
                   <Route path="/ambulances/:providerId/fleet" element={<FleetManagementPage />} />
                   
