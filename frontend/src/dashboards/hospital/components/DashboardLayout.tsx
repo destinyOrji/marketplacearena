@@ -12,7 +12,7 @@ import {
   FiMenu,
   FiX,
   FiLogOut,
-  FiBarChart2,
+  FiBarChart,
 } from 'react-icons/fi';
 import { useHospital } from '../contexts/HospitalContext';
 
@@ -134,7 +134,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Profile',      href: '/hospital/profile',      icon: FiUser },
     { name: 'Vacancies',    href: '/hospital/vacancies',    icon: FiFileText },
     { name: 'Applications', href: '/hospital/applications', icon: FiFileText },
-    { name: 'Analytics',    href: '/hospital/analytics',    icon: FiBarChart2 },
+    { name: 'Analytics',    href: '/hospital/analytics',    icon: FiBarChart },
     { name: 'Billing',      href: '/hospital/billing',      icon: FiCreditCard },
   ];
 

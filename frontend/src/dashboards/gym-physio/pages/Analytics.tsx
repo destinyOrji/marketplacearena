@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import apiClient from '../services/api';
+import { gymPhysioApiClient as apiClient } from '../services/api';
 
 const Analytics: React.FC = () => {
   const [data, setData] = useState<any>({});

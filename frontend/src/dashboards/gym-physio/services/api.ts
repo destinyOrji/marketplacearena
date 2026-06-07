@@ -229,6 +229,9 @@ export const changePassword = async (currentPassword: string, newPassword: strin
   await apiClient.post('/gym-physio/change-password', { currentPassword, newPassword });
 };
 
+// Export the raw axios instance for pages that need direct HTTP calls
+export { apiClient as gymPhysioApiClient };
+
 export default {
   getDashboardStats,
   getProfile,

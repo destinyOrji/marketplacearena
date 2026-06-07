@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
-import apiClient from '../services/api';
+import { gymPhysioApiClient as apiClient } from '../services/api';
 
 const MODE_LABELS: Record<string, string> = {
   in_person: '🏋️ In-Person',

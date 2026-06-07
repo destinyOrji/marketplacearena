@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getEarnings, getPayments } from '../services/api';
-import apiClient from '../services/api';
+import { gymPhysioApiClient as apiClient } from '../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+
+const PLATFORM_FEE = 0.10;
 
 type ActiveTab = 'earnings' | 'bank';
 
