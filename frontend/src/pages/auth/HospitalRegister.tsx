@@ -68,7 +68,7 @@ const HospitalRegister: React.FC = () => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: formData.phone }),
+          body: JSON.stringify({ email: formData.email }),
         }
       );
       const data = await response.json();

@@ -11,24 +11,14 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/
 
 const PatientOTPVerify: React.FC = () => {
   const navigate = useNavigate();
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
-    // Get step 1 data
     const step1Data = localStorage.getItem('patientRegisterStep1');
-    if (!step1Data) {
-      // Redirect back to step 1 if no data
-      navigate('/register');
-      return;
-    }
-
+    if (!step1Data) { navigate('/register'); return; }
     const data = JSON.parse(step1Data);
-    if (!data.phone) {
-      navigate('/register');
-      return;
-    }
-
-    setPhoneNumber(data.phone);
+    if (!data.email) { navigate('/register'); return; }
+    setEmail(data.email);
   }, [navigate]);
 
   const handleOTPVerified = () => {
@@ -45,7 +35,7 @@ const PatientOTPVerify: React.FC = () => {
     navigate('/register');
   };
 
-  if (!phoneNumber) {
+  if (!email) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -59,32 +49,21 @@ const PatientOTPVerify: React.FC = () => {
       <div className="py-6 border-b border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center">
-            <img 
-              src="/logo512.png" 
-              alt="Health Market Arena Logo" 
-              className="w-10 h-10 rounded-lg shadow-md"
-            />
-            <span className="ml-3 text-xl font-bold text-blue-600">
-              Health Market Arena
-            </span>
+            <img src="/logo512.png" alt="Health Market Arena Logo" className="w-10 h-10 rounded-lg shadow-md" />
+            <span className="ml-3 text-xl font-bold text-blue-600">Health Market Arena</span>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-600 mb-2">
-              Verify Your Phone Number
-            </h1>
-            <p className="text-gray-600">
-              We've sent a verification code to your phone
-            </p>
+            <h1 className="text-3xl font-bold text-blue-600 mb-2">Verify Your Email</h1>
+            <p className="text-gray-600">We've sent a 6-digit code to your email</p>
           </div>
 
           <OTPVerification
-            phoneNumber={phoneNumber}
+            email={email}
             onVerified={handleOTPVerified}
             onCancel={handleCancel}
           />

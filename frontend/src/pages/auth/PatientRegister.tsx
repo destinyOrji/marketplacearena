@@ -62,10 +62,9 @@ const PatientRegister: React.FC = () => {
     setLoading(true);
 
     try {
-      // Send OTP to phone number
+      // Send OTP to email address
       await axios.post(`${API_URL}/otp/send`, {
-        phoneNumber: formData.phone,
-        userType: 'patient'
+        email: formData.email,
       });
 
       // Store form data and navigate to OTP verification

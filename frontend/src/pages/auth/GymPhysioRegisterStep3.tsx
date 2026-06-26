@@ -4,27 +4,42 @@ import OTPVerification from '../../components/OTPVerification';
 
 const GymPhysioRegisterStep3: React.FC = () => {
   const navigate = useNavigate();
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sendError, setSendError] = useState('');
+
+  const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
   useEffect(() => {
     const step1Data = localStorage.getItem('gymPhysioRegisterStep1');
     const step2Data = localStorage.getItem('gymPhysioRegisterStep2');
-    
+
     if (!step1Data || !step2Data) {
       navigate('/register/gym-physio');
       return;
     }
 
     const data = JSON.parse(step1Data);
-    if (!data.phone) {
+    if (!data.email) {
       navigate('/register/gym-physio');
       return;
     }
 
-    setPhoneNumber(data.phone);
-    setLoading(false);
-  }, [navigate]);
+    setEmail(data.email);
+
+    // Send OTP to email now that we have all the data
+    fetch(`${API_URL}/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: data.email }),
+    })
+      .then(res => res.json())
+      .then(d => {
+        if (!d.success && d.statuscode !== 0) setSendError('Could not send verification code. Try resending.');
+      })
+      .catch(() => setSendError('Network error sending code. Try resending.'))
+      .finally(() => setLoading(false));
+  }, [navigate, API_URL]);
 
   const handleOTPVerified = () => {
     navigate('/register/gym-physio/step4');
@@ -56,10 +71,15 @@ const GymPhysioRegisterStep3: React.FC = () => {
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="max-w-md w-full">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-orange-600 mb-2">Verify Your Phone Number</h1>
-            <p className="text-gray-600">We've sent a verification code to your phone</p>
+            <h1 className="text-3xl font-bold text-orange-600 mb-2">Verify Your Email</h1>
+            <p className="text-gray-600">We've sent a verification code to your email</p>
           </div>
-          <OTPVerification phoneNumber={phoneNumber} onVerified={handleOTPVerified} onCancel={handleCancel} />
+          {sendError && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-700 text-center">
+              {sendError}
+            </div>
+          )}
+          <OTPVerification email={email} onVerified={handleOTPVerified} onCancel={handleCancel} />
         </div>
       </div>
 

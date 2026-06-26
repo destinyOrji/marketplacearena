@@ -12,12 +12,9 @@ const ProfessionalRegisterOTPVerify: React.FC = () => {
 
   useEffect(() => {
     const storedData = localStorage.getItem('professionalRegisterData');
-    if (!storedData) {
-      navigate('/register/professional');
-      return;
-    }
+    if (!storedData) { navigate('/register/professional'); return; }
     const data = JSON.parse(storedData);
-    setPhoneNumber(data.phone);
+    setPhoneNumber(data.email); // use email as identifier
   }, [navigate]);
 
   const handleOTPVerified = async () => {
@@ -56,8 +53,8 @@ const ProfessionalRegisterOTPVerify: React.FC = () => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img src="/logo512.png" alt="Logo" className="w-16 h-16 rounded-2xl shadow-lg mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-green-600 mb-2">Verify Your Phone</h1>
-          <p className="text-gray-600">Enter the 6-digit code sent to your phone</p>
+          <h1 className="text-3xl font-bold text-green-600 mb-2">Verify Your Email</h1>
+          <p className="text-gray-600">Enter the 6-digit code sent to your email</p>
         </div>
 
         {error && (
@@ -71,7 +68,7 @@ const ProfessionalRegisterOTPVerify: React.FC = () => {
           </div>
         ) : (
           <OTPVerification
-            phoneNumber={phoneNumber}
+            email={phoneNumber}
             onVerified={handleOTPVerified}
             onCancel={() => navigate('/register/professional')}
           />

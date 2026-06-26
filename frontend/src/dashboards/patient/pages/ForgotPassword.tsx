@@ -17,12 +17,10 @@ const ForgotPassword: React.FC = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      // Use the resend OTP endpoint to send OTP to phone
-      await authApi.resendOTP(phone);
+      await authApi.resendOTP(phone); // sends { email: phone } — our backend accepts email field
       setStep('otp');
-      showSuccessToast('OTP sent to your phone number');
+      showSuccessToast('OTP sent to your email address');
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to send OTP. Please try again.';
       setError(errorMessage);
@@ -110,12 +108,12 @@ const ForgotPassword: React.FC = () => {
 
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {step === 'phone' && 'Forgot Password?'}
-            {step === 'otp' && 'Verify OTP'}
+            {step === 'otp' && 'Check your Email'}
             {step === 'password' && 'Set New Password'}
           </h2>
           <p className="text-gray-600">
-            {step === 'phone' && 'Enter your phone number to receive an OTP'}
-            {step === 'otp' && 'Enter the 6-digit code sent to your phone'}
+            {step === 'phone' && 'Enter your email address to receive a reset code'}
+            {step === 'otp' && 'Enter the 6-digit code sent to your email'}
             {step === 'password' && 'Create a new password for your account'}
           </p>
         </div>
@@ -130,35 +128,23 @@ const ForgotPassword: React.FC = () => {
             )}
 
             <div>
-              <label
-                htmlFor="phone"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Phone Number
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                    />
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <input
-                  type="tel"
+                  type="email"
                   id="phone"
                   name="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Enter your phone number"
+                  placeholder="Enter your email address"
                   required
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
@@ -246,12 +232,8 @@ const ForgotPassword: React.FC = () => {
             </div>
 
             <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setStep('phone')}
-                className="text-sm text-gray-600 hover:text-gray-900"
-              >
-                Change Phone Number
+              <button type="button" onClick={() => setStep('phone')} className="text-sm text-gray-600 hover:text-gray-900">
+                Change Email Address
               </button>
             </div>
           </form>

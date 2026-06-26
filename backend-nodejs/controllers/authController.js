@@ -1,8 +1,52 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTPStorage = require('../models/OTPStorage');
+
+// ─── Email transporter ────────────────────────────────────────────────────────
+const createTransporter = () => nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.EMAIL_PORT || '587'),
+    secure: false,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+const sendOTPEmail = async (email, otpCode) => {
+    // If no email credentials configured, just log (dev mode)
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.log(`\n📧 [DEV] OTP for ${email} → ${otpCode}\n`);
+        return;
+    }
+
+    const transporter = createTransporter();
+    await transporter.sendMail({
+        from: `"Health Market Arena" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Your Health Market Arena Verification Code',
+        html: `
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
+                <div style="text-align:center;margin-bottom:24px;">
+                    <h2 style="color:#2563eb;margin:0;">Health Market Arena</h2>
+                    <p style="color:#6b7280;margin:4px 0 0;">Email Verification</p>
+                </div>
+                <div style="background:#fff;border-radius:8px;padding:24px;text-align:center;">
+                    <p style="color:#374151;margin-top:0;">Use the code below to verify your email address. It expires in <strong>10 minutes</strong>.</p>
+                    <div style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#2563eb;background:#eff6ff;border-radius:8px;padding:16px 24px;margin:20px 0;display:inline-block;">
+                        ${otpCode}
+                    </div>
+                    <p style="color:#6b7280;font-size:13px;margin-bottom:0;">If you did not request this code, please ignore this email.</p>
+                </div>
+                <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">© 2026 Health Market Arena · healthmarketarena.com</p>
+            </div>
+        `,
+    });
+    console.log(`📧 OTP email sent to ${email}`);
+};
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -30,60 +74,70 @@ const generateOTP = () => {
 // ─── Send OTP ────────────────────────────────────────────────────────────────
 exports.sendOTP = async (req, res) => {
     try {
-        const { phone, phoneNumber } = req.body;
-        const phoneNum = phone || phoneNumber;
+        // Accept email (new) or phone/phoneNumber (legacy fallback)
+        const { email, phone, phoneNumber } = req.body;
+        const identifier = email || phone || phoneNumber;
 
-        if (!phoneNum) {
+        if (!identifier) {
             return res.status(400).json({
                 statuscode: 1, status: "error",
-                message: "Phone number is required"
+                message: "Email is required"
             });
         }
 
         const otpCode = generateOTP();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        await OTPStorage.deleteMany({ phone: phoneNum });
-        await OTPStorage.create({ phone: phoneNum, otpCode, expiresAt });
+        // Store keyed by identifier (email or phone)
+        await OTPStorage.deleteMany({ phone: identifier });
+        await OTPStorage.create({ phone: identifier, otpCode, expiresAt });
 
-        console.log(`\n📱 OTP for ${phoneNum} → ${otpCode}\n`);
+        // Send email if identifier looks like an email, otherwise log (phone fallback)
+        if (identifier.includes('@')) {
+            await sendOTPEmail(identifier, otpCode);
+        } else {
+            console.log(`\n📱 [NO SMS] OTP for ${identifier} → ${otpCode}\n`);
+        }
 
         res.status(200).json({
             statuscode: 0, status: "success", success: true,
-            message: "OTP sent successfully to your phone",
-            data: { phoneNumber: phoneNum, expiresIn: 600 }
+            message: identifier.includes('@')
+                ? "Verification code sent to your email"
+                : "OTP sent successfully",
+            data: { email: identifier, expiresIn: 600 }
         });
     } catch (error) {
         console.error('Send OTP Error:', error);
-        res.status(500).json({ statuscode: 1, status: "error", message: "Failed to send OTP" });
+        res.status(500).json({ statuscode: 1, status: "error", message: "Failed to send verification code" });
     }
 };
 
-// ─── Verify Phone OTP ────────────────────────────────────────────────────────
+// ─── Verify OTP ───────────────────────────────────────────────────────────────
 exports.verifyPhoneOTP = async (req, res) => {
     try {
-        const { phone, phoneNumber, otp } = req.body;
-        const phoneNum = phone || phoneNumber;
+        // Accept email (new) or phone/phoneNumber (legacy)
+        const { email, phone, phoneNumber, otp } = req.body;
+        const identifier = email || phone || phoneNumber;
 
-        if (!phoneNum || !otp) {
+        if (!identifier || !otp) {
             return res.status(400).json({
                 statuscode: 1, status: "error",
-                message: "Phone and OTP code are required"
+                message: "Email and OTP code are required"
             });
         }
 
-        const otpRecord = await OTPStorage.findOne({ phone: phoneNum, otpCode: otp });
+        const otpRecord = await OTPStorage.findOne({ phone: identifier, otpCode: otp });
 
         if (!otpRecord) {
             return res.status(400).json({
-                statuscode: 1, status: "error", message: "Invalid OTP code"
+                statuscode: 1, status: "error", message: "Invalid verification code"
             });
         }
 
         if (new Date() > otpRecord.expiresAt) {
             await OTPStorage.deleteOne({ _id: otpRecord._id });
             return res.status(400).json({
-                statuscode: 1, status: "error", message: "OTP has expired"
+                statuscode: 1, status: "error", message: "Verification code has expired"
             });
         }
 
@@ -91,12 +145,12 @@ exports.verifyPhoneOTP = async (req, res) => {
 
         res.status(200).json({
             statuscode: 0, status: "success", success: true,
-            message: "Phone number verified successfully",
-            data: { phoneNumber: phoneNum, verified: true }
+            message: "Email verified successfully",
+            data: { email: identifier, verified: true }
         });
     } catch (error) {
         console.error('Verify OTP Error:', error);
-        res.status(500).json({ statuscode: 1, status: "error", message: "Failed to verify OTP" });
+        res.status(500).json({ statuscode: 1, status: "error", message: "Failed to verify code" });
     }
 };
 
