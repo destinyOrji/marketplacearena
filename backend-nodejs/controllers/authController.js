@@ -50,13 +50,18 @@ const sendOTPEmail = async (email, otpCode) => {
 
 // Generate JWT token
 const generateToken = (userId) => {
-    return jwt.sign({ userId, type: 'access' }, process.env.JWT_SECRET, {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        console.error('❌ JWT_SECRET is not set — using fallback (not secure for production)');
+    }
+    return jwt.sign({ userId, type: 'access' }, secret || 'fallback_dev_secret_change_in_production', {
         expiresIn: '1d'
     });
 };
 
 const generateRefreshToken = async (userId) => {
-    const token = jwt.sign({ userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh', {
+    const secret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET ? process.env.JWT_SECRET + '_refresh' : 'fallback_refresh_secret');
+    const token = jwt.sign({ userId, type: 'refresh' }, secret, {
         expiresIn: '30d'
     });
     await User.findByIdAndUpdate(userId, {

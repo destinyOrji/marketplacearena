@@ -14,7 +14,7 @@ exports.adminAuth = async (req, res, next) => {
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_dev_secret_change_in_production');
         const user = await User.findById(decoded.userId);
         
         if (!user) {

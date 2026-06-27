@@ -5,23 +5,23 @@ const Admin = require('../../models/Admin');
 
 // Generate short-lived access token (1 day)
 const generateAccessToken = (userId) => {
-    return jwt.sign({ userId, type: 'access' }, process.env.JWT_SECRET, {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) console.error('❌ JWT_SECRET not set in admin auth');
+    return jwt.sign({ userId, type: 'access' }, secret || 'fallback_dev_secret_change_in_production', {
         expiresIn: '1d'
     });
 };
 
 // Generate long-lived refresh token (30 days) and store in DB
 const generateRefreshToken = async (userId) => {
-    const token = jwt.sign({ userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET + '_refresh', {
+    const secret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET ? process.env.JWT_SECRET + '_refresh' : 'fallback_refresh_secret');
+    const token = jwt.sign({ userId, type: 'refresh' }, secret, {
         expiresIn: '30d'
     });
-
-    // Store refresh token in user record
     await User.findByIdAndUpdate(userId, {
         refreshToken: token,
         refreshTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     });
-
     return token;
 };
 
