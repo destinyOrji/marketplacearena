@@ -12,6 +12,20 @@ const mongoSanitize = require('express-mongo-sanitize');
 dotenv.config({ path: '.env' });
 dotenv.config({ path: '.env.production', override: true });
 
+// Debug: log env loading status (remove in production)
+console.log(`📋 NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+console.log(`📋 MONGODB_URI: ${process.env.MONGODB_URI ? '✓ set' : '✗ MISSING - check .env.production'}`);
+console.log(`📋 EMAIL_USER: ${process.env.EMAIL_USER ? '✓ set' : '✗ not set (email OTP will log to console)'}`);
+
+if (!process.env.MONGODB_URI) {
+    console.error('❌ FATAL: MONGODB_URI is not set. Check .env or .env.production file.');
+    console.error('Current working directory:', process.cwd());
+    const fs = require('fs');
+    console.error('.env exists:', fs.existsSync('.env'));
+    console.error('.env.production exists:', fs.existsSync('.env.production'));
+    process.exit(1);
+}
+
 const app = express();
 
 // Trust proxy (required when behind Nginx)

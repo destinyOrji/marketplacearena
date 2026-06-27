@@ -26,8 +26,8 @@ export const authApi = {
     apiClient.post<ApiResponse<null>>('/auth/forgot-password', { email }),
   resetPassword: (token: string, password: string) =>
     apiClient.post<ApiResponse<null>>('/auth/reset-password', { token, password }),
-  resetPasswordWithOTP: (phone: string, otpCode: string, newPassword: string) =>
-    apiClient.post<ApiResponse<null>>('/auth/reset-password-otp', { phone, otpCode, newPassword }),
+  resetPasswordWithOTP: (email: string, otpCode: string, newPassword: string) =>
+    apiClient.post<ApiResponse<null>>('/auth/reset-password-otp', { phone: email, otpCode, newPassword }),
 };
 
 // Patient Profile API
