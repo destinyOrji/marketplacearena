@@ -227,11 +227,32 @@ exports.register = async (req, res) => {
         try {
             if (userRole === 'professional') {
                 const Professional = require('../models/Professional');
+                // Map frontend professional type labels to valid enum values
+                const typeMap = {
+                    'doctor': 'doctor', 'nurse': 'nurse', 'pharmacist': 'pharmacist',
+                    'physiotherapist': 'physiotherapist', 'therapist': 'therapist',
+                    'technician': 'technician',
+                    'Doctor (General Practitioner)': 'doctor',
+                    'Doctor (Specialist)': 'doctor',
+                    'Surgeon': 'doctor',
+                    'Nurse': 'nurse',
+                    'Pharmacist': 'pharmacist',
+                    'Physiotherapist': 'physiotherapist',
+                    'Therapist': 'therapist',
+                    'Dentist': 'other',
+                    'Radiologist / Imaging Specialist': 'technician',
+                    'Laboratory Scientist / Technician': 'technician',
+                    'Nutritionist / Dietitian': 'other',
+                    'Mental Health Professional': 'therapist',
+                    'Emergency Medical Technician (EMT)': 'other',
+                    'Other Healthcare Professional': 'other',
+                };
+                const mappedType = typeMap[professionalType] || typeMap[professionalType?.toLowerCase()] || 'other';
                 await Professional.create({
                     user: user._id,
-                    professionalType: professionalType || 'other',
+                    professionalType: mappedType,
                     licenseNumber: licenseNumber || '',
-                    specialization: specialization || '',
+                    specialization: specialization || professionalType || '',
                     yearsOfExperience: parseInt(yearsOfExperience) || 0
                 });
             } else if (userRole === 'hospital') {
