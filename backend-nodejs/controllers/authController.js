@@ -94,7 +94,18 @@ exports.sendOTP = async (req, res) => {
 
         // Send email if identifier looks like an email, otherwise log (phone fallback)
         if (identifier.includes('@')) {
-            await sendOTPEmail(identifier, otpCode);
+            try {
+                await sendOTPEmail(identifier, otpCode);
+            } catch (emailError) {
+                console.error('❌ Email send failed:', emailError.message);
+                console.error('Email config — USER:', process.env.EMAIL_USER ? '✓ set' : '✗ MISSING', '| PASS:', process.env.EMAIL_PASS ? '✓ set' : '✗ MISSING');
+                // Still return success so the user isn't blocked, but log the failure
+                // The OTP is stored in DB so they can still verify if they have the code
+                return res.status(500).json({
+                    statuscode: 1, status: "error",
+                    message: `Failed to send email: ${emailError.message}`
+                });
+            }
         } else {
             console.log(`\n📱 [NO SMS] OTP for ${identifier} → ${otpCode}\n`);
         }

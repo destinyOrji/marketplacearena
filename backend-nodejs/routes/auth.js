@@ -139,6 +139,25 @@ router.post('/reset-password-otp', async (req, res) => {
     }
 });
 
+// ─── Email test endpoint (dev/debug only) ────────────────────────────────────
+router.get('/test-email', async (req, res) => {
+    try {
+        const nodemailer = require('nodemailer');
+        const config = {
+            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+            port: parseInt(process.env.EMAIL_PORT || '587'),
+            secure: false,
+            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+        };
+        console.log('Testing email with config:', { ...config, auth: { user: config.auth.user, pass: config.auth.pass ? '***set***' : 'MISSING' } });
+        const transporter = nodemailer.createTransport(config);
+        await transporter.verify();
+        res.json({ success: true, message: 'Email connection OK', user: process.env.EMAIL_USER });
+    } catch (err) {
+        res.json({ success: false, message: err.message, code: err.code, user: process.env.EMAIL_USER || 'NOT SET' });
+    }
+});
+
 console.log("✅ Auth routes loaded successfully");
 
 module.exports = router;
