@@ -195,7 +195,7 @@ exports.register = async (req, res) => {
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: "An account with this email already exists"
+                message: "An account with this email already exists. Please use a different email or log in."
             });
         }
 
