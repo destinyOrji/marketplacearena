@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiEye, FiCheckCircle, FiXCircle, FiFileText, FiTruck } from 'react-icons/fi';
+import { FiEye, FiCheckCircle, FiXCircle, FiFileText, FiTruck, FiAlertCircle } from 'react-icons/fi';
 import { Button, Modal } from '../../components';
 import { ambulanceService } from '../../services/ambulanceService';
 import { AmbulanceProvider, AmbulanceDocument } from '../../types';
@@ -13,11 +13,13 @@ const AmbulanceVerification: React.FC = () => {
   const navigate = useNavigate();
   const [pendingProviders, setPendingProviders] = useState<AmbulanceProvider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<AmbulanceProvider | null>(null);
   const [documents, setDocuments] = useState<AmbulanceDocument[]>([]);
   const [documentModal, setDocumentModal] = useState(false);
   const [verifyModal, setVerifyModal] = useState(false);
   const [rejectModal, setRejectModal] = useState({ show: false, reason: '' });
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchPendingVerifications();
@@ -26,10 +28,31 @@ const AmbulanceVerification: React.FC = () => {
   const fetchPendingVerifications = async () => {
     try {
       setLoading(true);
-      const data = await ambulanceService.getPendingVerifications();
-      setPendingProviders(data);
-    } catch (error) {
+      setError(null);
+      const response = await ambulanceService.getPendingVerifications();
+      // Map the backend response to match the frontend expected format
+      const mapped = (response || []).map((provider: any) => ({
+        id: provider._id || provider.id,
+        user_id: provider.user?._id || provider.user_id,
+        provider_name: provider.serviceName || provider.provider_name || 'N/A',
+        email: provider.user?.email || provider.email || 'N/A',
+        phone: provider.phone || provider.user?.phone || 'N/A',
+        service_type: provider.serviceType || provider.service_type || 'N/A',
+        registration_number: provider.registrationNumber || provider.registration_number || 'N/A',
+        address: provider.baseAddress?.street || provider.address || 'N/A',
+        city: provider.baseAddress?.city || provider.city || 'N/A',
+        state: provider.baseAddress?.state || provider.state || 'N/A',
+        country: provider.baseAddress?.country || provider.country || 'N/A',
+        verification_status: provider.isVerified ? 'verified' : 'pending',
+        is_active: provider.isAvailable || provider.is_active || false,
+        is_online: provider.isAvailable || provider.is_online || false,
+        email_verified: provider.user?.emailVerified || provider.email_verified || false,
+        created_at: provider.createdAt || provider.created_at || new Date().toISOString(),
+      }));
+      setPendingProviders(mapped);
+    } catch (error: any) {
       console.error('Failed to fetch pending verifications:', error);
+      setError(error.message || 'Failed to load pending verifications');
     } finally {
       setLoading(false);
     }
@@ -55,12 +78,17 @@ const AmbulanceVerification: React.FC = () => {
     if (!selectedProvider) return;
 
     try {
+      setActionLoading(true);
       await ambulanceService.verifyProvider(selectedProvider.id);
       setVerifyModal(false);
       setSelectedProvider(null);
-      fetchPendingVerifications();
-    } catch (error) {
+      await fetchPendingVerifications();
+      alert('Provider verified successfully!');
+    } catch (error: any) {
       console.error('Failed to verify provider:', error);
+      alert(error.message || 'Failed to verify provider');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -76,12 +104,17 @@ const AmbulanceVerification: React.FC = () => {
     }
 
     try {
+      setActionLoading(true);
       await ambulanceService.rejectProvider(selectedProvider.id, rejectModal.reason);
       setRejectModal({ show: false, reason: '' });
       setSelectedProvider(null);
-      fetchPendingVerifications();
-    } catch (error) {
+      await fetchPendingVerifications();
+      alert('Provider rejected successfully!');
+    } catch (error: any) {
       console.error('Failed to reject provider:', error);
+      alert(error.message || 'Failed to reject provider');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -89,6 +122,27 @@ const AmbulanceVerification: React.FC = () => {
     return <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
     </div>;
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-gray-900">Ambulance Provider Verification</h1>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 flex items-start gap-3">
+          <FiAlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Error Loading Verifications</h3>
+            <p className="text-sm text-red-700 mb-4">{error}</p>
+            <button
+              onClick={fetchPendingVerifications}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -199,11 +253,11 @@ const AmbulanceVerification: React.FC = () => {
             Are you sure you want to verify provider <strong>{selectedProvider?.provider_name}</strong>?
           </p>
           <div className="flex justify-end space-x-3">
-            <Button variant="secondary" onClick={() => { setVerifyModal(false); setSelectedProvider(null); }}>
+            <Button variant="secondary" onClick={() => { setVerifyModal(false); setSelectedProvider(null); }} disabled={actionLoading}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleVerifyConfirm}>
-              Verify Provider
+            <Button variant="primary" onClick={handleVerifyConfirm} disabled={actionLoading}>
+              {actionLoading ? 'Verifying...' : 'Verify Provider'}
             </Button>
           </div>
         </div>
@@ -226,11 +280,11 @@ const AmbulanceVerification: React.FC = () => {
             placeholder="Enter rejection reason..."
           />
           <div className="flex justify-end space-x-3">
-            <Button variant="secondary" onClick={() => { setRejectModal({ show: false, reason: '' }); setSelectedProvider(null); }}>
+            <Button variant="secondary" onClick={() => { setRejectModal({ show: false, reason: '' }); setSelectedProvider(null); }} disabled={actionLoading}>
               Cancel
             </Button>
-            <Button variant="danger" onClick={handleRejectConfirm}>
-              Reject Provider
+            <Button variant="danger" onClick={handleRejectConfirm} disabled={actionLoading}>
+              {actionLoading ? 'Rejecting...' : 'Reject Provider'}
             </Button>
           </div>
         </div>

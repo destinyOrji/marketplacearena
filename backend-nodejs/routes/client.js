@@ -1,9 +1,32 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { protect } = require('../middleware/auth');
 const { requireSubscription } = require('../middleware/subscription');
 const Client = require('../models/Client');
 const User = require('../models/User');
+
+// Configure multer for client photo uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/clients');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'client-' + Date.now() + path.extname(file.originalname));
+    }
+});
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/jpeg|jpg|png|gif|webp/.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Only image files allowed'));
+    }
+});
 
 // Dashboard stats for patient
 router.get('/dashboard-stats', protect, async (req, res) => {
@@ -1063,9 +1086,24 @@ router.get('/medical-records/:id/download', protect, async (req, res) => {
     res.status(200).json({ success: true, message: 'Download not yet configured' });
 });
 
-// Upload photo
-router.post('/upload-photo', protect, async (req, res) => {
-    res.json({ success: true, data: { photoUrl: null }, message: 'Photo upload — configure multer on server' });
+// Upload photo — client/patient
+router.post('/upload-photo', protect, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        
+        const photoUrl = `/uploads/clients/${req.file.filename}`;
+        
+        res.json({ 
+            success: true, 
+            data: { photoUrl },
+            message: 'Photo uploaded successfully' 
+        });
+    } catch (error) {
+        console.error('Error uploading photo:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // Change password

@@ -51,8 +51,8 @@ function CompliancePage() {
                 <li>Medical and Dental Practitioners Act</li>
                 <li>Nursing and Midwifery Act</li>
                 <li>Pharmacy Council of Nigeria regulations</li>
-                <li>Federal Ministry of Health guidelines</li>
-                <li>State health ministry requirements</li>
+                <li>Healthcare industry standards and guidelines</li>
+                <li>State health requirements</li>
               </ul>
 
               <h3 className="text-xl font-bold text-gray-900 mb-3 mt-6">1.2 Data Protection</h3>
@@ -87,7 +87,7 @@ function CompliancePage() {
                 Hospitals and clinics must demonstrate:
               </p>
               <ul className="list-disc list-inside text-gray-600 space-y-2 ml-4 mb-6">
-                <li>Valid operating license from state health ministry</li>
+                <li>Valid operating license from state health authority</li>
                 <li>Facility accreditation certificates</li>
                 <li>Compliance with health and safety standards</li>
                 <li>Quality assurance programs</li>

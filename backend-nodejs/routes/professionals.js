@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { protect } = require('../middleware/auth');
+const { requireVerification } = require('../middleware/requireVerification');
 const Professional = require('../models/Professional');
 const Service = require('../models/Service');
 const Appointment = require('../models/Appointment');
@@ -70,7 +71,7 @@ router.get('/debug/check-profile', protect, async (req, res) => {
 });
 
 // Dashboard stats
-router.get('/dashboard-stats', protect, async (req, res) => {
+router.get('/dashboard-stats', protect, requireVerification, async (req, res) => {
     try {
         const professional = await Professional.findOne({ user: req.user._id });
         const activeServices = professional ? await Service.countDocuments({ professional: professional._id, status: 'active' }) : 0;

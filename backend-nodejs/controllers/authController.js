@@ -300,11 +300,13 @@ exports.register = async (req, res) => {
                 const GymPhysio = require('../models/GymPhysio');
                 await GymPhysio.create({
                     user: user._id,
+                    phone: phone || '', // REQUIRED FIELD - was missing!
                     businessType: businessType || 'gym',
                     businessName: businessName || `${firstName} ${lastName}`,
                     licenseNumber: licenseNumber || '',
                     specialization: specialization || '',
                     yearsInBusiness: parseInt(yearsInBusiness) || 0,
+                    address: address || '',
                     city: city || '',
                     state: state || ''
                 });
@@ -323,7 +325,18 @@ exports.register = async (req, res) => {
                 });
             }
         } catch (profileError) {
-            console.error('Profile creation error (non-fatal):', profileError.message);
+            // Critical: Profile creation failed - rollback user creation
+            console.error('Profile creation error:', profileError.message);
+            console.error('Profile error details:', profileError);
+            
+            // Delete the user if profile creation fails
+            await User.findByIdAndDelete(user._id);
+            
+            return res.status(500).json({
+                success: false,
+                message: `Failed to create ${userRole} profile: ${profileError.message}. Please try again.`,
+                error: profileError.message
+            });
         }
 
         const token = generateToken(user._id);

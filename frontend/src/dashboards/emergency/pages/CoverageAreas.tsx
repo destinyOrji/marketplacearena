@@ -69,11 +69,11 @@ const CoverageAreas: React.FC = () => {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 relative z-10">
         <h1 className="text-2xl font-bold text-gray-900">Coverage Areas</h1>
         <button
           onClick={handleAddArea}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg"
         >
           + Add Coverage Area
         </button>
@@ -81,7 +81,7 @@ const CoverageAreas: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map View */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative z-0">
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <span className="text-2xl">🗺️</span>
@@ -89,19 +89,21 @@ const CoverageAreas: React.FC = () => {
             </h2>
             <p className="text-sm text-gray-600 mt-1">View all your active coverage areas across Nigeria</p>
           </div>
-          <div className="p-6">
-            <Map
-              height="450px"
-              center={[9.0820, 8.6753]} // Nigeria center
-              zoom={6}
-              circles={coverageAreas
-                .filter(area => area.isActive)
-                .map(area => ({
-                  center: area.center ? [area.center.latitude, area.center.longitude] : [9.0820, 8.6753],
-                  radius: area.radius || 5000,
-                  color: '#ef4444',
-                }))}
-            />
+          <div className="p-6 relative z-0">
+            <div className="relative z-0">
+              <Map
+                height="450px"
+                center={[9.0820, 8.6753]} // Nigeria center
+                zoom={6}
+                circles={coverageAreas
+                  .filter(area => area.isActive)
+                  .map(area => ({
+                    center: area.center ? [area.center.latitude, area.center.longitude] : [9.0820, 8.6753],
+                    radius: area.radius || 5000,
+                    color: '#ef4444',
+                  }))}
+              />
+            </div>
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <span className="w-3 h-3 bg-red-500 rounded-full opacity-30 border-2 border-red-500"></span>
@@ -115,7 +117,7 @@ const CoverageAreas: React.FC = () => {
         </div>
 
         {/* Coverage Areas List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative z-0">
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <span className="text-2xl">📍</span>

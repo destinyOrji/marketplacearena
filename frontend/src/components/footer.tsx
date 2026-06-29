@@ -131,7 +131,7 @@ const Footer: React.FC = () => {
                             © 2026 Health Market Arena. All rights reserved.
                         </p>
                         <p className="text-blue-200 text-sm mt-2 md:mt-0">
-                            Licensed by Federal Ministry of Health, Nigeria
+                            Patented/Operated by DCCS Technology Development Company Limited
                         </p>
                     </div>
                 </div>

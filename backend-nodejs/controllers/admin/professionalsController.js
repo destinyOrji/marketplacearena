@@ -490,11 +490,7 @@ exports.verifyProfessional = async (req, res) => {
 
         const professional = await Professional.findById(id);
         if (!professional) {
-            return res.status(404).json({
-                statuscode: 1,
-                status: 'error',
-                message: 'Professional not found'
-            });
+            return res.status(404).json({ statuscode: 1, status: 'error', message: 'Professional not found' });
         }
 
         professional.isVerified = true;
@@ -502,20 +498,18 @@ exports.verifyProfessional = async (req, res) => {
         professional.verifiedBy = req.user._id;
         await professional.save();
 
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            message: 'Professional verified successfully'
+        // Sync to User model so dashboard badge updates
+        await User.findByIdAndUpdate(professional.user, {
+            isVerified: true,
+            verificationStatus: 'verified',
+            status: 'active'
         });
+
+        res.json({ statuscode: 0, status: 'success', message: 'Professional verified successfully' });
 
     } catch (error) {
         console.error('Verify professional error:', error);
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to verify professional',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: 'Failed to verify professional', error: error.message });
     }
 };
 

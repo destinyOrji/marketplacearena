@@ -21,11 +21,14 @@ const ProfileOnboarding: React.FC = () => {
 
   useEffect(() => { loadProfile(); }, []);
 
+  const [isVerified, setIsVerified] = useState(false);
+
   const loadProfile = async () => {
     setLoading(true);
     try {
       const res = await apiClient.get('/professionals/profile');
       const d = res.data?.data || res.data;
+      setIsVerified(d.isVerified || false);
       setForm({
         firstName: d.user?.firstName || d.firstName || '',
         lastName: d.user?.lastName || d.lastName || '',
@@ -123,9 +126,14 @@ const ProfileOnboarding: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{form.firstName} {form.lastName}</h1>
           <p className="text-gray-500 text-sm">{form.email}</p>
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-1 capitalize">
-            {form.professionalType || 'Professional'}
-          </span>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
+              {form.professionalType || 'Professional'}
+            </span>
+            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${isVerified ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+              {isVerified ? '✓ Verified' : '⏳ Pending Verification'}
+            </span>
+          </div>
         </div>
       </div>
 

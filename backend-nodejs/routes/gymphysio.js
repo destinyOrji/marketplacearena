@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { protect } = require('../middleware/auth');
+const { requireVerification } = require('../middleware/requireVerification');
 const GymPhysio = require('../models/GymPhysio');
 const Service = require('../models/Service');
 const Appointment = require('../models/Appointment');
@@ -46,7 +47,7 @@ const upload = multer({
 });
 
 // Dashboard stats
-router.get('/dashboard-stats', protect, async (req, res) => {
+router.get('/dashboard-stats', protect, requireVerification, async (req, res) => {
     try {
         const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
 
@@ -128,12 +129,30 @@ router.get('/dashboard-stats', protect, async (req, res) => {
 // Get gym/physio profile
 router.get('/profile', protect, async (req, res) => {
     try {
-        const gymPhysio = await GymPhysio.findOne({ user: req.user._id }).populate('user', '-password');
+        let gymPhysio = await GymPhysio.findOne({ user: req.user._id }).populate('user', '-password');
+        
+        // Auto-create profile if it doesn't exist (handles missing profiles from registration issues)
         if (!gymPhysio) {
-            return res.status(404).json({ success: false, message: 'Gym/Physio profile not found' });
+            gymPhysio = await GymPhysio.create({
+                user: req.user._id,
+                phone: req.user.phone || '',
+                businessType: 'gym',
+                businessName: `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'My Business',
+                licenseNumber: '',
+                specialization: '',
+                yearsInBusiness: 0,
+                city: req.user.city || '',
+                state: req.user.state || '',
+                address: req.user.address || ''
+            });
+            
+            // Populate user after creation
+            gymPhysio = await GymPhysio.findById(gymPhysio._id).populate('user', '-password');
         }
+        
         res.json({ success: true, data: gymPhysio });
     } catch (error) {
+        console.error('Get gym-physio profile error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

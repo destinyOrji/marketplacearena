@@ -34,9 +34,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+        // Transform user data to include fullName if firstName and lastName are provided
+        const transformedUser = {
+          ...user,
+          fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Patient'
+        };
+        
+        // Update localStorage with transformed user data
+        localStorage.setItem('user', JSON.stringify(transformedUser));
+        
         setAuthState({
           isAuthenticated: true,
-          user,
+          user: transformedUser,
           token,
           loading: false,
           error: null,
@@ -65,12 +74,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const { user, token } = resData.data || resData;
 
+      // Transform user data to include fullName if firstName and lastName are provided
+      const transformedUser = {
+        ...user,
+        fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Patient'
+      };
+
       localStorage.setItem('authToken', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(transformedUser));
 
       setAuthState({
         isAuthenticated: true,
-        user,
+        user: transformedUser,
         token: token,
         loading: false,
         error: null,
@@ -96,6 +111,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const resData = response.data as any;
       if (resData.success === false || resData.statuscode === 1) {
         throw new Error(resData.message || 'Registration failed');
+      }
+
+      // If user data is included in registration response, transform it
+      if (resData.data?.user) {
+        const user = resData.data.user;
+        const transformedUser = {
+          ...user,
+          fullName: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Patient'
+        };
+        resData.data.user = transformedUser;
       }
 
       setAuthState((prev) => ({

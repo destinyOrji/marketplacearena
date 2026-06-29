@@ -1,11 +1,35 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { protect } = require('../middleware/auth');
+const { requireVerification } = require('../middleware/requireVerification');
 const Ambulance = require('../models/Ambulance');
 const User = require('../models/User');
 
+// Configure multer for ambulance uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/ambulance');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'ambulance-' + Date.now() + path.extname(file.originalname));
+    }
+});
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/jpeg|jpg|png|gif|webp/.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Only image files allowed'));
+    }
+});
+
 // Dashboard stats
-router.get('/dashboard-stats', protect, async (req, res) => {
+router.get('/dashboard-stats', protect, requireVerification, async (req, res) => {
     try {
         const ambulance = await Ambulance.findOne({ user: req.user._id });
 
@@ -38,6 +62,26 @@ router.get('/profile', protect, async (req, res) => {
         }
         res.json({ success: true, data: ambulance });
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Upload profile picture
+router.post('/upload-photo', protect, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        
+        const photoUrl = `/uploads/ambulance/${req.file.filename}`;
+        
+        res.json({ 
+            success: true, 
+            data: { photoUrl },
+            message: 'Photo uploaded successfully' 
+        });
+    } catch (error) {
+        console.error('Error uploading photo:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -867,11 +911,25 @@ router.delete('/payment-methods/:id', protect, async (req, res) => {
 });
 
 // Upload photo
-router.post('/upload-photo', protect, async (req, res) => {
-    res.json({ success: true, data: { photoUrl: '/uploads/ambulance/default.jpg' }, message: 'Photo upload endpoint — configure multer on server' });
+router.post('/upload-photo', protect, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+        const photoUrl = `/uploads/ambulance/${req.file.filename}`;
+        await Ambulance.findOneAndUpdate({ user: req.user._id }, { profilePhoto: photoUrl });
+        res.json({ success: true, data: { photoUrl }, message: 'Photo uploaded successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
-router.post('/documents/upload', protect, async (req, res) => {
-    res.json({ success: true, data: { documentUrl: '/uploads/ambulance/doc.pdf' }, message: 'Document upload endpoint — configure multer on server' });
+
+router.post('/documents/upload', protect, upload.single('document'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+        const documentUrl = `/uploads/ambulance/${req.file.filename}`;
+        res.json({ success: true, data: { documentUrl }, message: 'Document uploaded successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 module.exports = router;

@@ -56,32 +56,32 @@ const PaymentsEarnings: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Earned', value: `₦${totalEarnings.toLocaleString()}`, icon: '💰', color: 'bg-blue-50 text-blue-600' },
           { label: 'Pending',      value: `₦${pending.toLocaleString()}`,       icon: '⏳', color: 'bg-amber-50 text-amber-600' },
           { label: 'Platform Fee', value: `₦${platformFees.toLocaleString()}`,  icon: '🏛', color: 'bg-red-50 text-red-500' },
           { label: 'Net Earnings', value: `₦${netEarnings.toLocaleString()}`,   icon: '📈', color: 'bg-green-50 text-green-600' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-4">
-            <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center text-lg mb-2`}>{s.icon}</div>
-            <p className="text-xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-3">
+            <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center text-base mb-1.5`}>{s.icon}</div>
+            <p className="text-lg font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-500">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Additional Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Total Transactions', value: totalTransactions, icon: '📊', color: 'bg-purple-50 text-purple-600' },
           { label: 'Completed', value: completedPayments, icon: '✅', color: 'bg-green-50 text-green-600' },
           { label: 'Failed', value: failedPayments, icon: '❌', color: 'bg-red-50 text-red-500' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className={`w-8 h-8 rounded-lg ${s.color} flex items-center justify-center text-base mb-2`}>{s.icon}</div>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-3">
+            <div className={`w-7 h-7 rounded-lg ${s.color} flex items-center justify-center text-sm mb-1.5`}>{s.icon}</div>
+            <p className="text-xl font-bold text-gray-900">{s.value}</p>
+            <p className="text-xs text-gray-500">{s.label}</p>
           </div>
         ))}
       </div>

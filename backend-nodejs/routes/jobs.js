@@ -13,6 +13,10 @@ router.get('/', protect, async (req, res) => {
         const skip = (page - 1) * limit;
 
         let query = { status: 'active' };
+        // Filter out expired jobs for professionals — only show jobs where deadline hasn't passed
+        if (req.user.role === 'professional') {
+            query.applicationDeadline = { $gte: new Date() };
+        }
         if (department) query.department = { $regex: department, $options: 'i' };
         if (experienceLevel) query.experienceLevel = experienceLevel;
         if (employmentType) query.employmentType = employmentType;

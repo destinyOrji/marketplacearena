@@ -1,11 +1,35 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { protect } = require('../middleware/auth');
+const { requireVerification } = require('../middleware/requireVerification');
 const Hospital = require('../models/Hospital');
 const User = require('../models/User');
 
+// Configure multer for hospital image uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/hospitals');
+        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'hospital-' + Date.now() + path.extname(file.originalname));
+    }
+});
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (/jpeg|jpg|png|gif|webp/.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Only image files allowed'));
+    }
+});
+
 // Hospital dashboard stats
-router.get('/dashboard-stats', protect, async (req, res) => {
+router.get('/dashboard-stats', protect, requireVerification, async (req, res) => {
     try {
         const Job = require('../models/Job');
         const JobApplication = require('../models/JobApplication');
@@ -59,6 +83,26 @@ router.get('/profile', protect, async (req, res) => {
         }
         res.json({ success: true, data: hospital });
     } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Upload profile picture
+router.post('/upload-photo', protect, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        
+        const photoUrl = `/uploads/hospitals/${req.file.filename}`;
+        
+        res.json({ 
+            success: true, 
+            data: { photoUrl },
+            message: 'Photo uploaded successfully' 
+        });
+    } catch (error) {
+        console.error('Error uploading photo:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -1108,9 +1152,16 @@ router.post('/onboarding', protect, async (req, res) => {
 });
 
 // Image upload (logo / facility photo)
-router.post('/upload-image', protect, async (req, res) => {
-    // Without multer configured, acknowledge gracefully
-    res.json({ success: true, data: { image_url: null }, message: 'Image upload — configure multer on server' });
+router.post('/upload-image', protect, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+        const imageUrl = `/uploads/hospitals/${req.file.filename}`;
+        // Save to hospital profile
+        await Hospital.findOneAndUpdate({ user: req.user._id }, { $set: { logoUrl: imageUrl } });
+        res.json({ success: true, data: { image_url: imageUrl }, message: 'Image uploaded successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 // Application detail

@@ -273,26 +273,19 @@ exports.getProviderDocuments = async (req, res) => {
 exports.verifyProvider = async (req, res) => {
     try {
         const { id } = req.params;
+        const provider = await Ambulance.findByIdAndUpdate(id, {
+            isVerified: true, verificationDate: new Date(), verifiedBy: req.user._id
+        }, { new: true });
+        if (!provider) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Provider not found' });
 
-        await Ambulance.findByIdAndUpdate(id, {
-            isVerified: true,
-            verificationDate: new Date(),
-            verifiedBy: req.user._id
+        // Sync to User model
+        await User.findByIdAndUpdate(provider.user, {
+            isVerified: true, verificationStatus: 'verified', status: 'active'
         });
 
-        res.json({
-            statuscode: 0,
-            status: 'success',
-            message: 'Ambulance provider verified successfully'
-        });
-
+        res.json({ statuscode: 0, status: 'success', message: 'Ambulance provider verified successfully' });
     } catch (error) {
-        res.status(500).json({
-            statuscode: 1,
-            status: 'error',
-            message: 'Failed to verify ambulance provider',
-            error: error.message
-        });
+        res.status(500).json({ statuscode: 1, status: 'error', message: 'Failed to verify ambulance provider', error: error.message });
     }
 };
 

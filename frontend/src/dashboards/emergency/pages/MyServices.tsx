@@ -156,9 +156,16 @@ const MyServices: React.FC = () => {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Service Name *</label>
-                <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                <select value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  placeholder="e.g., Basic Life Support" required />
+                  required>
+                  <option value="">Select a service</option>
+                  <option value="ambulance">Ambulance</option>
+                  <option value="paramedic">Paramedic</option>
+                  <option value="fire">Fire</option>
+                  <option value="rescue">Rescue</option>
+                  <option value="medical-transport">Medical Transport</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>

@@ -16,6 +16,81 @@ const GymPhysioRegisterStep2: React.FC = () => {
     yearsInBusiness: '',
   });
 
+  // Specialization options based on business type
+  const specializationOptions = {
+    gym: [
+      'Personal Training',
+      'Group Fitness Classes',
+      'CrossFit',
+      'Bodybuilding',
+      'Powerlifting',
+      'Olympic Weightlifting',
+      'Cardio Training',
+      'HIIT (High-Intensity Interval Training)',
+      'Yoga',
+      'Pilates',
+      'Spinning/Cycling',
+      'Boxing/Kickboxing',
+      'Functional Fitness',
+      'Sports Performance Training',
+      'Weight Loss Programs',
+      'Strength & Conditioning',
+      'Senior Fitness',
+      'Youth Fitness',
+      'Prenatal/Postnatal Fitness',
+      '24/7 Access Gym',
+    ],
+    physiotherapy: [
+      'Sports Physiotherapy',
+      'Orthopedic Physiotherapy',
+      'Neurological Physiotherapy',
+      'Pediatric Physiotherapy',
+      'Geriatric Physiotherapy',
+      'Cardiopulmonary Physiotherapy',
+      'Women\'s Health Physiotherapy',
+      'Manual Therapy',
+      'Post-Surgical Rehabilitation',
+      'Chronic Pain Management',
+      'Sports Injury Rehabilitation',
+      'Musculoskeletal Physiotherapy',
+      'Vestibular Rehabilitation',
+      'Oncology Physiotherapy',
+      'Occupational Health Physiotherapy',
+      'Electrotherapy',
+      'Hydrotherapy',
+      'Acupuncture/Dry Needling',
+      'Massage Therapy',
+      'Spinal Rehabilitation',
+    ],
+    both: [
+      'Personal Training',
+      'Group Fitness Classes',
+      'Sports Physiotherapy',
+      'Orthopedic Physiotherapy',
+      'Sports Injury Rehabilitation',
+      'Post-Surgical Rehabilitation',
+      'Strength & Conditioning',
+      'Functional Fitness',
+      'Manual Therapy',
+      'Chronic Pain Management',
+      'Weight Loss Programs',
+      'Sports Performance Training',
+      'Yoga',
+      'Pilates',
+      'CrossFit',
+      'HIIT (High-Intensity Interval Training)',
+      'Massage Therapy',
+      'Senior Fitness',
+      'Hydrotherapy',
+      'Musculoskeletal Physiotherapy',
+    ],
+  };
+
+  // Get current specialization options based on selected business type
+  const currentSpecializations = formData.businessType
+    ? specializationOptions[formData.businessType as keyof typeof specializationOptions] || []
+    : [];
+
   useEffect(() => {
     const step1Data = localStorage.getItem('gymPhysioRegisterStep1');
     if (!step1Data) {
@@ -24,10 +99,21 @@ const GymPhysioRegisterStep2: React.FC = () => {
   }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    
+    // If business type changes, reset specialization
+    if (name === 'businessType') {
+      setFormData({
+        ...formData,
+        [name]: value,
+        specialization: '', // Reset specialization when business type changes
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   const handleBack = () => {
@@ -95,17 +181,47 @@ const GymPhysioRegisterStep2: React.FC = () => {
                 </div>
 
                 <div className="mb-4">
-                  <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-2">Specialization</label>
-                  <input
-                    type="text"
-                    id="specialization"
-                    name="specialization"
-                    value={formData.specialization}
-                    onChange={handleChange}
-                    placeholder="e.g., Sports Rehabilitation, Weight Training, etc."
-                    required
-                    className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200"
-                  />
+                  <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-2">
+                    Specialization
+                    {!formData.businessType && (
+                      <span className="text-xs text-gray-500 ml-2">(Select Business Type first)</span>
+                    )}
+                  </label>
+                  {formData.businessType ? (
+                    <select
+                      id="specialization"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      required
+                      className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 appearance-none bg-white"
+                    >
+                      <option value="">Select Specialization</option>
+                      {currentSpecializations.map((spec) => (
+                        <option key={spec} value={spec}>
+                          {spec}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      id="specialization"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleChange}
+                      placeholder="Please select a Business Type first"
+                      disabled
+                      className="block w-full px-3 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                    />
+                  )}
+                  {formData.businessType && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.businessType === 'gym' && 'Select your gym/fitness specialization'}
+                      {formData.businessType === 'physiotherapy' && 'Select your physiotherapy specialization'}
+                      {formData.businessType === 'both' && 'Select your primary specialization'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="mb-4">

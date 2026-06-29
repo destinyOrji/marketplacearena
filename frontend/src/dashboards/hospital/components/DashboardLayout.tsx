@@ -13,6 +13,7 @@ import {
   FiX,
   FiLogOut,
   FiTrendingUp,
+  FiSettings,
 } from 'react-icons/fi';
 import { useHospital } from '../contexts/HospitalContext';
 
@@ -136,6 +137,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Applications', href: '/hospital/applications', icon: FiFileText },
     { name: 'Analytics',    href: '/hospital/analytics',    icon: FiTrendingUp },
     { name: 'Billing',      href: '/hospital/billing',      icon: FiCreditCard },
+    { name: 'Settings',     href: '/hospital/settings',     icon: FiSettings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
