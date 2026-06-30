@@ -151,6 +151,7 @@ app.use('/api/subscriptions', require('./routes/subscriptions'));
 const { providerRouter } = require('./routes/subscriptions');
 app.use('/api/subscriptions/provider', providerRouter);
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/blog', require('./routes/blog'));
 
 // Debug routes (only in development)
 if (process.env.NODE_ENV !== 'production') {

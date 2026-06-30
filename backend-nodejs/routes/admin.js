@@ -6,6 +6,7 @@ const adminProfessionalsController = require('../controllers/admin/professionals
 const adminHospitalsController = require('../controllers/admin/hospitalsController');
 const adminAmbulancesController = require('../controllers/admin/ambulancesController');
 const adminGymPhysioController = require('../controllers/admin/gymPhysioController');
+const adminBlogController = require('../controllers/admin/blogController');
 const { adminAuth } = require('../middleware/adminAuth');
 
 const router = express.Router();
@@ -324,5 +325,15 @@ router.get('/settings/roles', adminAuth, (req, res) => {
 router.get('/settings/audit-logs', adminAuth, (req, res) => {
     res.json({ statuscode: 0, status: 'success', data: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } });
 });
+
+// ─── Blog Management Routes ────────────────────────────────────────────────────
+router.get('/blog/posts', adminAuth, adminBlogController.getAllPosts);
+router.get('/blog/posts/:id', adminAuth, adminBlogController.getPostById);
+router.post('/blog/posts', adminAuth, adminBlogController.createPost);
+router.put('/blog/posts/:id', adminAuth, adminBlogController.updatePost);
+router.delete('/blog/posts/:id', adminAuth, adminBlogController.deletePost);
+router.post('/blog/posts/:id/publish', adminAuth, adminBlogController.publishPost);
+router.post('/blog/posts/bulk-delete', adminAuth, adminBlogController.bulkDelete);
+router.get('/blog/analytics', adminAuth, adminBlogController.getAnalytics);
 
 module.exports = router;
