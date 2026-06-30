@@ -93,6 +93,10 @@ const AllGymEarningsPage = lazy(() => import('./pages/gym-physio/AllGymEarnings'
 const PendingApprovalsPage = lazy(() => import('./pages/PendingApprovals'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
 
+// Blog management pages
+const BlogManagementPage = lazy(() => import('./pages/BlogManagement'));
+const BlogEditorPage = lazy(() => import('./pages/BlogEditor'));
+
 const AdminRoutes: React.FC = () => {
   return (
     <AdminAuthProvider>
@@ -184,6 +188,11 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/settings/email-templates" element={<EmailTemplatesPage />} />
                   <Route path="/settings/audit-logs" element={<AuditLogsPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
+                  
+                  {/* Blog Management Routes */}
+                  <Route path="/blog" element={<BlogManagementPage />} />
+                  <Route path="/blog/create" element={<BlogEditorPage />} />
+                  <Route path="/blog/edit/:id" element={<BlogEditorPage />} />
                 </Routes>
               </DashboardLayout>
             </ProtectedRoute>
