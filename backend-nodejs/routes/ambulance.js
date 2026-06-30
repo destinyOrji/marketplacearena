@@ -61,35 +61,57 @@ router.get('/profile', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Ambulance profile not found' });
         }
         
-        // Format response to match frontend expectations
+        // Format response to match frontend expectations and model structure
         const ambulanceData = {
             id: ambulance._id,
             user_id: ambulance.user._id,
-            provider_name: ambulance.provider_name,
-            email: ambulance.email,
+            // Map both formats for compatibility
+            provider_name: ambulance.serviceName,
+            serviceName: ambulance.serviceName,
+            service_type: ambulance.serviceType,
+            serviceType: ambulance.serviceType,
+            registration_number: ambulance.registrationNumber,
+            licenseNumber: ambulance.registrationNumber,
             phone: ambulance.phone,
-            service_type: ambulance.service_type,
-            registration_number: ambulance.registration_number,
-            address: ambulance.address,
-            city: ambulance.city,
-            state: ambulance.state,
-            country: ambulance.country,
-            verification_status: ambulance.verification_status,
-            isVerified: ambulance.verification_status === 'verified',
-            verificationStatus: ambulance.verification_status,
-            is_active: ambulance.is_active,
-            is_online: ambulance.is_online,
-            email_verified: ambulance.email_verified,
-            profile_picture: ambulance.profile_picture,
-            license_document: ambulance.license_document,
-            insurance_document: ambulance.insurance_document,
+            emergency_number: ambulance.emergencyNumber,
+            emergencyNumber: ambulance.emergencyNumber,
+            email: ambulance.email || ambulance.user.email,
+            // Address - support both flat and nested formats
+            address: ambulance.baseAddress?.street || '',
+            city: ambulance.baseAddress?.city || '',
+            state: ambulance.baseAddress?.state || '',
+            country: ambulance.baseAddress?.country || '',
+            baseAddress: ambulance.baseAddress,
+            // Verification status - map both formats
+            isVerified: ambulance.isVerified,
+            verification_status: ambulance.isVerified ? 'verified' : 'pending',
+            verificationStatus: ambulance.isVerified ? 'verified' : 'pending',
+            verificationDate: ambulance.verificationDate,
+            // Operational status
+            is_active: ambulance.isAvailable,
+            is_online: ambulance.isAvailable,
+            isAvailable: ambulance.isAvailable,
+            // Documents
+            license_document: ambulance.licenseDocument,
+            insurance_document: ambulance.insuranceDocument,
+            // Stats
+            averageRating: ambulance.averageRating,
+            totalReviews: ambulance.totalReviews,
+            totalBookings: ambulance.totalBookings,
+            completedBookings: ambulance.completedBookings,
+            averageResponseTime: ambulance.averageResponseTime,
+            // Arrays
+            vehicles: ambulance.vehicles || [],
+            staff: ambulance.staff || [],
+            services: ambulance.services || [],
+            coverageAreas: ambulance.coverageAreas || [],
+            // Timestamps
             createdAt: ambulance.createdAt,
             updatedAt: ambulance.updatedAt,
-            // Add user fields for compatibility
+            // User fields for compatibility
             role: ambulance.user.role,
             firstName: ambulance.user.firstName,
-            serviceName: ambulance.provider_name,
-            organizationName: ambulance.provider_name
+            organizationName: ambulance.serviceName
         };
         
         res.json({ success: true, data: ambulanceData });
