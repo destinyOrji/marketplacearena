@@ -27,19 +27,19 @@ const ProfileOnboarding: React.FC = () => {
       const res = await apiClient.get('/ambulance/profile');
       const d = res.data?.data || res.data;
       setForm({
-        serviceName: d.serviceName || '',
-        serviceType: d.serviceType || '',
+        serviceName: d.provider_name || d.serviceName || '',
+        serviceType: d.service_type || d.serviceType || '',
         phone: d.phone || '',
-        emergencyNumber: d.emergencyNumber || '',
+        emergencyNumber: d.emergency_number || d.emergencyNumber || '',
         email: d.email || d.user?.email || '',
-        licenseNumber: d.licenseNumber || '',
-        yearsOfExperience: d.yearsOfExperience || 0,
-        street: d.baseAddress?.street || '',
-        city: d.baseAddress?.city || '',
-        state: d.baseAddress?.state || '',
-        country: d.baseAddress?.country || '',
+        licenseNumber: d.registration_number || d.licenseNumber || '',
+        yearsOfExperience: d.years_of_experience || d.yearsOfExperience || 0,
+        street: d.address || d.baseAddress?.street || '',
+        city: d.city || d.baseAddress?.city || '',
+        state: d.state || d.baseAddress?.state || '',
+        country: d.country || d.baseAddress?.country || '',
       });
-      setIsVerified(d.isVerified || false);
+      setIsVerified(d.isVerified || d.verification_status === 'verified' || false);
     } catch (e) {
       toast.error('Failed to load profile');
     } finally {
