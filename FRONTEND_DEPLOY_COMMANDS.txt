@@ -1,0 +1,46 @@
+═══════════════════════════════════════════════════════════
+  FRONTEND DEPLOYMENT - Copy and Paste into PuTTY
+═══════════════════════════════════════════════════════════
+
+cd /var/www/healthmarketarena/frontend
+
+git pull origin main
+
+npm install
+
+npm run build
+
+sudo rm -rf /var/www/healthmarketarena/html/*
+
+sudo cp -r build/* /var/www/healthmarketarena/html/
+
+sudo chown -R nginx:nginx /var/www/healthmarketarena/html/
+
+sudo nginx -s reload
+
+ls -la /var/www/healthmarketarena/html/
+
+sudo systemctl status nginx
+
+═══════════════════════════════════════════════════════════
+✅ Frontend Deployed Successfully!
+═══════════════════════════════════════════════════════════
+
+EXPECTED OUTPUT:
+✓ Git pull shows files updated (coverage map fix)
+✓ npm install completes
+✓ npm run build completes (takes 2-3 minutes)
+✓ Files copied to html/ directory
+✓ Nginx reloaded successfully
+✓ Nginx status shows "active (running)"
+
+TEST YOUR SITE:
+Open browser and visit:
+- https://healthmarketarena.com
+- https://healthmarketarena.com/ambulance/coverage (map should be fixed!)
+
+IF BUILD FAILS (Out of Memory):
+Run this instead of "npm run build":
+NODE_OPTIONS="--max-old-space-size=4096" npm run build
+
+═══════════════════════════════════════════════════════════

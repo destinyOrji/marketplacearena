@@ -1,0 +1,38 @@
+═══════════════════════════════════════════════════════════
+  BACKEND DEPLOYMENT - Copy and Paste into PuTTY
+═══════════════════════════════════════════════════════════
+
+cd /var/www/healthmarketarena/backend-nodejs
+
+git pull origin main
+
+npm install
+
+pm2 restart healthmarket-backend
+
+pm2 status
+
+pm2 logs healthmarket-backend --lines 30
+
+curl http://localhost:3001/api/health
+
+curl http://localhost:3001/api/blog/posts
+
+═══════════════════════════════════════════════════════════
+✅ Backend Deployed Successfully!
+═══════════════════════════════════════════════════════════
+
+EXPECTED OUTPUT:
+✓ Git pull shows files updated
+✓ npm install completes (installs slugify)
+✓ PM2 shows "online" status
+✓ Logs show "Connected to MongoDB"
+✓ Health endpoint returns JSON
+✓ Blog endpoint returns empty array [] or posts
+
+IF YOU SEE ERRORS:
+- Check logs: pm2 logs healthmarket-backend --lines 100
+- Restart again: pm2 restart healthmarket-backend
+- Check MongoDB: Look for connection errors in logs
+
+═══════════════════════════════════════════════════════════

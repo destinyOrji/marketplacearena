@@ -1,0 +1,30 @@
+═══════════════════════════════════════════════════════════
+  QUICK DEPLOY TO PRODUCTION - Health Market Arena
+═══════════════════════════════════════════════════════════
+
+📋 COPY THIS ENTIRE BLOCK INTO PUTTY:
+
+# Backend
+cd /var/www/healthmarketarena/backend-nodejs
+git pull origin main
+npm install
+pm2 restart healthmarket-backend
+pm2 status
+
+# Frontend  
+cd /var/www/healthmarketarena/frontend
+git pull origin main
+npm install
+npm run build
+sudo rm -rf /var/www/healthmarketarena/html/*
+sudo cp -r build/* /var/www/healthmarketarena/html/
+sudo chown -R nginx:nginx /var/www/healthmarketarena/html/
+sudo nginx -s reload
+
+# Verify
+pm2 logs healthmarket-backend --lines 20
+curl http://localhost:3001/api/health
+
+═══════════════════════════════════════════════════════════
+✅ DONE! Your site is updated.
+═══════════════════════════════════════════════════════════

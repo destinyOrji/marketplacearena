@@ -74,6 +74,11 @@ const GymPhysioRegisterStep3 = lazy(() => import('./pages/auth/GymPhysioRegister
 const GymPhysioRegisterStep4 = lazy(() => import('./pages/auth/GymPhysioRegisterStep4'));
 const GymPhysioRegisterStep5 = lazy(() => import('./pages/auth/GymPhysioRegisterStep5'));
 
+// Lazy load blog admin pages
+const BlogAdminLogin = lazy(() => import('./pages/blog-admin/BlogAdminLogin'));
+const BlogAdminDashboard = lazy(() => import('./pages/blog-admin/BlogAdminDashboard'));
+const BlogPostEditor = lazy(() => import('./pages/blog-admin/BlogPostEditor'));
+
 function App() {
   return (
     <AuthProvider>
@@ -321,6 +326,12 @@ function App() {
             <Route path="/auth/register/ambulance/step3" element={<Navigate to="/register/ambulance/step3" replace />} />
             <Route path="/auth/register/ambulance/step4" element={<Navigate to="/register/ambulance/step4" replace />} />
             <Route path="/auth/register/ambulance/step5" element={<Navigate to="/register/ambulance/step5" replace />} />
+            
+            {/* Blog Admin Routes - Separate from main admin */}
+            <Route path="/blog-admin/login" element={<BlogAdminLogin />} />
+            <Route path="/blog-admin/dashboard" element={<BlogAdminDashboard />} />
+            <Route path="/blog-admin/create" element={<BlogPostEditor />} />
+            <Route path="/blog-admin/edit/:id" element={<BlogPostEditor />} />
           </Routes>
         </Suspense>
       </NotificationProvider>
