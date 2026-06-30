@@ -17,6 +17,8 @@ import CompliancePage from './pages/CompliancePage';
 import UserTypeSelection from './pages/auth/UserTypeSelection';
 import Login from './pages/auth/Login';
 import PaymentVerify from './pages/PaymentVerify';
+import BlogListPage from './pages/BlogListPage';
+import BlogPostPage from './pages/BlogPostPage';
 import { AuthProvider } from './dashboards/patient/contexts/AuthContext';
 import { NotificationProvider } from './dashboards/patient/contexts/NotificationContext';
 import { ProtectedRoute } from './dashboards/patient/components';
@@ -96,6 +98,8 @@ function App() {
             <Route path="/payment/verify" element={<PaymentVerify />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/blog" element={<BlogListPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
             <Route path="/professionals" element={<ProfessionalPage />} />
             <Route path="/hospitals" element={<HospitalPage />} />
             <Route path="/ambulance" element={<AmbulancePage />} />
