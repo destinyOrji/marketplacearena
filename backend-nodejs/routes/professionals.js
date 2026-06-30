@@ -108,7 +108,45 @@ router.get('/profile', protect, async (req, res) => {
         if (!professional) {
             return res.status(404).json({ success: false, message: 'Professional profile not found' });
         }
-        res.json({ success: true, data: professional });
+        
+        // Format response to match frontend expectations
+        const professionalData = {
+            id: professional._id,
+            userId: professional.user._id,
+            email: professional.user.email,
+            firstName: professional.user.firstName,
+            lastName: professional.user.lastName,
+            fullName: `${professional.user.firstName} ${professional.user.lastName}`,
+            role: professional.user.role,
+            professionalType: professional.professionalType,
+            licenseNumber: professional.licenseNumber,
+            specialization: professional.specialization,
+            yearsOfExperience: professional.yearsOfExperience,
+            qualifications: professional.qualifications,
+            certifications: professional.certifications,
+            skills: professional.skills,
+            bio: professional.bio,
+            phone: professional.phone,
+            address: professional.address,
+            city: professional.city,
+            state: professional.state,
+            country: professional.country,
+            isVerified: professional.isVerified,
+            verificationStatus: professional.user.verificationStatus || (professional.isVerified ? 'verified' : 'pending'),
+            verificationDate: professional.verificationDate,
+            isAvailable: professional.isAvailable,
+            consultationFee: professional.consultationFee,
+            currency: professional.currency,
+            averageRating: professional.averageRating,
+            rating: professional.averageRating,
+            totalReviews: professional.totalReviews,
+            reviewCount: professional.totalReviews,
+            profilePicture: professional.profilePicture,
+            createdAt: professional.createdAt,
+            updatedAt: professional.updatedAt
+        };
+        
+        res.json({ success: true, data: professionalData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

@@ -60,7 +60,39 @@ router.get('/profile', protect, async (req, res) => {
         if (!ambulance) {
             return res.status(404).json({ success: false, message: 'Ambulance profile not found' });
         }
-        res.json({ success: true, data: ambulance });
+        
+        // Format response to match frontend expectations
+        const ambulanceData = {
+            id: ambulance._id,
+            user_id: ambulance.user._id,
+            provider_name: ambulance.provider_name,
+            email: ambulance.email,
+            phone: ambulance.phone,
+            service_type: ambulance.service_type,
+            registration_number: ambulance.registration_number,
+            address: ambulance.address,
+            city: ambulance.city,
+            state: ambulance.state,
+            country: ambulance.country,
+            verification_status: ambulance.verification_status,
+            isVerified: ambulance.verification_status === 'verified',
+            verificationStatus: ambulance.verification_status,
+            is_active: ambulance.is_active,
+            is_online: ambulance.is_online,
+            email_verified: ambulance.email_verified,
+            profile_picture: ambulance.profile_picture,
+            license_document: ambulance.license_document,
+            insurance_document: ambulance.insurance_document,
+            createdAt: ambulance.createdAt,
+            updatedAt: ambulance.updatedAt,
+            // Add user fields for compatibility
+            role: ambulance.user.role,
+            firstName: ambulance.user.firstName,
+            serviceName: ambulance.provider_name,
+            organizationName: ambulance.provider_name
+        };
+        
+        res.json({ success: true, data: ambulanceData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

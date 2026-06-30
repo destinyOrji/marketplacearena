@@ -4,15 +4,26 @@ import { useAuth } from '../contexts/AuthContext';
 import apiClient from '../services/apiClient';
 
 const DashboardHome: React.FC = () => {
-  const { professional } = useAuth();
+  const { professional, updateProfessional } = useAuth();
   const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Fetch dashboard stats
     apiClient.get('/professionals/dashboard-stats')
       .then(res => setStats(res.data?.data || res.data || {}))
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // Refresh professional profile data to get latest verification status
+    apiClient.get('/professionals/profile')
+      .then(res => {
+        const profileData = res.data?.data || res.data;
+        if (profileData && updateProfessional) {
+          updateProfessional(profileData);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const name = professional?.fullName || (professional as any)?.firstName || 'Doctor';

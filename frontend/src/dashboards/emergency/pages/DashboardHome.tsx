@@ -5,25 +5,45 @@ import apiClient from '../services/apiClient';
 const DashboardHome: React.FC = () => {
   const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
-
-  // Read provider info directly from localStorage (safe fallback)
-  let providerName = 'Ambulance Service';
-  let isVerified = false;
-  try {
-    const stored = localStorage.getItem('ambulance') || localStorage.getItem('user');
-    if (stored) {
-      const p = JSON.parse(stored);
-      providerName = p.serviceName || p.organizationName || p.firstName || 'Ambulance Service';
-      isVerified = p.isVerified || p.verificationStatus === 'verified';
-    }
-  } catch { }
+  const [providerData, setProviderData] = useState<any>(null);
 
   useEffect(() => {
+    // Fetch dashboard stats
     apiClient.get('/ambulance/dashboard-stats')
       .then(res => setStats(res.data?.data || res.data || {}))
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // Refresh ambulance profile data to get latest verification status
+    apiClient.get('/ambulance/profile')
+      .then(res => {
+        const profileData = res.data?.data || res.data;
+        if (profileData) {
+          setProviderData(profileData);
+          // Update localStorage with fresh data
+          localStorage.setItem('ambulance', JSON.stringify(profileData));
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  // Read provider info from state or localStorage
+  let providerName = 'Ambulance Service';
+  let isVerified = false;
+  
+  if (providerData) {
+    providerName = providerData.provider_name || providerData.serviceName || providerData.organizationName || 'Ambulance Service';
+    isVerified = providerData.isVerified || providerData.verification_status === 'verified' || providerData.verificationStatus === 'verified';
+  } else {
+    try {
+      const stored = localStorage.getItem('ambulance') || localStorage.getItem('user');
+      if (stored) {
+        const p = JSON.parse(stored);
+        providerName = p.provider_name || p.serviceName || p.organizationName || p.firstName || 'Ambulance Service';
+        isVerified = p.isVerified || p.verification_status === 'verified' || p.verificationStatus === 'verified';
+      }
+    } catch { }
+  }
 
   const name = providerName;
 
