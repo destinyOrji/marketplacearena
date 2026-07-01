@@ -293,16 +293,43 @@ const MyApplications: React.FC = () => {
 
               {/* Cover Letter Preview */}
               {application.coverLetter && (
-                <div className="mt-4">
-                  <button
-                    onClick={() => {
-                      // Toggle cover letter visibility
-                      console.log('View cover letter');
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    View Cover Letter
-                  </button>
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <details className="group">
+                    <summary className="text-sm text-blue-600 hover:text-blue-700 font-medium cursor-pointer list-none">
+                      <span className="inline-flex items-center gap-1">
+                        View Cover Letter
+                        <svg className="w-4 h-4 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </span>
+                    </summary>
+                    <div className="mt-3 p-4 bg-gray-50 rounded-lg text-sm text-gray-700 whitespace-pre-wrap">
+                      {application.coverLetter}
+                    </div>
+                  </details>
+                </div>
+              )}
+
+              {/* Submitted Documents */}
+              {(application.attachments && application.attachments.length > 0) && (
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Submitted Documents</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {application.attachments.map((doc: string, index: number) => (
+                      <a
+                        key={index}
+                        href={doc.startsWith('http') ? doc : `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com'}${doc}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-sm text-gray-700">Document {index + 1}</span>
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

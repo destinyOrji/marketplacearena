@@ -16,6 +16,7 @@ router.post('/resend', authController.sendOTP);
 // Other basic routes
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/refresh-token', authController.refreshToken); // Refresh access token
 
 // Logout (stateless JWT — just acknowledge)
 router.post('/logout', (req, res) => {

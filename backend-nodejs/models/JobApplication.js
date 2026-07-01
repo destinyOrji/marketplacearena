@@ -12,15 +12,30 @@ const jobApplicationSchema = new mongoose.Schema({
         required: true
     },
     coverLetter: { type: String },
+    attachments: [{ type: String }], // Array of file URLs (resume, certificates, etc.)
     status: {
         type: String,
-        enum: ['pending', 'reviewed', 'shortlisted', 'offered', 'accepted', 'rejected', 'withdrawn'],
+        enum: ['pending', 'reviewing', 'shortlisted', 'offered', 'accepted', 'rejected', 'withdrawn'],
         default: 'pending'
     },
     reviewNotes: String,
     reviewedAt: Date,
     offeredAt: Date,
-    respondedAt: Date
+    respondedAt: Date,
+    
+    // Onboarding details (added when accepting application)
+    onboarding: {
+        startDate: Date,
+        interviewDate: Date,
+        interviewTime: String,
+        interviewLocation: String,
+        contactPerson: String,
+        contactPhone: String,
+        contactEmail: String,
+        additionalNotes: String,
+        documentsRequired: [String],
+        onboardingInstructions: String
+    }
 }, { timestamps: true });
 
 // Prevent duplicate applications

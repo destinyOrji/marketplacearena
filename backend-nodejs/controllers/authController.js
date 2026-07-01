@@ -48,25 +48,25 @@ const sendOTPEmail = async (email, otpCode) => {
     console.log(`📧 OTP email sent to ${email}`);
 };
 
-// Generate JWT token
+// Generate JWT token with 2-hour expiration for active sessions
 const generateToken = (userId) => {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
         console.error('❌ JWT_SECRET is not set — using fallback (not secure for production)');
     }
     return jwt.sign({ userId, type: 'access' }, secret || 'fallback_dev_secret_change_in_production', {
-        expiresIn: '1d'
+        expiresIn: '2h' // 2 hours - user must be active within this time
     });
 };
 
 const generateRefreshToken = async (userId) => {
     const secret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET ? process.env.JWT_SECRET + '_refresh' : 'fallback_refresh_secret');
     const token = jwt.sign({ userId, type: 'refresh' }, secret, {
-        expiresIn: '30d'
+        expiresIn: '7d' // Refresh token valid for 7 days
     });
     await User.findByIdAndUpdate(userId, {
         refreshToken: token,
-        refreshTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });
     return token;
 };
@@ -432,6 +432,73 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ success: false, message: "Login failed. Please try again." });
+    }
+};
+
+// ─── Refresh Token ───────────────────────────────────────────────────────────
+exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken: providedRefreshToken } = req.body;
+
+        if (!providedRefreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: "Refresh token is required"
+            });
+        }
+
+        // Verify refresh token
+        const secret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET ? process.env.JWT_SECRET + '_refresh' : 'fallback_refresh_secret');
+        const decoded = jwt.verify(providedRefreshToken, secret);
+
+        if (decoded.type !== 'refresh') {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid token type"
+            });
+        }
+
+        // Get user and verify refresh token matches
+        const user = await User.findById(decoded.userId);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        if (user.refreshToken !== providedRefreshToken) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid refresh token"
+            });
+        }
+
+        if (user.status === 'suspended') {
+            return res.status(403).json({
+                success: false,
+                message: "Your account has been suspended"
+            });
+        }
+
+        // Generate new tokens
+        const newAccessToken = generateToken(user._id);
+        const newRefreshToken = await generateRefreshToken(user._id);
+
+        res.status(200).json({
+            success: true,
+            message: "Token refreshed successfully",
+            data: {
+                token: newAccessToken,
+                refresh: newRefreshToken
+            }
+        });
+    } catch (error) {
+        console.error('Refresh Token Error:', error);
+        res.status(401).json({
+            success: false,
+            message: "Invalid or expired refresh token"
+        });
     }
 };
 

@@ -109,6 +109,53 @@ router.get('/profile', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Professional profile not found' });
         }
         
+        // Calculate profile completion percentage dynamically
+        let completionPercentage = 0;
+        
+        // Basic fields (30%)
+        let basicFieldsScore = 0;
+        if (professional.professionalType && professional.professionalType !== 'other') basicFieldsScore += 5;
+        if (professional.licenseNumber && professional.licenseNumber.trim() !== '') basicFieldsScore += 5;
+        if (professional.specialization && professional.specialization.trim() !== '') basicFieldsScore += 5;
+        if (professional.phone && professional.phone.trim() !== '') basicFieldsScore += 5;
+        if (professional.bio && professional.bio.trim() !== '') basicFieldsScore += 5;
+        if (professional.yearsOfExperience > 0) basicFieldsScore += 5;
+        completionPercentage += basicFieldsScore;
+        
+        // Contact & Location (15%)
+        let locationScore = 0;
+        if (professional.address && professional.address.trim() !== '') locationScore += 5;
+        if (professional.city && professional.city.trim() !== '') locationScore += 5;
+        if (professional.state && professional.state.trim() !== '') locationScore += 5;
+        completionPercentage += locationScore;
+        
+        // Professional Details (25%)
+        let professionalDetailsScore = 0;
+        if (professional.qualifications && professional.qualifications.length > 0) professionalDetailsScore += 10;
+        if (professional.certifications && professional.certifications.length > 0) professionalDetailsScore += 10;
+        if (professional.skills && professional.skills.length > 0) professionalDetailsScore += 5;
+        completionPercentage += professionalDetailsScore;
+        
+        // Documents (15%)
+        let documentsScore = 0;
+        if (professional.licenseDocument && professional.licenseDocument.trim() !== '') documentsScore += 5;
+        if (professional.profilePicture && professional.profilePicture.trim() !== '') documentsScore += 5;
+        if (professional.resumeFile && professional.resumeFile.trim() !== '') documentsScore += 5;
+        completionPercentage += documentsScore;
+        
+        // Consultation Fee (5%)
+        if (professional.consultationFee && professional.consultationFee > 0) {
+            completionPercentage += 5;
+        }
+        
+        // Verification Status (10% bonus)
+        if (professional.isVerified) {
+            completionPercentage += 10;
+        }
+        
+        // Ensure percentage is between 0 and 100
+        completionPercentage = Math.min(100, Math.max(0, completionPercentage));
+        
         // Format response to match frontend expectations
         const professionalData = {
             id: professional._id,
@@ -142,6 +189,7 @@ router.get('/profile', protect, async (req, res) => {
             totalReviews: professional.totalReviews,
             reviewCount: professional.totalReviews,
             profilePicture: professional.profilePicture,
+            completionPercentage: completionPercentage, // Add calculated completion percentage
             createdAt: professional.createdAt,
             updatedAt: professional.updatedAt
         };
@@ -228,6 +276,7 @@ router.get('/services', protect, async (req, res) => {
             status: service.status,
             images: service.images || [],
             tags: service.tags || [],
+            consultationType: service.consultationType || [],
             availability: service.availability,
             rating: service.rating || 0,
             reviewCount: service.reviewCount || 0,
@@ -270,6 +319,7 @@ router.get('/services/:id', protect, async (req, res) => {
             status: service.status,
             images: service.images || [],
             tags: service.tags || [],
+            consultationType: service.consultationType || [],
             availability: service.availability,
             rating: service.rating || 0,
             reviewCount: service.reviewCount || 0,
@@ -338,6 +388,7 @@ router.post('/services/create', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Duration must be >= 15 minutes' });
         }
         
+        // Force status to 'pending' for new services - admin must approve
         const serviceData = {
             professional: professional._id,
             title: req.body.title,
@@ -345,9 +396,10 @@ router.post('/services/create', protect, async (req, res) => {
             category: req.body.category,
             price: parseFloat(req.body.price),
             duration: parseInt(req.body.duration),
-            status: req.body.status || 'active',
+            status: 'pending', // Always pending for new services
             images: req.body.images || [],
             tags: req.body.tags || [],
+            consultationType: req.body.consultationType || [],
             availability: req.body.availability || 'available'
         };
         
@@ -367,6 +419,7 @@ router.post('/services/create', protect, async (req, res) => {
             status: service.status,
             images: service.images || [],
             tags: service.tags || [],
+            consultationType: service.consultationType || [],
             availability: service.availability,
             rating: service.rating || 0,
             reviewCount: service.reviewCount || 0,
@@ -378,7 +431,7 @@ router.post('/services/create', protect, async (req, res) => {
         res.status(201).json({ 
             success: true, 
             data: formattedService, 
-            message: 'Service created successfully' 
+            message: 'Service created and pending admin approval' 
         });
     } catch (error) {
         console.error('Error creating service:', error);
@@ -395,9 +448,40 @@ router.put('/services/:id/update', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Professional not found' });
         }
         
+        // Get the current service to check its status
+        const currentService = await Service.findOne({ 
+            _id: req.params.id, 
+            professional: professional._id 
+        });
+        
+        if (!currentService) {
+            return res.status(404).json({ success: false, message: 'Service not found' });
+        }
+        
+        // Prepare update data
+        const updateData = { ...req.body };
+        
+        // Prevent professionals from setting status to 'active' - only admin can approve
+        // Professionals can only toggle between 'inactive' (paused) and their current status
+        if (updateData.status) {
+            if (updateData.status === 'active' && currentService.status !== 'active') {
+                // If trying to set to active when not already active, reject
+                delete updateData.status; // Remove status from update
+            } else if (updateData.status === 'inactive' && currentService.status === 'active') {
+                // Allow pausing an active service
+                updateData.status = 'inactive';
+            } else if (updateData.status === 'active' && currentService.status === 'inactive') {
+                // Allow resuming a paused service (if it was previously approved)
+                updateData.status = 'active';
+            } else if (updateData.status === 'pending') {
+                // Don't allow changing back to pending
+                delete updateData.status;
+            }
+        }
+        
         const service = await Service.findOneAndUpdate(
             { _id: req.params.id, professional: professional._id },
-            { $set: req.body },
+            { $set: updateData },
             { new: true, runValidators: true }
         );
         
@@ -420,6 +504,7 @@ router.put('/services/:id/update', protect, async (req, res) => {
             rating: service.rating || 0,
             reviewCount: service.reviewCount || 0,
             bookingCount: service.bookingCount || 0,
+            consultationType: service.consultationType || req.body.consultationType || [],
             createdAt: service.createdAt,
             updatedAt: service.updatedAt
         };
@@ -1180,6 +1265,109 @@ router.put('/job-applications/:id/decline', protect, async (req, res) => {
         res.json({ success: true, data: app, message: 'Offer declined' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get approved/accepted jobs with full details (GET /professionals/approved-jobs)
+router.get('/approved-jobs', protect, async (req, res) => {
+    try {
+        const JobApplication = require('../models/JobApplication');
+        const professional = await Professional.findOne({ user: req.user._id });
+        
+        if (!professional) {
+            return res.json({ 
+                success: true, 
+                data: [] 
+            });
+        }
+
+        // Find all accepted job applications with full details
+        const acceptedApplications = await JobApplication.find({ 
+            professional: professional._id,
+            status: 'accepted'
+        })
+        .populate({
+            path: 'job',
+            populate: {
+                path: 'hospital',
+                select: 'hospitalName registrationNumber phone email website address operatingHours emergencyServices'
+            }
+        })
+        .sort({ updatedAt: -1 });
+
+        // Format the data with all relevant information
+        const approvedJobs = acceptedApplications.map(app => {
+            const job = app.job;
+            const hospital = job?.hospital;
+            
+            return {
+                applicationId: app._id,
+                applicationDate: app.createdAt,
+                acceptedDate: app.updatedAt,
+                reviewNotes: app.reviewNotes || '',
+                
+                // Onboarding details
+                onboarding: app.onboarding || {},
+                
+                // Job details
+                jobId: job?._id,
+                jobTitle: job?.jobTitle || 'N/A',
+                department: job?.department || '',
+                jobDescription: job?.jobDescription || '',
+                employmentType: job?.employmentType || 'full_time',
+                experienceLevel: job?.experienceLevel || '',
+                
+                // Compensation
+                salaryRangeMin: job?.salaryRangeMin || 0,
+                salaryRangeMax: job?.salaryRangeMax || 0,
+                salaryCurrency: job?.salaryCurrency || 'NGN',
+                benefits: job?.benefits || [],
+                
+                // Hospital details
+                hospitalId: hospital?._id,
+                hospitalName: hospital?.hospitalName || '',
+                hospitalRegistrationNumber: hospital?.registrationNumber || '',
+                hospitalPhone: hospital?.phone || '',
+                hospitalEmail: hospital?.email || '',
+                hospitalWebsite: hospital?.website || '',
+                
+                // Hospital address
+                address: {
+                    street: hospital?.address?.street || '',
+                    city: hospital?.address?.city || '',
+                    state: hospital?.address?.state || '',
+                    country: hospital?.address?.country || '',
+                    zipCode: hospital?.address?.zipCode || '',
+                    fullAddress: [
+                        hospital?.address?.street,
+                        hospital?.address?.city,
+                        hospital?.address?.state,
+                        hospital?.address?.zipCode,
+                        hospital?.address?.country
+                    ].filter(Boolean).join(', ')
+                },
+                
+                // Operating hours
+                operatingHours: hospital?.operatingHours || {},
+                emergencyServices: hospital?.emergencyServices || false,
+                
+                // Job posting details
+                applicationDeadline: job?.applicationDeadline || null,
+                numberOfPositions: job?.numberOfPositions || 1,
+                requiredQualifications: job?.requiredQualifications || [],
+            };
+        });
+
+        res.json({ 
+            success: true, 
+            data: approvedJobs 
+        });
+    } catch (error) {
+        console.error('Get approved jobs error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
 });
 

@@ -69,29 +69,44 @@ const MyServices: React.FC = () => {
   const handleToggleStatus = async (id: string) => {
     const service = services.find(s => s.id === id);
     if (!service) return;
+    
+    // Only allow toggle between active and inactive (paused)
+    // Pending services cannot be toggled by professional
+    if (service.status === 'pending') {
+      toast.error('Service is pending admin approval');
+      return;
+    }
+    
     const newStatus = service.status === 'active' ? 'inactive' : 'active';
     try {
       const updated = await servicesApi.updateService(id, { status: newStatus });
       setServices(services.map(s => s.id === id ? updated : s));
-      toast.success(`Service ${newStatus === 'active' ? 'activated' : 'paused'}`);
-    } catch { toast.error('Failed to update service'); }
+      toast.success(`Service ${newStatus === 'active' ? 'resumed' : 'paused'}`);
+    } catch { 
+      toast.error('Failed to update service status'); 
+    }
   };
 
-  const handleSubmitService = async (data: Partial<Service>, images: File[]) => {
+  const handleSubmitService = async (data: Partial<Service> & { existingImages?: string[] }, images: File[]) => {
     try {
       let imageUrls: string[] = [];
       if (images.length > 0) {
         const uploads = await Promise.all(images.map(img => profileApi.uploadPhoto(img).catch(() => null)));
         imageUrls = uploads.filter((u): u is string => !!u);
       }
-      const serviceData = { ...data, images: imageUrls.length > 0 ? imageUrls : data.images || [] };
+      
+      // Use existing images (already filtered by removeImage) and add new uploads
+      const existingImages = data.existingImages || [];
+      const allImages = [...existingImages, ...imageUrls];
+      const { existingImages: _, ...serviceData } = data; // Remove existingImages from data
+      const finalData = { ...serviceData, images: allImages };
 
       if (modalMode === 'create') {
-        const newService = await servicesApi.createService(serviceData);
+        const newService = await servicesApi.createService(finalData);
         setServices([...services, newService]);
         toast.success('Service created — pending admin approval');
       } else if (editingService) {
-        const updated = await servicesApi.updateService(editingService.id, serviceData);
+        const updated = await servicesApi.updateService(editingService.id, finalData);
         setServices(services.map(s => s.id === editingService.id ? updated : s));
         toast.success('Service updated');
       }

@@ -35,7 +35,7 @@ const VacancyForm: React.FC = () => {
   const loadVacancy = async () => {
     setLoading(true);
     try {
-      const vacancy = await hospitalApi.getVacancy(Number(id));
+      const vacancy = await hospitalApi.getVacancy(id!); // Pass ID as string
       const v = vacancy as any;
       setForm({
         jobTitle: v.jobTitle || v.job_title || '',
@@ -57,7 +57,8 @@ const VacancyForm: React.FC = () => {
           : v.application_deadline?.split('T')[0] || '',
         status: v.status || 'active',
       });
-    } catch {
+    } catch (error) {
+      console.error('Failed to load vacancy:', error);
       toast.error('Failed to load vacancy');
       navigate('/hospital/vacancies');
     } finally {
@@ -91,15 +92,23 @@ const VacancyForm: React.FC = () => {
       };
 
       if (isEdit) {
-        await hospitalApi.updateVacancy(Number(id), payload as any);
+        await hospitalApi.updateVacancy(id!, payload as any);
         toast.success('Vacancy updated successfully');
+        navigate('/hospital/vacancies');
       } else {
-        await hospitalApi.createVacancy(payload as any);
-        toast.success(form.status === 'active'
-          ? 'Vacancy created and professionals notified!'
-          : 'Vacancy saved as draft');
+        // Create new vacancy - will return payment URL
+        const response = await hospitalApi.createVacancy(payload as any);
+        const data = (response as any)?.data || response;
+        
+        if (data.payment && data.payment.authorizationUrl) {
+          toast.success('Redirecting to payment...');
+          // Redirect to Paystack payment page
+          window.location.href = data.payment.authorizationUrl;
+        } else {
+          toast.success('Vacancy saved as draft');
+          navigate('/hospital/vacancies');
+        }
       }
-      navigate('/hospital/vacancies');
     } catch (error: any) {
       toast.error(error.response?.data?.message || error.message || 'Failed to save vacancy');
     } finally {
@@ -233,23 +242,25 @@ const VacancyForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Status */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Publication</h3>
-          <div>
-            <label className={labelClass}>Status</label>
-            <select className={inputClass} value={form.status} onChange={e => set('status', e.target.value)}>
-              <option value="draft">Save as Draft</option>
-              <option value="active">Publish Now (notify professionals)</option>
-              <option value="paused">Paused</option>
-            </select>
-            {form.status === 'active' && (
-              <p className="mt-2 text-sm text-green-600 font-medium">
-                ✓ All registered professionals will be notified about this vacancy
-              </p>
-            )}
+        {/* Status - Only show for editing */}
+        {isEdit && (
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Publication</h3>
+            <div>
+              <label className={labelClass}>Status</label>
+              <select className={inputClass} value={form.status} onChange={e => set('status', e.target.value)}>
+                <option value="draft">Save as Draft</option>
+                <option value="active">Publish Now (notify professionals)</option>
+                <option value="paused">Paused</option>
+              </select>
+              {form.status === 'active' && (
+                <p className="mt-2 text-sm text-green-600 font-medium">
+                  ✓ All registered professionals will be notified about this vacancy
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end space-x-4">
@@ -260,13 +271,25 @@ const VacancyForm: React.FC = () => {
           <button type="submit" disabled={submitting}
             className="flex items-center gap-2 px-6 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
             <FiSave className="h-4 w-4" />
-            {submitting ? 'Saving...' : isEdit ? 'Update Vacancy' : 'Create & Pay ₦5,000'}
+            {submitting ? 'Processing...' : isEdit ? 'Update Vacancy' : 'Continue to Payment'}
           </button>
         </div>
 
         {!isEdit && (
-          <div className="mt-3 text-center text-xs text-gray-400">
-            💡 A one-time posting fee of <strong>₦5,000</strong> is charged per vacancy. You'll be redirected to Paystack to complete payment.
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h4 className="text-sm font-semibold text-blue-900 mb-1">Payment Required</h4>
+                <p className="text-sm text-blue-800">
+                  A one-time posting fee of <strong>₦5,000</strong> is required to publish your vacancy. 
+                  After clicking "Continue to Payment", you'll be redirected to Paystack for secure payment. 
+                  Once payment is confirmed, your vacancy will be automatically published and all professionals will be notified.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </form>

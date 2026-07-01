@@ -30,6 +30,7 @@ const ServiceFormModal: React.FC<ServiceFormModalProps> = ({
 
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]); // Track existing images separately
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -43,7 +44,22 @@ const ServiceFormModal: React.FC<ServiceFormModalProps> = ({
         duration: service.duration,
         consultationType: service.consultationType,
       });
-      setImagePreviews(service.images || []);
+      // Load existing images with proper URL handling
+      if (service.images && service.images.length > 0) {
+        const getImageUrl = (imagePath: string) => {
+          if (!imagePath) return '';
+          if (imagePath.startsWith('http')) return imagePath;
+          const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com';
+          return `${backendUrl}${imagePath}`;
+        };
+        const urls = service.images.map(img => getImageUrl(img));
+        setExistingImages(service.images); // Store original paths
+        setImagePreviews(urls); // Store display URLs
+      }
+    } else {
+      // Reset when creating new service
+      setExistingImages([]);
+      setImagePreviews([]);
     }
   }, [service, mode]);
 
@@ -95,8 +111,18 @@ const ServiceFormModal: React.FC<ServiceFormModalProps> = ({
   };
 
   const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-    setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+    const isExistingImage = index < existingImages.length;
+    
+    if (isExistingImage) {
+      // Remove from existing images
+      setExistingImages(existingImages.filter((_, i) => i !== index));
+      setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+    } else {
+      // Remove from new images
+      const newImageIndex = index - existingImages.length;
+      setImages(images.filter((_, i) => i !== newImageIndex));
+      setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,8 +131,8 @@ const ServiceFormModal: React.FC<ServiceFormModalProps> = ({
 
     console.log('=== Form Submit ===');
     console.log('Form data:', formData);
-    console.log('Images:', images.length);
-    console.log('Image previews:', imagePreviews.length);
+    console.log('New images:', images.length);
+    console.log('Existing images:', existingImages.length);
 
     // Validate form data
     const validationResult = serviceSchema.safeParse(formData);
@@ -119,7 +145,9 @@ const ServiceFormModal: React.FC<ServiceFormModalProps> = ({
     setLoading(true);
     try {
       console.log('Calling onSubmit with images:', images);
-      await onSubmit(formData, images);
+      // Pass both existing images and new files
+      const dataWithExistingImages = { ...formData, existingImages };
+      await onSubmit(dataWithExistingImages, images);
       onClose();
       // Reset form
       setFormData({
@@ -132,6 +160,7 @@ const ServiceFormModal: React.FC<ServiceFormModalProps> = ({
       });
       setImages([]);
       setImagePreviews([]);
+      setExistingImages([]);
     } catch (error: any) {
       console.error('Submit error:', error);
       setErrors({ submit: error.message || 'Failed to save service' });

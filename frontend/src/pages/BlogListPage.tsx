@@ -29,6 +29,39 @@ const BlogListPage: React.FC = () => {
 
   useEffect(() => {
     fetchPosts();
+    
+    // Set page meta tags for blog homepage
+    document.title = 'Blog | Health Market Arena';
+    
+    const metaTags = [
+      { property: 'og:title', content: 'Health Market Arena Blog' },
+      { property: 'og:description', content: 'Stay informed with the latest health insights, medical news, and wellness tips' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:url', content: window.location.href },
+      { property: 'og:site_name', content: 'Health Market Arena' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: 'Health Market Arena Blog' },
+      { name: 'twitter:description', content: 'Stay informed with the latest health insights, medical news, and wellness tips' },
+      { name: 'description', content: 'Stay informed with the latest health insights, medical news, and wellness tips from Health Market Arena' },
+    ];
+
+    metaTags.forEach(({ property, name, content }) => {
+      const selector = property ? `meta[property="${property}"]` : `meta[name="${name}"]`;
+      let tag = document.querySelector(selector) as HTMLMetaElement;
+      
+      if (!tag) {
+        tag = document.createElement('meta');
+        if (property) tag.setAttribute('property', property);
+        if (name) tag.setAttribute('name', name);
+        document.head.appendChild(tag);
+      }
+      
+      tag.content = content;
+    });
+
+    return () => {
+      document.title = 'Health Market Arena';
+    };
   }, []);
 
   const fetchPosts = async () => {

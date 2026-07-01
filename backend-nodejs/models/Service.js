@@ -40,6 +40,11 @@ const serviceSchema = new mongoose.Schema({
         required: true,
         min: 15
     },
+    consultationType: {
+        type: [String],
+        enum: ['in-person', 'virtual', 'home-visit'],
+        default: []
+    },
     status: {
         type: String,
         enum: ['active', 'inactive', 'pending'],

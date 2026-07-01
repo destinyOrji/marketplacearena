@@ -12,6 +12,7 @@ import Onboarding from './pages/Onboarding';
 import Vacancies from './pages/Vacancies';
 import VacancyForm from './pages/VacancyForm';
 import VacancyDetail from './pages/VacancyDetail';
+import VacancyPaymentCallback from './pages/VacancyPaymentCallback';
 import Applications from './pages/Applications';
 import ApplicationDetail from './pages/ApplicationDetail';
 import Billing from './pages/Billing';
@@ -40,6 +41,7 @@ const HospitalRoutes: React.FC = () => {
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/vacancies" element={<Vacancies />} />
               <Route path="/vacancies/new" element={<VacancyForm />} />
+              <Route path="/vacancies/payment/callback" element={<VacancyPaymentCallback />} />
               <Route path="/vacancies/:id" element={<VacancyDetail />} />
               <Route path="/vacancies/:id/edit" element={<VacancyForm />} />
               <Route path="/applications" element={<Applications />} />

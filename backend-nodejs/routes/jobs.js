@@ -9,14 +9,22 @@ const Notification = require('../models/Notification');
 // Browse all active job postings
 router.get('/', protect, async (req, res) => {
     try {
-        const { page = 1, limit = 20, search, department, experienceLevel, employmentType } = req.query;
+        const { page = 1, limit = 20, search, department, experienceLevel, employmentType, showExpired = 'false' } = req.query;
         const skip = (page - 1) * limit;
 
         let query = { status: 'active' };
-        // Filter out expired jobs for professionals — only show jobs where deadline hasn't passed
+        
+        // Filter based on expired status for professionals
         if (req.user.role === 'professional') {
-            query.applicationDeadline = { $gte: new Date() };
+            if (showExpired === 'true') {
+                // Show only expired jobs (deadline has passed)
+                query.applicationDeadline = { $lt: new Date() };
+            } else {
+                // Show only active jobs (deadline hasn't passed yet)
+                query.applicationDeadline = { $gte: new Date() };
+            }
         }
+        
         if (department) query.department = { $regex: department, $options: 'i' };
         if (experienceLevel) query.experienceLevel = experienceLevel;
         if (employmentType) query.employmentType = employmentType;
@@ -61,6 +69,7 @@ router.get('/', protect, async (req, res) => {
             numberOfPositions: job.numberOfPositions,
             applicationDeadline: job.applicationDeadline,
             publishedAt: job.publishedAt,
+            isExpired: job.applicationDeadline && new Date(job.applicationDeadline) < new Date(),
             hospital: {
                 id: job.hospital?._id,
                 name: job.hospital?.hospitalName,

@@ -3,24 +3,24 @@ const crypto = require('crypto');
 const User = require('../../models/User');
 const Admin = require('../../models/Admin');
 
-// Generate short-lived access token (1 day)
+// Generate short-lived access token (2 hours)
 const generateAccessToken = (userId) => {
     const secret = process.env.JWT_SECRET;
     if (!secret) console.error('❌ JWT_SECRET not set in admin auth');
     return jwt.sign({ userId, type: 'access' }, secret || 'fallback_dev_secret_change_in_production', {
-        expiresIn: '1d'
+        expiresIn: '2h' // 2 hours - user must be active within this time
     });
 };
 
-// Generate long-lived refresh token (30 days) and store in DB
+// Generate long-lived refresh token (7 days) and store in DB
 const generateRefreshToken = async (userId) => {
     const secret = process.env.JWT_REFRESH_SECRET || (process.env.JWT_SECRET ? process.env.JWT_SECRET + '_refresh' : 'fallback_refresh_secret');
     const token = jwt.sign({ userId, type: 'refresh' }, secret, {
-        expiresIn: '30d'
+        expiresIn: '7d' // Refresh token valid for 7 days
     });
     await User.findByIdAndUpdate(userId, {
         refreshToken: token,
-        refreshTokenExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });
     return token;
 };

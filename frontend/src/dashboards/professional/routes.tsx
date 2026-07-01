@@ -10,6 +10,7 @@ const ProfileOnboarding = lazy(() => import('./pages/ProfileOnboarding'));
 const MyServices = lazy(() => import('./pages/MyServices'));
 const BrowseJobs = lazy(() => import('./pages/BrowseJobs'));
 const MyApplications = lazy(() => import('./pages/MyApplications'));
+const ApprovedJobs = lazy(() => import('./pages/ApprovedJobs'));
 const Appointments = lazy(() => import('./pages/Appointments'));
 const ScheduleAvailability = lazy(() => import('./pages/ScheduleAvailability'));
 const PaymentsEarnings = lazy(() => import('./pages/PaymentsEarnings'));
@@ -40,6 +41,7 @@ const ProfessionalRoutes: React.FC = () => {
           <Route path="/services" element={<MyServices />} />
           <Route path="/jobs" element={<BrowseJobs />} />
           <Route path="/applications" element={<MyApplications />} />
+          <Route path="/approved-jobs" element={<ApprovedJobs />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/schedule" element={<ScheduleAvailability />} />
           <Route path="/payments" element={<PaymentsEarnings />} />

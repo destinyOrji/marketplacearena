@@ -220,6 +220,43 @@ const ApplicationDetailPage: React.FC = () => {
         </div>
       )}
 
+      {/* License Document */}
+      {application.license_document && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">License Document</h3>
+          <a
+            href={application.license_document}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <FiDownload className="mr-2 h-4 w-4" />
+            Download License
+          </a>
+        </div>
+      )}
+
+      {/* Additional Attachments */}
+      {application.attachments && application.attachments.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Documents</h3>
+          <div className="space-y-2">
+            {application.attachments.map((attachment: string, index: number) => (
+              <a
+                key={index}
+                href={attachment}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 mr-2 mb-2"
+              >
+                <FiDownload className="mr-2 h-4 w-4" />
+                Download Document {index + 1}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Review Notes */}
       {application.review_notes && (
         <div className="bg-white shadow rounded-lg p-6">

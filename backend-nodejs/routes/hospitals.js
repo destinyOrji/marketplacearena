@@ -130,6 +130,7 @@ router.put('/profile/update', protect, async (req, res) => {
 router.get('/vacancies', protect, async (req, res) => {
     try {
         const Job = require('../models/Job');
+        const JobApplication = require('../models/JobApplication');
         const hospital = await Hospital.findOne({ user: req.user._id });
         
         if (!hospital) {
@@ -158,13 +159,34 @@ router.get('/vacancies', protect, async (req, res) => {
             .limit(parseInt(page_size))
             .sort({ createdAt: -1 });
 
+        // Aggregate application counts for all vacancies
+        const vacancyIds = vacancies.map(v => v._id);
+        const applicationCounts = await JobApplication.aggregate([
+            { $match: { job: { $in: vacancyIds } } },
+            { $group: { _id: '$job', count: { $sum: 1 } } }
+        ]);
+
+        // Create a map for quick lookup
+        const countMap = {};
+        applicationCounts.forEach(item => {
+            countMap[item._id.toString()] = item.count;
+        });
+
+        // Add application count to each vacancy
+        const vacanciesWithCounts = vacancies.map(vacancy => {
+            const vacancyObj = vacancy.toObject();
+            vacancyObj.applicationsCount = countMap[vacancy._id.toString()] || 0;
+            vacancyObj.applications_count = countMap[vacancy._id.toString()] || 0; // Legacy snake_case
+            return vacancyObj;
+        });
+
         const total = await Job.countDocuments(query);
 
         res.json({ 
             statuscode: 0,
             status: 'success',
             data: { 
-                vacancies, 
+                vacancies: vacanciesWithCounts, 
                 pagination: { 
                     total, 
                     page: parseInt(page), 
@@ -223,9 +245,8 @@ router.post('/vacancies/pay', protect, async (req, res) => {
 router.post('/vacancies/create/', protect, async (req, res) => {
     try {
         const Job = require('../models/Job');
-        const Notification = require('../models/Notification');
-        const Professional = require('../models/Professional');
-        const hospital = await Hospital.findOne({ user: req.user._id }).populate('user', 'firstName lastName');
+        const { initializeTransaction } = require('../services/paystackService');
+        const hospital = await Hospital.findOne({ user: req.user._id }).populate('user', 'firstName lastName email');
         
         if (!hospital) {
             return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital profile not found' });
@@ -247,15 +268,55 @@ router.post('/vacancies/create/', protect, async (req, res) => {
             benefits: req.body.benefits || [],
             numberOfPositions: req.body.numberOfPositions || req.body.number_of_positions || 1,
             applicationDeadline: req.body.applicationDeadline || req.body.application_deadline,
-            status: req.body.status || 'draft',
+            status: 'draft', // Always create as draft first
+            paymentStatus: 'pending'
         };
 
         const job = await Job.create(jobData);
 
-        // If status is active, notify all professionals
-        if (job.status === 'active') {
-            const professionals = await Professional.find({}).populate('user', '_id');
-            const notifications = professionals
+        // Initialize payment with Paystack
+        const fee = 5000; // ₦5,000 per vacancy posting
+        const reference = `VAC-${job._id}-${Date.now()}`;
+
+        const paystackResponse = await initializeTransaction(
+            hospital.user.email,
+            fee,
+            reference,
+            { 
+                vacancyId: job._id.toString(), 
+                type: 'vacancy_posting', 
+                hospitalId: hospital._id.toString() 
+            }
+        );
+
+        if (!paystackResponse.status) {
+            // If payment initialization fails, delete the draft job
+            await Job.findByIdAndDelete(job._id);
+            return res.status(500).json({ 
+                statuscode: 1, 
+                status: 'error', 
+                message: 'Failed to initialize payment' 
+            });
+        }
+
+        res.status(201).json({ 
+            statuscode: 0, 
+            status: 'success', 
+            data: {
+                vacancy: job,
+                payment: {
+                    authorizationUrl: paystackResponse.data.authorization_url,
+                    reference: paystackResponse.data.reference,
+                    amount: fee
+                }
+            },
+            message: 'Vacancy created. Please complete payment to publish.' 
+        });
+    } catch (error) {
+        console.error('Error creating vacancy:', error);
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+});
                 .filter(p => p.user)
                 .map(p => ({
                     user: p.user._id,
@@ -560,7 +621,7 @@ router.get('/vacancies/:id/stats', protect, async (req, res) => {
         const stats = {
             total_applications: applications.length,
             pending: applications.filter(a => a.status === 'pending').length,
-            reviewed: applications.filter(a => a.status === 'reviewed').length,
+            reviewing: applications.filter(a => a.status === 'reviewing').length,
             accepted: applications.filter(a => a.status === 'accepted').length,
             rejected: applications.filter(a => a.status === 'rejected').length,
             views: vacancy.views || 0
@@ -715,15 +776,72 @@ router.get('/applications', protect, async (req, res) => {
 router.put('/applications/:id/accept', protect, async (req, res) => {
     try {
         const JobApplication = require('../models/JobApplication');
+        const Notification = require('../models/Notification');
+        
+        const { onboarding } = req.body;
+        
+        // Build update object
+        const updateData = {
+            status: 'accepted',
+            reviewedAt: new Date()
+        };
+        
+        // Add onboarding details if provided
+        if (onboarding) {
+            updateData.onboarding = {
+                startDate: onboarding.startDate || null,
+                interviewDate: onboarding.interviewDate || null,
+                interviewTime: onboarding.interviewTime || '',
+                interviewLocation: onboarding.interviewLocation || '',
+                contactPerson: onboarding.contactPerson || '',
+                contactPhone: onboarding.contactPhone || '',
+                contactEmail: onboarding.contactEmail || '',
+                additionalNotes: onboarding.additionalNotes || '',
+                documentsRequired: onboarding.documentsRequired || [],
+                onboardingInstructions: onboarding.onboardingInstructions || ''
+            };
+        }
         
         const application = await JobApplication.findByIdAndUpdate(
             req.params.id,
-            { status: 'accepted' },
+            updateData,
             { new: true }
-        );
+        ).populate({
+            path: 'professional',
+            populate: { path: 'user', select: '_id firstName lastName' }
+        }).populate('job', 'jobTitle');
 
         if (!application) {
             return res.status(404).json({ success: false, message: 'Application not found' });
+        }
+
+        // Send notification to professional
+        if (application.professional?.user?._id) {
+            const hospital = await Hospital.findOne({ user: req.user._id });
+            const hospitalName = hospital?.hospitalName || 'Hospital';
+            const jobTitle = application.job?.jobTitle || 'Position';
+            
+            let notificationMessage = `Congratulations! ${hospitalName} has accepted your application for ${jobTitle}.`;
+            
+            // Add interview info to notification if provided
+            if (onboarding?.interviewDate) {
+                notificationMessage += ` You have an interview scheduled.`;
+            }
+            
+            await Notification.create({
+                user: application.professional.user._id,
+                title: 'Application Accepted! 🎉',
+                message: notificationMessage,
+                type: 'job_accepted',
+                data: {
+                    applicationId: application._id,
+                    jobId: application.job._id || application.job,
+                    jobTitle: jobTitle,
+                    hospitalName: hospitalName,
+                    hospitalId: hospital?._id,
+                    hasOnboardingDetails: !!onboarding
+                }
+            });
         }
 
         res.json({ 
@@ -1172,11 +1290,31 @@ router.get('/applications/:id', protect, async (req, res) => {
         if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
 
         const app = await JobApplication.findById(req.params.id)
-            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email phone' } })
+            .populate({ 
+                path: 'professional', 
+                populate: { 
+                    path: 'user', 
+                    select: 'firstName lastName email phone' 
+                } 
+            })
             .populate({ path: 'job', select: 'jobTitle department' });
 
         if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
-        res.json({ success: true, data: app });
+        
+        // Format response to include all professional documents
+        const responseData = {
+            ...app.toObject(),
+            resume_file: app.professional?.resumeFile || null,
+            license_document: app.professional?.licenseDocument || null,
+            attachments: app.attachments || [],
+            professional: {
+                ...app.professional?.toObject(),
+                resume_file: app.professional?.resumeFile || null,
+                license_document: app.professional?.licenseDocument || null,
+            }
+        };
+        
+        res.json({ success: true, data: responseData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -1206,7 +1344,7 @@ router.post('/applications/:id/review', protect, async (req, res) => {
         const { application_status, review_notes } = req.body;
         const app = await JobApplication.findByIdAndUpdate(
             req.params.id,
-            { status: application_status || 'reviewed', reviewNotes: review_notes, reviewedAt: new Date() },
+            { status: application_status || 'reviewing', reviewNotes: review_notes, reviewedAt: new Date() },
             { new: true }
         );
         if (!app) return res.status(404).json({ success: false, message: 'Application not found' });

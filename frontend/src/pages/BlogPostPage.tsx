@@ -37,6 +37,77 @@ const BlogPostPage: React.FC = () => {
     }
   }, [slug]);
 
+  useEffect(() => {
+    if (post) {
+      // Update page title
+      document.title = `${post.title} | Health Market Arena Blog`;
+
+      // Add Open Graph meta tags for social media sharing
+      const metaTags = [
+        { property: 'og:title', content: post.title },
+        { property: 'og:description', content: post.excerpt },
+        { property: 'og:type', content: 'article' },
+        { property: 'og:url', content: window.location.href },
+        { property: 'og:site_name', content: 'Health Market Arena' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: post.title },
+        { name: 'twitter:description', content: post.excerpt },
+        { name: 'description', content: post.excerpt },
+      ];
+
+      // Add featured image if available
+      if (post.featuredImage?.url) {
+        metaTags.push(
+          { property: 'og:image', content: post.featuredImage.url },
+          { name: 'twitter:image', content: post.featuredImage.url }
+        );
+      }
+
+      // Add author if available
+      if (post.author?.name) {
+        metaTags.push(
+          { property: 'article:author', content: post.author.name },
+          { name: 'author', content: post.author.name }
+        );
+      }
+
+      // Add published date
+      if (post.publishedAt) {
+        metaTags.push({ property: 'article:published_time', content: post.publishedAt });
+      }
+
+      // Add category and tags
+      if (post.category) {
+        metaTags.push({ property: 'article:section', content: post.category });
+      }
+      if (post.tags && post.tags.length > 0) {
+        post.tags.forEach(tag => {
+          metaTags.push({ property: 'article:tag', content: tag });
+        });
+      }
+
+      // Remove existing meta tags and add new ones
+      metaTags.forEach(({ property, name, content }) => {
+        const selector = property ? `meta[property="${property}"]` : `meta[name="${name}"]`;
+        let tag = document.querySelector(selector) as HTMLMetaElement;
+        
+        if (!tag) {
+          tag = document.createElement('meta');
+          if (property) tag.setAttribute('property', property);
+          if (name) tag.setAttribute('name', name);
+          document.head.appendChild(tag);
+        }
+        
+        tag.content = content;
+      });
+
+      // Cleanup function to reset title when component unmounts
+      return () => {
+        document.title = 'Health Market Arena';
+      };
+    }
+  }, [post]);
+
   const fetchPost = async () => {
     try {
       const response = await axios.get(`${API_URL}/blog/posts/${slug}`);

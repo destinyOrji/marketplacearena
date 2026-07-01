@@ -215,6 +215,12 @@ export const jobsApi = {
     const response = await apiClient.post(`/applications/${applicationId}/decline`, { reason });
     return response.data?.data ?? response.data;
   },
+
+  getApprovedJobs: async (): Promise<any[]> => {
+    const response = await apiClient.get('/professionals/approved-jobs');
+    const payload = response.data?.data ?? response.data;
+    return Array.isArray(payload) ? payload : [];
+  },
 };
 
 // ============================================================================

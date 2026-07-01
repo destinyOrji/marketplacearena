@@ -35,6 +35,296 @@ const QUICK_MESSAGES = [
   'We are pleased to inform you that your application has been shortlisted. We will be in touch shortly.',
 ];
 
+interface AcceptModalProps {
+  app: any;
+  onClose: () => void;
+  onAccepted: () => void;
+}
+
+const AcceptModal: React.FC<AcceptModalProps> = ({ app, onClose, onAccepted }) => {
+  const [formData, setFormData] = useState({
+    startDate: '',
+    interviewDate: '',
+    interviewTime: '',
+    interviewLocation: '',
+    contactPerson: '',
+    contactPhone: '',
+    contactEmail: '',
+    additionalNotes: '',
+    documentsRequired: [] as string[],
+    onboardingInstructions: ''
+  });
+  const [docInput, setDocInput] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const profName = app.professional?.user?.firstName
+    ? `${app.professional.user.firstName} ${app.professional.user.lastName}`
+    : app.professional_name || 'Professional';
+  const jobTitle = app.job?.jobTitle || app.job?.job_title || 'N/A';
+  const id = app._id || app.id;
+
+  const getHeaders = () => {
+    const token = localStorage.getItem('hospitalToken') || localStorage.getItem('authToken');
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
+  const handleAddDocument = () => {
+    if (docInput.trim() && !formData.documentsRequired.includes(docInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        documentsRequired: [...prev.documentsRequired, docInput.trim()]
+      }));
+      setDocInput('');
+    }
+  };
+
+  const handleRemoveDocument = (doc: string) => {
+    setFormData(prev => ({
+      ...prev,
+      documentsRequired: prev.documentsRequired.filter(d => d !== doc)
+    }));
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await axios.put(
+        `${API_URL}/hospitals/applications/${id}/accept`,
+        { onboarding: formData },
+        getHeaders()
+      );
+      toast.success('Application accepted with onboarding details!');
+      onAccepted();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to accept application');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-green-600 flex items-center justify-center">
+              <FiCheckCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Accept Application</h3>
+              <p className="text-xs text-gray-500">Accepting {profName} for {jobTitle}</p>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <p className="text-sm text-green-800">
+              <strong>Add onboarding details</strong> to help the professional prepare for their new role. 
+              This information will be visible in their "Approved Jobs" page.
+            </p>
+          </div>
+
+          {/* Start Date */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              Start Date (Optional)
+            </label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={e => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+
+          {/* Interview/Meeting Details */}
+          <div className="border border-gray-200 rounded-xl p-4 space-y-4">
+            <h4 className="text-sm font-bold text-gray-900">Interview/Meeting Details (Optional)</h4>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Interview Date</label>
+                <input
+                  type="date"
+                  value={formData.interviewDate}
+                  onChange={e => setFormData(prev => ({ ...prev, interviewDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Interview Time</label>
+                <input
+                  type="time"
+                  value={formData.interviewTime}
+                  onChange={e => setFormData(prev => ({ ...prev, interviewTime: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Interview Location</label>
+              <input
+                type="text"
+                value={formData.interviewLocation}
+                onChange={e => setFormData(prev => ({ ...prev, interviewLocation: e.target.value }))}
+                placeholder="e.g., Main Office, Conference Room A, or Video Call Link"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
+
+          {/* Contact Person */}
+          <div className="border border-gray-200 rounded-xl p-4 space-y-4">
+            <h4 className="text-sm font-bold text-gray-900">Primary Contact (Optional)</h4>
+            
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Contact Person Name</label>
+              <input
+                type="text"
+                value={formData.contactPerson}
+                onChange={e => setFormData(prev => ({ ...prev, contactPerson: e.target.value }))}
+                placeholder="e.g., Dr. John Smith, HR Manager"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Contact Phone</label>
+                <input
+                  type="tel"
+                  value={formData.contactPhone}
+                  onChange={e => setFormData(prev => ({ ...prev, contactPhone: e.target.value }))}
+                  placeholder="+234..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Contact Email</label>
+                <input
+                  type="email"
+                  value={formData.contactEmail}
+                  onChange={e => setFormData(prev => ({ ...prev, contactEmail: e.target.value }))}
+                  placeholder="contact@hospital.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Documents Required */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              Documents Required (Optional)
+            </label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={docInput}
+                onChange={e => setDocInput(e.target.value)}
+                onKeyPress={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddDocument(); } }}
+                placeholder="e.g., ID Card, Medical License, CV"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
+              />
+              <button
+                onClick={handleAddDocument}
+                type="button"
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+            </div>
+            {formData.documentsRequired.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {formData.documentsRequired.map((doc, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
+                    {doc}
+                    <button onClick={() => handleRemoveDocument(doc)} className="hover:text-blue-900">
+                      <FiX className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Onboarding Instructions */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              Onboarding Instructions (Optional)
+            </label>
+            <textarea
+              value={formData.onboardingInstructions}
+              onChange={e => setFormData(prev => ({ ...prev, onboardingInstructions: e.target.value }))}
+              rows={3}
+              placeholder="Provide detailed instructions for the first day, dress code, who to meet, etc."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 resize-none"
+            />
+          </div>
+
+          {/* Additional Notes */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 mb-1.5">
+              Additional Notes (Optional)
+            </label>
+            <textarea
+              value={formData.additionalNotes}
+              onChange={e => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+              rows={3}
+              placeholder="Any other information the professional should know..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
+          <button onClick={onClose} disabled={submitting}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 transition-colors">
+            Cancel
+          </button>
+          <button onClick={handleSubmit} disabled={submitting}
+            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+            {submitting ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Accepting...
+              </>
+            ) : (
+              <>
+                <FiCheckCircle className="w-4 h-4" />
+                Accept Application
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface MessageModalProps {
   app: any;
   onClose: () => void;
@@ -215,6 +505,7 @@ const Applications: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [messageApp, setMessageApp] = useState<any | null>(null);
+  const [acceptApp, setAcceptApp] = useState<any | null>(null);
 
   const getHeaders = () => {
     const token = localStorage.getItem('hospitalToken') || localStorage.getItem('authToken');
@@ -413,14 +704,9 @@ const Applications: React.FC = () => {
                           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                             {status === 'pending' && (
                               <>
-                                <button onClick={() => handleAccept(id)} disabled={isBusy}
+                                <button onClick={() => setAcceptApp(app)} disabled={isBusy}
                                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm">
-                                  {isAccepting ? (
-                                    <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                    </svg>
-                                  ) : <FiCheckCircle className="w-3.5 h-3.5" />}
+                                  <FiCheckCircle className="w-3.5 h-3.5" />
                                   Accept
                                 </button>
                                 <button onClick={() => handleReject(id)} disabled={isBusy}
@@ -526,6 +812,18 @@ const Applications: React.FC = () => {
           app={messageApp}
           onClose={() => setMessageApp(null)}
           onSent={() => setMessageApp(null)}
+        />
+      )}
+
+      {/* Accept Modal */}
+      {acceptApp && (
+        <AcceptModal
+          app={acceptApp}
+          onClose={() => setAcceptApp(null)}
+          onAccepted={() => {
+            setAcceptApp(null);
+            loadApplications();
+          }}
         />
       )}
     </div>

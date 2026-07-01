@@ -33,7 +33,16 @@ const jobSchema = new mongoose.Schema({
         default: 'draft'
     },
     views: { type: Number, default: 0 },
-    publishedAt: Date
+    publishedAt: Date,
+    
+    // Payment tracking
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid'],
+        default: 'pending'
+    },
+    paymentReference: { type: String },
+    paymentAmount: { type: Number, default: 5000 }
 }, { timestamps: true });
 
 // Auto-set publishedAt when status changes to active

@@ -13,6 +13,7 @@ const BrowseJobs: React.FC = () => {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showExpired, setShowExpired] = useState(false); // Toggle for active/expired jobs
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -30,12 +31,12 @@ const BrowseJobs: React.FC = () => {
 
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [showExpired]); // Refetch when toggle changes
 
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const data = await jobsApi.getJobs();
+      const data = await jobsApi.getJobs({ showExpired });
       setJobs(data);
     } catch (error) {
       toast.error('Failed to load jobs');
@@ -192,8 +193,36 @@ const BrowseJobs: React.FC = () => {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Browse Jobs</h1>
-        <p className="text-gray-600">Find and apply for job opportunities that match your expertise</p>
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Browse Jobs</h1>
+            <p className="text-gray-600">Find and apply for job opportunities that match your expertise</p>
+          </div>
+          
+          {/* Active/Expired Toggle */}
+          <div className="flex items-center gap-3 bg-white rounded-lg border border-gray-200 p-1">
+            <button
+              onClick={() => setShowExpired(false)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                !showExpired
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              ✓ Active Jobs
+            </button>
+            <button
+              onClick={() => setShowExpired(true)}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                showExpired
+                  ? 'bg-gray-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              ⏰ Expired Jobs
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Actions Bar */}
@@ -382,14 +411,127 @@ const BrowseJobs: React.FC = () => {
           </svg>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             {searchQuery || Object.values(filters).some((v) => v)
-              ? 'No jobs match your criteria'
-              : 'No jobs available'}
+              ? `No ${showExpired ? 'expired' : 'active'} jobs match your criteria`
+              : `No ${showExpired ? 'expired' : 'active'} jobs available`}
           </h3>
           <p className="text-gray-600">
             {searchQuery || Object.values(filters).some((v) => v)
               ? 'Try adjusting your search or filters'
+              : showExpired
+              ? 'No expired jobs found'
               : 'Check back later for new opportunities'}
           </p>
+        </div>
+      ) : showExpired ? (
+        /* Table View for Expired Jobs */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Job Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Hospital
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Employment Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Salary Range
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Expired Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentJobs.map((job) => (
+                  <tr key={job.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{job.title}</div>
+                      <div className="text-sm text-gray-500">{job.specialty}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{(job as any).hospitalName || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{job.location}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {job.specialty}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className="capitalize">{job.jobType.replace('-', ' ')}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {job.compensation.type === 'fixed' && job.compensation.amount
+                        ? `${(job as any).currency || 'NGN'} ${(job as any).salaryMin?.toLocaleString() || 0} - ${(job as any).salaryMax?.toLocaleString() || 0}`
+                        : 'Negotiable'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(job.applicationDeadline).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {job.hasApplied ? (
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Applied
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                          Expired
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => handleViewDetails(job.id)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Pagination for Table */}
+          {totalPages > 1 && (
+            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+              <div className="text-sm text-gray-700">
+                Showing {indexOfFirstJob + 1} to {Math.min(indexOfLastJob, filteredJobs.length)} of {filteredJobs.length} jobs
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  Previous
+                </button>
+                <span className="px-4 py-2 text-sm text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <>
