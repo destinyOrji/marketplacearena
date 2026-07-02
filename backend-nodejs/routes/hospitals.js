@@ -317,25 +317,6 @@ router.post('/vacancies/create/', protect, async (req, res) => {
         res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 });
-                .filter(p => p.user)
-                .map(p => ({
-                    user: p.user._id,
-                    title: 'New Job Vacancy',
-                    message: `${hospital.hospitalName} posted a new vacancy: ${job.jobTitle} (${job.department})`,
-                    type: 'job_posted',
-                    data: { jobId: job._id, hospitalId: hospital._id }
-                }));
-            if (notifications.length > 0) {
-                await Notification.insertMany(notifications);
-            }
-        }
-
-        res.status(201).json({ statuscode: 0, status: 'success', data: job, message: 'Vacancy created successfully' });
-    } catch (error) {
-        console.error('Error creating vacancy:', error);
-        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
-    }
-});
 
 router.get('/vacancies/:id', protect, async (req, res) => {
     try {
