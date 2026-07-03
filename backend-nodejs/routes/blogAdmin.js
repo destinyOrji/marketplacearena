@@ -1,9 +1,42 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const BlogPost = require('../models/BlogPost');
 const BlogAdmin = require('../models/BlogAdmin');
 const mongoose = require('mongoose');
+
+// ─── Image Upload Config ─────────────────────────────────────────────────────
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '../uploads/blog');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const name = `blog-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
+        cb(null, name);
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp/;
+        if (allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed (jpg, png, gif, webp)'));
+        }
+    }
+});
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -193,6 +226,29 @@ router.put('/profile', blogAdminAuth, async (req, res) => {
             success: true,
             message: 'Profile updated',
             data: { id: admin._id, name: admin.name, email: admin.email, avatar: admin.avatar }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ─── Image Upload ─────────────────────────────────────────────────────────────
+
+// Upload featured image
+router.post('/upload-image', blogAdminAuth, upload.single('image'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No image file provided' });
+        }
+
+        // Build public URL - images served from /uploads/blog/
+        const imageUrl = `${process.env.BACKEND_URL || 'https://healthmarketarena.com'}/uploads/blog/${req.file.filename}`;
+
+        res.json({
+            success: true,
+            url: imageUrl,
+            filename: req.file.filename,
+            message: 'Image uploaded successfully'
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
