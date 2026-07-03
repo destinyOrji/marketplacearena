@@ -9,12 +9,18 @@ const BlogPostEditor: React.FC = () => {
   const navigate = useNavigate();
   const isEdit = !!id;
 
+  const CATEGORIES = [
+    'Health Tips', 'Medical News', 'Hospital Updates', 'Emergency Care',
+    'Wellness', 'Technology', 'Patient Stories', 'Professional Insights',
+    'Fitness', 'Mental Health', 'General'
+  ];
+
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     excerpt: '',
     author: '',
-    category: 'Health',
+    category: 'General',
     tags: '',
     featured_image: '',
     status: 'draft' as 'draft' | 'published',
@@ -47,17 +53,17 @@ const BlogPostEditor: React.FC = () => {
       });
       const post = response.data.data;
       setFormData({
-        title: post.title,
-        content: post.content,
-        excerpt: post.excerpt,
-        author: post.author,
-        category: post.category,
-        tags: post.tags.join(', '),
-        featured_image: post.featured_image || '',
-        status: post.status,
-        meta_title: post.seo?.meta_title || '',
-        meta_description: post.seo?.meta_description || '',
-        meta_keywords: post.seo?.meta_keywords || ''
+        title: post.title || '',
+        content: post.content || '',
+        excerpt: post.excerpt || '',
+        author: post.author?.name || '',
+        category: post.category || 'General',
+        tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
+        featured_image: post.featuredImage?.url || post.featured_image || '',
+        status: post.status || 'draft',
+        meta_title: post.metaTitle || post.seo?.meta_title || '',
+        meta_description: post.metaDescription || post.seo?.meta_description || '',
+        meta_keywords: Array.isArray(post.metaKeywords) ? post.metaKeywords.join(', ') : (post.seo?.meta_keywords || '')
       });
     } catch (error) {
       console.error('Failed to fetch post:', error);
@@ -185,11 +191,9 @@ const BlogPostEditor: React.FC = () => {
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="Health">Health</option>
-                  <option value="Wellness">Wellness</option>
-                  <option value="Medical">Medical</option>
-                  <option value="Technology">Technology</option>
-                  <option value="News">News</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 
