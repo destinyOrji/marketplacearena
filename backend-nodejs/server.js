@@ -174,6 +174,44 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Sitemap - redirect to blog sitemap so Google finds it at /sitemap.xml
+app.get('/sitemap.xml', async (req, res) => {
+    try {
+        const BlogPost = require('./models/BlogPost');
+        const posts = await BlogPost.find({ status: 'published' })
+            .select('slug publishedAt updatedAt')
+            .sort({ publishedAt: -1 });
+
+        const siteUrl = 'https://healthmarketarena.com';
+
+        const postUrls = posts.map(post => `
+    <url>
+        <loc>${siteUrl}/blog/${post.slug}</loc>
+        <lastmod>${new Date(post.updatedAt || post.publishedAt).toISOString().split('T')[0]}</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>`).join('');
+
+        const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url><loc>${siteUrl}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+    <url><loc>${siteUrl}/blog</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+    <url><loc>${siteUrl}/professionals</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+    <url><loc>${siteUrl}/hospitals</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+    <url><loc>${siteUrl}/ambulance</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+    <url><loc>${siteUrl}/about</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    <url><loc>${siteUrl}/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+    ${postUrls}
+</urlset>`;
+
+        res.set('Content-Type', 'application/xml; charset=utf-8');
+        res.set('Cache-Control', 'public, max-age=3600');
+        res.send(sitemap);
+    } catch (error) {
+        res.status(500).send('<?xml version="1.0"?><urlset></urlset>');
+    }
+});
+
 // 404 handler — always JSON, never HTML
 app.use('*', (req, res) => {
     res.status(404).json({
