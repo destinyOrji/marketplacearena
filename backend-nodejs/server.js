@@ -164,6 +164,21 @@ if (process.env.NODE_ENV !== 'production') {
 // Only for initial setup and testing
 app.use('/api/temp', require('./routes/temp-admin-setup'));
 
+// Robots.txt - tells Google what to crawl
+app.get('/robots.txt', (req, res) => {
+    res.set('Content-Type', 'text/plain');
+    res.send(`User-agent: *
+Allow: /
+Allow: /blog
+Allow: /blog/
+Disallow: /admin/
+Disallow: /blog-admin/
+Disallow: /api/
+
+Sitemap: https://healthmarketarena.com/sitemap.xml
+`);
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({
