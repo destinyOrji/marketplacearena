@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FiSave } from 'react-icons/fi';
 import { getProfile, updateProfile, uploadPhoto, changePassword } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfileOnboarding: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const { updateGymPhysio } = useAuth();
 
   const [form, setForm] = useState({
     businessName: '', businessType: '', specialization: '',
@@ -50,7 +52,11 @@ const ProfileOnboarding: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateProfile(form as any);
+      const updated = await updateProfile(form as any);
+      // Update AuthContext so sidebar/navbar shows the new name immediately
+      if (updated) {
+        updateGymPhysio(updated as any);
+      }
       toast.success('Profile updated successfully');
     } catch (e: any) {
       toast.error(e.message || 'Failed to update profile');

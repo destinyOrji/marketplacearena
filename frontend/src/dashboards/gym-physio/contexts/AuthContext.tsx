@@ -108,7 +108,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               localStorage.setItem('gymPhysio', userStr);
             }
 
-            const gymPhysio: GymPhysioProfile = {
+            // Start with stored data immediately so the UI loads fast
+            const baseProfile: GymPhysioProfile = {
               ...user,
               businessType: user.businessType || 'gym',
               businessName: user.businessName || '',
@@ -129,11 +130,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
               updatedAt: user.updatedAt ? new Date(user.updatedAt) : new Date(),
             };
-            
+
             dispatch({
               type: 'LOGIN_SUCCESS',
-              payload: { gymPhysio, token },
+              payload: { gymPhysio: baseProfile, token },
             });
+
+            // Then fetch the full profile from the backend to get latest businessName etc.
+            try {
+              const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
+              const response = await fetch(`${API_URL}/gym-physio/profile`, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data) {
+                  const fullProfile: GymPhysioProfile = {
+                    ...baseProfile,
+                    ...data.data,
+                    createdAt: data.data.createdAt ? new Date(data.data.createdAt) : baseProfile.createdAt,
+                    updatedAt: data.data.updatedAt ? new Date(data.data.updatedAt) : baseProfile.updatedAt,
+                  };
+                  // Update localStorage with latest name
+                  const updatedUser = { ...user, businessName: data.data.businessName || user.businessName };
+                  localStorage.setItem('gymPhysio', JSON.stringify(updatedUser));
+                  dispatch({ type: 'UPDATE_GYM_PHYSIO', payload: fullProfile });
+                }
+              }
+            } catch (fetchError) {
+              // Non-critical — already loaded base profile above
+              console.warn('Could not fetch full gym-physio profile:', fetchError);
+            }
+
           } else {
             const roleRoutes: Record<string, string> = {
               client: '/patient/dashboard',
@@ -187,7 +215,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const updateGymPhysio = (gymPhysio: GymPhysioProfile) => {
-    localStorage.setItem('gymPhysio', JSON.stringify(gymPhysio));
+    // Update localStorage with latest businessName so sidebar/navbar shows correctly after save
+    const storedUser = localStorage.getItem('gymPhysio');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        const updated = { ...user, businessName: gymPhysio.businessName, businessType: gymPhysio.businessType };
+        localStorage.setItem('gymPhysio', JSON.stringify(updated));
+      } catch {}
+    }
     dispatch({ type: 'UPDATE_GYM_PHYSIO', payload: gymPhysio });
   };
 
