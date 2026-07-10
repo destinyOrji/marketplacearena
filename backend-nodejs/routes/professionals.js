@@ -203,11 +203,33 @@ router.get('/profile', protect, async (req, res) => {
 // Update professional profile
 router.put('/profile/update', protect, async (req, res) => {
     try {
+        // Whitelist only safe fields - prevent mass assignment
+        const allowedFields = [
+            'firstName', 'lastName', 'phone', 'bio', 'specialization',
+            'professionalType', 'yearsOfExperience', 'languages',
+            'location', 'address', 'city', 'state', 'country',
+            'consultationFee', 'currency', 'availableForConsultation',
+            'profilePicture', 'education', 'certifications', 'skills',
+            'consultationType', 'licenseNumber', 'licenseExpiry'
+        ];
+
+        const updateData = {};
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        });
+
         const professional = await Professional.findOneAndUpdate(
             { user: req.user._id },
-            { $set: req.body },
-            { new: true }
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
+
+        if (!professional) {
+            return res.status(404).json({ success: false, message: 'Professional profile not found' });
+        }
+
         res.json({ success: true, data: professional, message: 'Profile updated successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

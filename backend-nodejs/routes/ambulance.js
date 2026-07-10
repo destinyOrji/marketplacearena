@@ -272,9 +272,15 @@ router.put('/bookings/:id/complete', protect, async (req, res) => {
 router.put('/bookings/:id/cancel', protect, async (req, res) => {
     try {
         const EmergencyBooking = require('../models/EmergencyBooking');
-        
-        const booking = await EmergencyBooking.findByIdAndUpdate(
-            req.params.id,
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+
+        if (!ambulance) {
+            return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
+        }
+
+        // Ownership check: only the assigned ambulance provider can cancel
+        const booking = await EmergencyBooking.findOneAndUpdate(
+            { _id: req.params.id, ambulance: ambulance._id },
             { 
                 status: 'cancelled',
                 cancelledAt: new Date(),
@@ -284,7 +290,7 @@ router.put('/bookings/:id/cancel', protect, async (req, res) => {
         );
 
         if (!booking) {
-            return res.status(404).json({ success: false, message: 'Booking not found' });
+            return res.status(404).json({ success: false, message: 'Booking not found or not authorized' });
         }
 
         res.json({ 

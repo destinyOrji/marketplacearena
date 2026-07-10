@@ -90,11 +90,17 @@ router.post('/reset-password', async (req, res) => {
         const User = require('../models/User');
         const OTPStorage = require('../models/OTPStorage');
         const { token, password, email, otpCode } = req.body;
-        // Accept either token (= OTP code) or separate email+otpCode fields
         const emailVal = email;
         const otp = token || otpCode;
         if (!emailVal || !otp || !password) {
             return res.status(400).json({ success: false, message: 'Email, OTP code, and new password are required' });
+        }
+        // Password strength validation
+        if (password.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        }
+        if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+            return res.status(400).json({ success: false, message: 'Password must contain at least one uppercase letter and one number' });
         }
         const record = await OTPStorage.findOne({ phone: emailVal, otpCode: otp });
         if (!record) return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
@@ -122,6 +128,10 @@ router.post('/reset-password-otp', async (req, res) => {
         if (!phone || !otpCode || !newPassword) {
             return res.status(400).json({ success: false, message: 'Phone, OTP, and new password are required' });
         }
+        // Password strength validation
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        }
         const record = await OTPStorage.findOne({ phone, otpCode });
         if (!record) return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         if (new Date() > record.expiresAt) {
@@ -140,8 +150,12 @@ router.post('/reset-password-otp', async (req, res) => {
     }
 });
 
-// ─── Email test endpoint (dev/debug only) ────────────────────────────────────
+// ─── Email test endpoint (dev only) ──────────────────────────────────────────
 router.get('/test-email', async (req, res) => {
+    // Block in production - this reveals config details
+    if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ success: false, message: 'Not found' });
+    }
     try {
         const nodemailer = require('nodemailer');
         const config = {
@@ -150,12 +164,11 @@ router.get('/test-email', async (req, res) => {
             secure: false,
             auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
         };
-        console.log('Testing email with config:', { ...config, auth: { user: config.auth.user, pass: config.auth.pass ? '***set***' : 'MISSING' } });
         const transporter = nodemailer.createTransport(config);
         await transporter.verify();
         res.json({ success: true, message: 'Email connection OK', user: process.env.EMAIL_USER });
     } catch (err) {
-        res.json({ success: false, message: err.message, code: err.code, user: process.env.EMAIL_USER || 'NOT SET' });
+        res.json({ success: false, message: err.message, code: err.code });
     }
 });
 

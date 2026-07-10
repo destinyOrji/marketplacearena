@@ -195,6 +195,28 @@ exports.register = async (req, res) => {
             });
         }
 
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+
+        // Password strength validation
+        if (password.length < 8) {
+            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        }
+
+        // Name length validation
+        if (firstName.trim().length < 2 || lastName.trim().length < 2) {
+            return res.status(400).json({ success: false, message: 'First and last name must be at least 2 characters' });
+        }
+
+        // Validate role against allowed values
+        const allowedRoles = ['patient', 'professional', 'hospital', 'ambulance', 'gym_physio'];
+        if (role && !allowedRoles.includes(role)) {
+            return res.status(400).json({ success: false, message: 'Invalid role' });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {

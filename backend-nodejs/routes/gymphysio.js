@@ -160,11 +160,28 @@ router.get('/profile', protect, async (req, res) => {
 // Update gym/physio profile
 router.put('/profile/update', protect, async (req, res) => {
     try {
+        // Whitelist safe fields only - prevent mass assignment
+        const allowedFields = [
+            'businessName', 'phone', 'email', 'address', 'city', 'state', 'country',
+            'website', 'description', 'services', 'operatingHours', 'profileImage',
+            'specializations', 'certifications', 'licenseNumber', 'licenseExpiry',
+            'contactPerson', 'contactPhone', 'pricing', 'amenities'
+        ];
+        const updateData = {};
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) updateData[field] = req.body[field];
+        });
+
         const gymPhysio = await GymPhysio.findOneAndUpdate(
             { user: req.user._id },
-            { $set: req.body },
-            { new: true }
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
+
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+
         res.json({ success: true, data: gymPhysio, message: 'Profile updated successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

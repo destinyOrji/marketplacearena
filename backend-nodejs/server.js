@@ -31,6 +31,14 @@ const app = express();
 // Trust proxy (required when behind Nginx)
 app.set('trust proxy', 1);
 
+// Warn if weak JWT_SECRET in production
+if (process.env.NODE_ENV === 'production') {
+    const secret = process.env.JWT_SECRET || '';
+    if (!secret || secret.length < 32 || secret === 'fallback_dev_secret_change_in_production') {
+        console.error('⚠️  WARNING: JWT_SECRET is weak or not set. Set a strong secret in .env!');
+    }
+}
+
 // Security Middleware
 // Helmet helps secure Express apps by setting various HTTP headers
 app.use(helmet({

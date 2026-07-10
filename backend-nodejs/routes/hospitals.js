@@ -110,10 +110,26 @@ router.post('/upload-photo', protect, upload.single('photo'), async (req, res) =
 // Update hospital profile
 router.put('/profile/update', protect, async (req, res) => {
     try {
+        // Whitelist safe fields only - prevent mass assignment
+        const allowedFields = [
+            'hospitalName', 'phone', 'email', 'address', 'city', 'state', 'country',
+            'website', 'description', 'specializations', 'services', 'operatingHours',
+            'emergencyServices', 'totalBeds', 'availableBeds', 'icuBeds',
+            'profileImage', 'logo', 'licenseNumber', 'licenseExpiry',
+            'contactPerson', 'contactPhone', 'contactEmail'
+        ];
+
+        const updateData = {};
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        });
+
         const hospital = await Hospital.findOneAndUpdate(
             { user: req.user._id },
-            { $set: req.body },
-            { new: true }
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
         
         if (!hospital) {
@@ -404,37 +420,23 @@ router.put('/vacancies/:id/update', protect, async (req, res) => {
             });
         }
 
+        // Whitelist vacancy fields - prevent mass assignment
+        const allowedVacancyFields = [
+            'jobTitle', 'department', 'jobDescription', 'requiredQualifications',
+            'experienceLevel', 'minimumExperienceYears', 'employmentType',
+            'salaryRangeMin', 'salaryRangeMax', 'salaryCurrency', 'benefits',
+            'numberOfPositions', 'applicationDeadline', 'skills', 'location'
+        ];
+        const updateData = {};
+        allowedVacancyFields.forEach(field => {
+            if (req.body[field] !== undefined) updateData[field] = req.body[field];
+        });
+
         const vacancy = await Job.findOneAndUpdate(
             { _id: req.params.id, hospital: hospital._id },
-            { $set: req.body },
-            { new: true }
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
-
-        if (!vacancy) {
-            return res.status(404).json({ 
-                statuscode: 1,
-                status: 'error',
-                message: 'Vacancy not found' 
-            });
-        }
-
-        res.json({ 
-            statuscode: 0,
-            status: 'success',
-            data: vacancy, 
-            message: 'Vacancy updated successfully' 
-        });
-    } catch (error) {
-        console.error('Error updating vacancy:', error);
-        res.status(500).json({ 
-            statuscode: 1,
-            status: 'error',
-            message: error.message 
-        });
-    }
-});
-
-router.patch('/vacancies/:id/status', protect, async (req, res) => {
     try {
         const Job = require('../models/Job');
         const hospital = await Hospital.findOne({ user: req.user._id });
@@ -447,35 +449,21 @@ router.patch('/vacancies/:id/status', protect, async (req, res) => {
             });
         }
 
+        // Only allow hospitals to set these statuses manually
+        const allowedStatuses = ['draft', 'active', 'paused', 'closed'];
+        if (!req.body.status || !allowedStatuses.includes(req.body.status)) {
+            return res.status(400).json({
+                statuscode: 1,
+                status: 'error',
+                message: `Invalid status. Allowed: ${allowedStatuses.join(', ')}`
+            });
+        }
+
         const vacancy = await Job.findOneAndUpdate(
             { _id: req.params.id, hospital: hospital._id },
             { $set: { status: req.body.status } },
             { new: true }
         );
-
-        if (!vacancy) {
-            return res.status(404).json({ 
-                statuscode: 1,
-                status: 'error',
-                message: 'Vacancy not found' 
-            });
-        }
-
-        res.json({ 
-            statuscode: 0,
-            status: 'success',
-            data: vacancy, 
-            message: 'Vacancy status updated successfully' 
-        });
-    } catch (error) {
-        console.error('Error updating vacancy status:', error);
-        res.status(500).json({ 
-            statuscode: 1,
-            status: 'error',
-            message: error.message 
-        });
-    }
-});
 
 router.delete('/vacancies/:id/delete', protect, async (req, res) => {
     try {
@@ -678,10 +666,22 @@ router.put('/jobs/:id/update', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Hospital not found' });
         }
 
+        // Whitelist job fields
+        const allowedJobFields = [
+            'jobTitle', 'department', 'jobDescription', 'requiredQualifications',
+            'experienceLevel', 'minimumExperienceYears', 'employmentType',
+            'salaryRangeMin', 'salaryRangeMax', 'salaryCurrency', 'benefits',
+            'numberOfPositions', 'applicationDeadline', 'skills', 'location'
+        ];
+        const updateData = {};
+        allowedJobFields.forEach(field => {
+            if (req.body[field] !== undefined) updateData[field] = req.body[field];
+        });
+
         const job = await Job.findOneAndUpdate(
             { _id: req.params.id, hospital: hospital._id },
-            { $set: req.body },
-            { new: true }
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
 
         if (!job) {
@@ -1057,10 +1057,22 @@ router.get('/settings', protect, async (req, res) => {
 
 router.put('/settings/update', protect, async (req, res) => {
     try {
+        // Whitelist settings fields only
+        const allowedSettingsFields = [
+            'hospitalName', 'phone', 'email', 'address', 'city', 'state', 'country',
+            'website', 'description', 'operatingHours', 'emergencyServices',
+            'totalBeds', 'availableBeds', 'icuBeds', 'specializations', 'services',
+            'contactPerson', 'contactPhone', 'contactEmail', 'licenseNumber', 'licenseExpiry'
+        ];
+        const updateData = {};
+        allowedSettingsFields.forEach(field => {
+            if (req.body[field] !== undefined) updateData[field] = req.body[field];
+        });
+
         const hospital = await Hospital.findOneAndUpdate(
             { user: req.user._id },
-            { $set: req.body },
-            { new: true }
+            { $set: updateData },
+            { new: true, runValidators: true }
         );
 
         if (!hospital) {
@@ -1238,10 +1250,21 @@ router.get('/analytics', protect, async (req, res) => {
 // Onboarding (alias for profile update)
 router.post('/onboarding', protect, async (req, res) => {
     try {
+        const allowedOnboardingFields = [
+            'hospitalName', 'phone', 'address', 'city', 'state', 'country',
+            'website', 'description', 'specializations', 'services', 'operatingHours',
+            'emergencyServices', 'totalBeds', 'availableBeds', 'icuBeds',
+            'licenseNumber', 'licenseExpiry', 'contactPerson', 'contactPhone', 'contactEmail'
+        ];
+        const updateData = {};
+        allowedOnboardingFields.forEach(field => {
+            if (req.body[field] !== undefined) updateData[field] = req.body[field];
+        });
+
         const hospital = await Hospital.findOneAndUpdate(
             { user: req.user._id },
-            { $set: req.body },
-            { new: true, upsert: false }
+            { $set: updateData },
+            { new: true, upsert: false, runValidators: true }
         );
         if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
         res.json({ success: true, data: hospital, message: 'Onboarding completed' });
