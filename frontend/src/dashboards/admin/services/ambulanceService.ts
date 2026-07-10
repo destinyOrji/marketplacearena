@@ -24,7 +24,24 @@ class AmbulanceServiceClass {
     if (params.service_type) q.append('service_type', params.service_type);
     if (params.verification_status) q.append('verification_status', params.verification_status);
     const res = await axios.get<PaginatedResponse<AmbulanceProvider>>(`${this.baseURL}?${q}`, this.h());
-    return res.data;
+
+    // Map backend fields to frontend expected fields
+    const mapped = (res.data.data || []).map((p: any) => ({
+      ...p,
+      // Name: use serviceName from backend
+      provider_name: p.serviceName || p.provider_name || p.user?.firstName + ' ' + p.user?.lastName || '—',
+      // Location: split baseAddress or use city/state
+      city: p.city || (p.baseAddress ? p.baseAddress.split(',')[0]?.trim() : ''),
+      state: p.state || (p.baseAddress ? p.baseAddress.split(',').slice(-1)[0]?.trim() : ''),
+      // Availability
+      is_online: p.isAvailable ?? p.is_online ?? false,
+      // Verification
+      verification_status: p.isVerified ? 'verified' : (p.verificationStatus || 'pending'),
+      // Service type
+      service_type: p.serviceType || p.service_type || '—',
+    }));
+
+    return { ...res.data, data: mapped };
   }
 
   async getProviderById(id: string): Promise<AmbulanceProvider> {
