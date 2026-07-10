@@ -437,12 +437,32 @@ router.put('/vacancies/:id/update', protect, async (req, res) => {
             { $set: updateData },
             { new: true, runValidators: true }
         );
-    try {
-        const Job = require('../models/Job');
-        const hospital = await Hospital.findOne({ user: req.user._id });
-        
-        if (!hospital) {
+
+        if (!vacancy) {
             return res.status(404).json({ 
+                statuscode: 1,
+                status: 'error',
+                message: 'Vacancy not found' 
+            });
+        }
+
+        res.json({ 
+            statuscode: 0,
+            status: 'success',
+            data: vacancy, 
+            message: 'Vacancy updated successfully' 
+        });
+    } catch (error) {
+        console.error('Error updating vacancy:', error);
+        res.status(500).json({ 
+            statuscode: 1,
+            status: 'error',
+            message: error.message 
+        });
+    }
+});
+
+router.patch('/vacancies/:id/status', protect, async (req, res) => {
                 statuscode: 1,
                 status: 'error',
                 message: 'Hospital not found' 
@@ -464,6 +484,30 @@ router.put('/vacancies/:id/update', protect, async (req, res) => {
             { $set: { status: req.body.status } },
             { new: true }
         );
+
+        if (!vacancy) {
+            return res.status(404).json({ 
+                statuscode: 1,
+                status: 'error',
+                message: 'Vacancy not found' 
+            });
+        }
+
+        res.json({ 
+            statuscode: 0,
+            status: 'success',
+            data: vacancy, 
+            message: 'Vacancy status updated successfully' 
+        });
+    } catch (error) {
+        console.error('Error updating vacancy status:', error);
+        res.status(500).json({ 
+            statuscode: 1,
+            status: 'error',
+            message: error.message 
+        });
+    }
+});
 
 router.delete('/vacancies/:id/delete', protect, async (req, res) => {
     try {
