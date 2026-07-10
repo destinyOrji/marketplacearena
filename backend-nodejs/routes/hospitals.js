@@ -463,6 +463,12 @@ router.put('/vacancies/:id/update', protect, async (req, res) => {
 });
 
 router.patch('/vacancies/:id/status', protect, async (req, res) => {
+    try {
+        const Job = require('../models/Job');
+        const hospital = await Hospital.findOne({ user: req.user._id });
+        
+        if (!hospital) {
+            return res.status(404).json({ 
                 statuscode: 1,
                 status: 'error',
                 message: 'Hospital not found' 
