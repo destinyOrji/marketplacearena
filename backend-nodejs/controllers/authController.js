@@ -212,7 +212,7 @@ exports.register = async (req, res) => {
         }
 
         // Validate role against allowed values
-        const allowedRoles = ['patient', 'professional', 'hospital', 'ambulance', 'gym_physio'];
+        const allowedRoles = ['patient', 'client', 'professional', 'hospital', 'ambulance', 'gym_physio', 'gym-physio'];
         if (role && !allowedRoles.includes(role)) {
             return res.status(400).json({ success: false, message: 'Invalid role' });
         }
