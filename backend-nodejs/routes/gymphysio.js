@@ -162,10 +162,11 @@ router.put('/profile/update', protect, async (req, res) => {
     try {
         // Whitelist safe fields only - prevent mass assignment
         const allowedFields = [
-            'businessName', 'phone', 'email', 'address', 'city', 'state', 'country',
-            'website', 'description', 'services', 'operatingHours', 'profileImage',
-            'specializations', 'certifications', 'licenseNumber', 'licenseExpiry',
-            'contactPerson', 'contactPhone', 'pricing', 'amenities'
+            'businessName', 'businessType', 'phone', 'email', 'address', 'city', 'state', 'country',
+            'website', 'description', 'bio', 'services', 'operatingHours', 'profileImage', 'profilePicture',
+            'specializations', 'specialization', 'certifications', 'licenseNumber', 'licenseExpiry',
+            'contactPerson', 'contactPhone', 'pricing', 'amenities',
+            'yearsInBusiness', 'membershipFee', 'consultationFee'
         ];
         const updateData = {};
         allowedFields.forEach(field => {
