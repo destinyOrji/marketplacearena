@@ -176,8 +176,14 @@ export const jobsApi = {
   },
 
   applyForJob: async (jobId: string, data: { coverLetter: string; attachments?: File[] }): Promise<JobApplication> => {
-    const response = await apiClient.post(`/jobs/${jobId}/apply`, {
-      coverLetter: data.coverLetter,
+    // Use FormData so files are sent as multipart/form-data
+    const formData = new FormData();
+    formData.append('coverLetter', data.coverLetter);
+    if (data.attachments && data.attachments.length > 0) {
+      data.attachments.forEach(file => formData.append('attachments', file));
+    }
+    const response = await apiClient.post(`/jobs/${jobId}/apply`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data?.data ?? response.data;
   },

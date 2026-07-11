@@ -192,8 +192,12 @@ exports.getHospitalApplications = async (req, res) => {
         const jobs = await Job.find({ hospital: hospital._id }).select('_id');
         const jobIds = jobs.map(j => j._id);
         const applications = await JobApplication.find({ job: { $in: jobIds } })
-            .populate({ path: 'job', select: 'title department' })
-            .populate({ path: 'professional', populate: { path: 'user', select: 'firstName lastName email' } })
+            .populate({ path: 'job', select: 'jobTitle department' })  // was 'title department' — wrong field
+            .populate({
+                path: 'professional',
+                select: 'professionalType specialization yearsOfExperience licenseNumber licenseDocument resumeFile profilePicture qualifications certifications skills bio phone city state isVerified',
+                populate: { path: 'user', select: 'firstName lastName email phone' }
+            })
             .sort({ createdAt: -1 });
 
         res.json({ statuscode: 0, status: 'success', data: applications });

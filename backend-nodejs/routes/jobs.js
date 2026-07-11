@@ -1,10 +1,36 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const { protect } = require('../middleware/auth');
 const Job = require('../models/Job');
 const JobApplication = require('../models/JobApplication');
 const Professional = require('../models/Professional');
 const Notification = require('../models/Notification');
+
+// ── Multer for job application attachments ────────────────────────────────────
+const appUploadDir = path.join(__dirname, '../uploads/job-applications');
+if (!fs.existsSync(appUploadDir)) fs.mkdirSync(appUploadDir, { recursive: true });
+
+const appStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, appUploadDir),
+    filename: (req, file, cb) => {
+        const safe = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+        cb(null, `app-${Date.now()}-${safe}`);
+    }
+});
+
+const appUpload = multer({
+    storage: appStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+    fileFilter: (req, file, cb) => {
+        const allowed = /jpeg|jpg|png|gif|webp|pdf|doc|docx/;
+        const ok = allowed.test(path.extname(file.originalname).toLowerCase()) ||
+                   allowed.test(file.mimetype);
+        cb(ok ? null : new Error('Only images and PDF/DOC files are allowed'), ok);
+    }
+});
 
 // Browse all active job postings
 router.get('/', protect, async (req, res) => {
@@ -112,8 +138,8 @@ router.get('/:id', protect, async (req, res) => {
     }
 });
 
-// Apply to a job
-router.post('/:id/apply', protect, async (req, res) => {
+// Apply to a job (accepts multipart/form-data for file attachments)
+router.post('/:id/apply', protect, appUpload.array('attachments', 10), async (req, res) => {
     try {
         if (req.user.role !== 'professional') {
             return res.status(403).json({ success: false, message: 'Only professionals can apply to jobs' });
@@ -134,10 +160,22 @@ router.post('/:id/apply', protect, async (req, res) => {
         const existing = await JobApplication.findOne({ job: job._id, professional: professional._id });
         if (existing) return res.status(400).json({ success: false, message: 'You have already applied to this job' });
 
+        // Collect attachment URLs — files uploaded via multipart OR pre-uploaded URL strings in body
+        let attachmentUrls = [];
+        if (req.files && req.files.length > 0) {
+            attachmentUrls = req.files.map(f => `/uploads/job-applications/${f.filename}`);
+        }
+        // Also accept array of already-uploaded URL strings passed as JSON
+        if (req.body.attachments) {
+            const extra = Array.isArray(req.body.attachments) ? req.body.attachments : [req.body.attachments];
+            attachmentUrls = [...attachmentUrls, ...extra.filter(u => typeof u === 'string' && u.startsWith('/'))];
+        }
+
         const application = await JobApplication.create({
             job: job._id,
             professional: professional._id,
             coverLetter: req.body.coverLetter || '',
+            attachments: attachmentUrls,
             status: 'pending'
         });
 

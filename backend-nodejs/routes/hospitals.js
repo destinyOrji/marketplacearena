@@ -1345,31 +1345,19 @@ router.get('/applications/:id', protect, async (req, res) => {
         if (!hospital) return res.status(404).json({ success: false, message: 'Hospital not found' });
 
         const app = await JobApplication.findById(req.params.id)
-            .populate({ 
-                path: 'professional', 
-                populate: { 
-                    path: 'user', 
-                    select: 'firstName lastName email phone' 
-                } 
+            .populate({
+                path: 'professional',
+                select: 'professionalType specialization yearsOfExperience licenseNumber licenseDocument resumeFile profilePicture qualifications certifications skills bio phone address city state country isVerified',
+                populate: {
+                    path: 'user',
+                    select: 'firstName lastName email phone'
+                }
             })
             .populate({ path: 'job', select: 'jobTitle department' });
 
         if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
-        
-        // Format response to include all professional documents
-        const responseData = {
-            ...app.toObject(),
-            resume_file: app.professional?.resumeFile || null,
-            license_document: app.professional?.licenseDocument || null,
-            attachments: app.attachments || [],
-            professional: {
-                ...app.professional?.toObject(),
-                resume_file: app.professional?.resumeFile || null,
-                license_document: app.professional?.licenseDocument || null,
-            }
-        };
-        
-        res.json({ success: true, data: responseData });
+
+        res.json({ success: true, data: app.toObject() });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
