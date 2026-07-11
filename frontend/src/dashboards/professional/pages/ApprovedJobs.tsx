@@ -4,8 +4,8 @@
  */
 import React, { useState, useEffect } from 'react';
 import { 
-  FiMapPin, FiBriefcase, FiDollarSign, FiCalendar, FiPhone, 
-  FiMail, FiGlobe, FiClock, FiAward, FiCheckCircle, FiAlertCircle 
+  FiNavigation, FiFolder, FiDollarSign, FiCalendar, FiPhoneCall, 
+  FiMail, FiExternalLink, FiClock, FiStar, FiCheckCircle, FiAlertCircle 
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { jobsApi } from '../services/api';
@@ -197,7 +197,7 @@ const ApprovedJobs: React.FC = () => {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-600">
                   <div className="flex items-center gap-1">
-                    <FiBriefcase className="h-4 w-4" />
+                    <FiFolder className="h-4 w-4" />
                     <span>{formatEmploymentType(selectedJob.employmentType)}</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -205,7 +205,7 @@ const ApprovedJobs: React.FC = () => {
                     <span>{formatSalary(selectedJob.salaryRangeMin, selectedJob.salaryRangeMax, selectedJob.salaryCurrency)}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <FiAward className="h-4 w-4" />
+                    <FiStar className="h-4 w-4" />
                     <span className="capitalize">{selectedJob.experienceLevel || 'Mid'} Level</span>
                   </div>
                 </div>
@@ -217,7 +217,7 @@ const ApprovedJobs: React.FC = () => {
                   {/* Job Description */}
                   <div>
                     <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <FiBriefcase className="h-4 w-4 text-blue-600" />
+                      <FiFolder className="h-4 w-4 text-blue-600" />
                       Job Description
                     </h4>
                     <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
@@ -305,7 +305,7 @@ const ApprovedJobs: React.FC = () => {
                                 )}
                                 {selectedJob.onboarding.interviewLocation && (
                                   <p className="flex items-center gap-1 text-gray-600">
-                                    <FiMapPin className="h-3.5 w-3.5" />
+                                    <FiNavigation className="h-3.5 w-3.5" />
                                     {selectedJob.onboarding.interviewLocation}
                                   </p>
                                 )}
@@ -392,7 +392,7 @@ const ApprovedJobs: React.FC = () => {
                     <div className="space-y-2.5">
                       {selectedJob.hospitalPhone && (
                         <div className="flex items-center gap-3 text-sm">
-                          <FiPhone className="h-4 w-4 text-gray-400" />
+                          <FiPhoneCall className="h-4 w-4 text-gray-400" />
                           <a href={`tel:${selectedJob.hospitalPhone}`} className="text-blue-600 hover:underline">
                             {selectedJob.hospitalPhone}
                           </a>
@@ -408,7 +408,7 @@ const ApprovedJobs: React.FC = () => {
                       )}
                       {selectedJob.hospitalWebsite && (
                         <div className="flex items-center gap-3 text-sm">
-                          <FiGlobe className="h-4 w-4 text-gray-400" />
+                          <FiExternalLink className="h-4 w-4 text-gray-400" />
                           <a 
                             href={selectedJob.hospitalWebsite} 
                             target="_blank" 
@@ -425,7 +425,7 @@ const ApprovedJobs: React.FC = () => {
                   {/* Hospital Address */}
                   <div>
                     <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                      <FiMapPin className="h-4 w-4 text-blue-600" />
+                      <FiNavigation className="h-4 w-4 text-blue-600" />
                       Hospital Location
                     </h4>
                     {selectedJob.address.fullAddress ? (

@@ -9,8 +9,8 @@ import {
   FiMail,
   FiBell,
   FiLock,
-  FiGlobe,
-  FiShield,
+  FiSettings,
+  FiEyeOff,
   FiTrash2,
   FiAlertCircle,
 } from 'react-icons/fi';
@@ -182,10 +182,10 @@ const Settings: React.FC = () => {
   const checkboxClass = 'w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500';
 
   const tabs = [
-    { id: 'general', name: 'General', icon: FiGlobe },
+    { id: 'general', name: 'General', icon: FiSettings },
     { id: 'notifications', name: 'Notifications', icon: FiBell },
     { id: 'security', name: 'Security', icon: FiLock },
-    { id: 'privacy', name: 'Privacy', icon: FiShield },
+    { id: 'privacy', name: 'Privacy', icon: FiEyeOff },
     { id: 'danger', name: 'Danger Zone', icon: FiAlertCircle },
   ] as const;
 

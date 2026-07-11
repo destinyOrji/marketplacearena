@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiShield, FiUsers, FiInfo, FiCheck } from 'react-icons/fi';
+import { FiLock, FiUsers, FiAlertCircle, FiCheck } from 'react-icons/fi';
 import { settingsService } from '../../services/settingsService';
 import { Role, AvailablePermission } from '../../types';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -68,7 +68,7 @@ const RoleCard: React.FC<RoleCardProps> = ({ role, allPermissions }) => {
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
           <div className={`p-2 rounded-lg bg-white shadow-sm`}>
-            <FiShield className={`h-5 w-5 ${colours.icon}`} />
+            <FiLock className={`h-5 w-5 ${colours.icon}`} />
           </div>
           <div>
             <div className="flex items-center space-x-2">
@@ -200,7 +200,7 @@ const RolesPermissions: React.FC = () => {
 
       {/* Info banner */}
       <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <FiInfo className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <FiAlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800">
           <p className="font-medium mb-1">How roles work</p>
           <p>

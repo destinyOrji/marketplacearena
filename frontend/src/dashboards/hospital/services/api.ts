@@ -39,11 +39,22 @@ class HospitalApiService {
     });
 
     // Handle non-JSON error responses (e.g. rate limiter plain text)
+    // and redirect to login on 401
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response && typeof error.response.data === 'string') {
-          error.response.data = { message: error.response.data };
+        if (error.response) {
+          if (typeof error.response.data === 'string') {
+            error.response.data = { message: error.response.data };
+          }
+          // Token expired or invalid — clear storage and redirect to login
+          if (error.response.status === 401) {
+            localStorage.removeItem('hospitalToken');
+            localStorage.removeItem('hospital');
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(error);
       }

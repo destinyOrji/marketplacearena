@@ -10,85 +10,78 @@ interface AuthWrapperProps {
 }
 
 const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [authState, setAuthState] = useState<'loading' | 'ok' | 'no_auth' | 'wrong_role'>('loading');
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = () => {
-      // Check for shared auth token (from main login)
-      const sharedToken = localStorage.getItem('authToken');
-      const sharedUser = localStorage.getItem('user');
-      
-      // Check for hospital-specific token
-      const hospitalToken = localStorage.getItem('hospitalToken');
-      const storedHospital = localStorage.getItem('hospital');
+      try {
+        // Check every possible key where the token/user could be stored
+        const token =
+          localStorage.getItem('hospitalToken') ||
+          localStorage.getItem('authToken');
 
-      const token = hospitalToken || sharedToken;
-      const userStr = storedHospital || sharedUser;
+        const userStr =
+          localStorage.getItem('hospital') ||
+          localStorage.getItem('user');
 
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          
-          if (user.role === 'hospital') {
-            // Store hospital-specific tokens if using shared tokens
-            if (!hospitalToken && sharedToken) {
-              localStorage.setItem('hospitalToken', sharedToken);
-              localStorage.setItem('hospital', userStr);
-            }
-            
-            setIsAuthenticated(true);
-            setUserRole(user.role);
-          } else {
-            // Not a hospital user, redirect to correct dashboard
-            const roleRoutes: Record<string, string> = {
-              client: '/patient/dashboard',
-              professional: '/professional/dashboard',
-              ambulance: '/ambulance/dashboard',
-              admin: '/admin/dashboard',
-            };
-            const correctDashboard = roleRoutes[user.role] || '/patient/dashboard';
-            window.location.href = correctDashboard;
-          }
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-          setIsAuthenticated(false);
+        if (!token || !userStr) {
+          setAuthState('no_auth');
+          return;
         }
-      } else {
-        setIsAuthenticated(false);
+
+        const user = JSON.parse(userStr);
+        const role: string = (user.role || '').toLowerCase().trim();
+
+        if (role === 'hospital') {
+          // Ensure both hospital-specific keys are set so HospitalApiService picks up the token
+          if (!localStorage.getItem('hospitalToken')) {
+            localStorage.setItem('hospitalToken', token);
+          }
+          if (!localStorage.getItem('hospital')) {
+            localStorage.setItem('hospital', userStr);
+          }
+          setAuthState('ok');
+        } else {
+          // Logged in but wrong role — redirect to the correct dashboard
+          const roleRoutes: Record<string, string> = {
+            client: '/patient/dashboard',
+            patient: '/patient/dashboard',
+            professional: '/professional/dashboard',
+            ambulance: '/ambulance/dashboard',
+            'gym-physio': '/gym-physio/dashboard',
+            admin: '/admin/dashboard',
+            super_admin: '/admin/dashboard',
+          };
+          setRedirectTo(roleRoutes[role] || '/patient/dashboard');
+          setAuthState('wrong_role');
+        }
+      } catch (error) {
+        console.error('AuthWrapper: error reading auth state', error);
+        setAuthState('no_auth');
       }
     };
 
     checkAuth();
   }, []);
 
-  // Loading state
-  if (isAuthenticated === null) {
+  if (authState === 'loading') {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
 
-  // Not authenticated, redirect to login
-  if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
+  if (authState === 'no_auth') {
+    return <Navigate to="/login" replace />;
   }
 
-  // Wrong role, already handled by redirect above
-  if (userRole !== 'hospital') {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">Redirecting to your dashboard...</p>
-        </div>
-      </div>
-    );
+  if (authState === 'wrong_role' && redirectTo) {
+    return <Navigate to={redirectTo} replace />;
   }
 
-  // Authenticated and correct role
+  // authState === 'ok'
   return <>{children}</>;
 };
 

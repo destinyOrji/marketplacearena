@@ -62,6 +62,32 @@ const Login: React.FC = () => {
 
       const { user, token } = data.data;
 
+      // Validate account type matches actual role (helpful error, not a block)
+      const roleMap: Record<string, string[]> = {
+        hospital: ['hospital'],
+        professional: ['professional'],
+        patient: ['client', 'patient'],
+        ambulance: ['ambulance'],
+        'gym-physio': ['gym-physio', 'gym_physio'],
+      };
+
+      if (formData.accountType) {
+        const allowedRoles = roleMap[formData.accountType] || [];
+        if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+          const friendlyRole: Record<string, string> = {
+            hospital: 'Hospital',
+            professional: 'Professional',
+            client: 'Patient',
+            patient: 'Patient',
+            ambulance: 'Ambulance',
+            'gym-physio': 'Gym & Physiotherapy',
+          };
+          throw new Error(
+            `This account is registered as "${friendlyRole[user.role] || user.role}". Please select the correct account type.`
+          );
+        }
+      }
+
       // Store tokens and user data for all dashboard types
       localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));

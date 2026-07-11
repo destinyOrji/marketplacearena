@@ -311,11 +311,11 @@ const MyApplications: React.FC = () => {
               )}
 
               {/* Submitted Documents */}
-              {(application.attachments && application.attachments.length > 0) && (
+              {((application as any).attachments && (application as any).attachments.length > 0) && (
                 <div className="mt-4 border-t border-gray-200 pt-4">
                   <h4 className="text-sm font-semibold text-gray-900 mb-3">Submitted Documents</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {application.attachments.map((doc: string, index: number) => (
+                    {(application as any).attachments.map((doc: string, index: number) => (
                       <a
                         key={index}
                         href={doc.startsWith('http') ? doc : `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com'}${doc}`}

@@ -43,13 +43,13 @@ const AmbulanceVerification: React.FC = () => {
         city: provider.baseAddress?.city || provider.city || 'N/A',
         state: provider.baseAddress?.state || provider.state || 'N/A',
         country: provider.baseAddress?.country || provider.country || 'N/A',
-        verification_status: provider.isVerified ? 'verified' : 'pending',
+        verification_status: (provider.isVerified ? 'verified' : 'pending') as 'pending' | 'verified' | 'rejected',
         is_active: provider.isAvailable || provider.is_active || false,
         is_online: provider.isAvailable || provider.is_online || false,
         email_verified: provider.user?.emailVerified || provider.email_verified || false,
         created_at: provider.createdAt || provider.created_at || new Date().toISOString(),
       }));
-      setPendingProviders(mapped);
+      setPendingProviders(mapped as AmbulanceProvider[]);
     } catch (error: any) {
       console.error('Failed to fetch pending verifications:', error);
       setError(error.message || 'Failed to load pending verifications');

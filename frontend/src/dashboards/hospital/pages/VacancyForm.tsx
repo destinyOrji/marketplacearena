@@ -35,7 +35,7 @@ const VacancyForm: React.FC = () => {
   const loadVacancy = async () => {
     setLoading(true);
     try {
-      const vacancy = await hospitalApi.getVacancy(id!); // Pass ID as string
+      const vacancy = await hospitalApi.getVacancy(Number(id!));
       const v = vacancy as any;
       setForm({
         jobTitle: v.jobTitle || v.job_title || '',
@@ -92,7 +92,7 @@ const VacancyForm: React.FC = () => {
       };
 
       if (isEdit) {
-        await hospitalApi.updateVacancy(id!, payload as any);
+        await hospitalApi.updateVacancy(Number(id!), payload as any);
         toast.success('Vacancy updated successfully');
         navigate('/hospital/vacancies');
       } else {

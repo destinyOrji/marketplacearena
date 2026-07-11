@@ -218,8 +218,8 @@ const AllPatients: React.FC = () => {
           <p className="text-gray-700">
             Are you sure you want to delete patient{' '}
             <strong>
-              {deleteModal.patient?.firstName || deleteModal.patient?.first_name}{' '}
-              {deleteModal.patient?.lastName || deleteModal.patient?.last_name}
+              {deleteModal.patient?.first_name}{' '}
+              {deleteModal.patient?.last_name}
             </strong>
             ? This action cannot be undone.
           </p>

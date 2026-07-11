@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiEdit2, FiTrash2, FiPlus, FiShield, FiToggleLeft, FiToggleRight, FiX, FiCheck } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiLock, FiX, FiCheck } from 'react-icons/fi';
 import { settingsService } from '../../services/settingsService';
 import { AdminUser, AvailablePermission } from '../../types';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
@@ -558,9 +558,9 @@ const AdminUsers: React.FC = () => {
                                 title={user.is_active ? 'Deactivate' : 'Activate'}
                                 className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-blue-600"
                               >
-                                {user.is_active
-                                  ? <FiToggleRight className="h-5 w-5 text-green-600" />
-                                  : <FiToggleLeft className="h-5 w-5 text-gray-400" />}
+                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${user.is_active ? 'text-green-600' : 'text-gray-400'}`}>
+                                  {user.is_active ? 'ON' : 'OFF'}
+                                </span>
                               </button>
                             )}
                             {/* Edit permissions */}
@@ -569,7 +569,7 @@ const AdminUsers: React.FC = () => {
                               title="Edit permissions"
                               className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-blue-600"
                             >
-                              <FiShield className="h-4 w-4" />
+                              <FiLock className="h-4 w-4" />
                             </button>
                             {/* Delete */}
                             {!isSelf && user.role !== 'super_admin' && (

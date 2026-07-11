@@ -14,7 +14,8 @@ import * as api from '../services/api';
 
 // Mock the API module
 jest.mock('../services/api');
-const mockedApi = api as jest.Mocked<typeof api>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockedApi = api as any;
 
 // Mock react-router-dom hooks
 const mockNavigate = jest.fn();

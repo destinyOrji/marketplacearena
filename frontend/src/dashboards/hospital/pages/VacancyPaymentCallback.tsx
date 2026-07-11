@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FiCheckCircle, FiXCircle, FiLoader } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiRefreshCw } from 'react-icons/fi';
 
 const VacancyPaymentCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -43,7 +43,7 @@ const VacancyPaymentCallback: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Verifying Payment</h2>
           <p className="text-gray-600">Please wait while we confirm your payment...</p>
           <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
-            <FiLoader className="animate-spin" />
+            <FiRefreshCw className="animate-spin" />
             <span>This may take a few moments</span>
           </div>
         </div>
