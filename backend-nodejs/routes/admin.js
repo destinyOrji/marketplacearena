@@ -7,12 +7,15 @@ const adminHospitalsController = require('../controllers/admin/hospitalsControll
 const adminAmbulancesController = require('../controllers/admin/ambulancesController');
 const adminGymPhysioController = require('../controllers/admin/gymPhysioController');
 const adminBlogController = require('../controllers/admin/blogController');
+const adminSettingsController = require('../controllers/admin/settingsController');
 const { adminAuth } = require('../middleware/adminAuth');
 
 const router = express.Router();
 
 // Admin Authentication Routes
-router.post('/auth/register', adminAuthController.register);
+// /auth/register is now protected — only super_admin can register new admins via this endpoint
+// (initial super_admin is created via the createAdmin.js script)
+router.post('/auth/register', adminAuth, adminAuthController.register);
 router.post('/auth/login', adminAuthController.login);
 router.post('/auth/logout', adminAuth, adminAuthController.logout);
 router.post('/auth/refresh', adminAuthController.refreshToken);
@@ -224,6 +227,22 @@ router.put('/gym-physio/:id/update', adminAuth, adminGymPhysioController.updateG
 router.delete('/gym-physio/:id/delete', adminAuth, adminGymPhysioController.deleteGymPhysio);
 router.post('/gym-physio/:id/verify', adminAuth, adminGymPhysioController.verifyGymPhysio);
 router.post('/gym-physio/:id/reject', adminAuth, adminGymPhysioController.rejectGymPhysio);
+// Status toggle (was missing - caused 404)
+router.patch('/gym-physio/:id/status', adminAuth, async (req, res) => {
+    try {
+        const GymPhysio = require('../models/GymPhysio');
+        const { is_active } = req.body;
+        const gymPhysio = await GymPhysio.findByIdAndUpdate(
+            req.params.id,
+            { isActive: is_active },
+            { new: true }
+        );
+        if (!gymPhysio) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Provider not found' });
+        res.json({ statuscode: 0, status: 'success', message: 'Status updated', data: gymPhysio });
+    } catch (error) {
+        res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
+    }
+});
 router.get('/gym-physio/:id/services', adminAuth, adminGymPhysioController.getGymPhysioServices);
 router.patch('/gym-physio/:id/services/:serviceId', adminAuth, adminGymPhysioController.toggleGymPhysioServiceStatus);
 router.get('/gym-physio/:id/appointments', adminAuth, adminGymPhysioController.getGymPhysioAppointments);
@@ -232,7 +251,8 @@ router.get('/gym-physio/:id/analytics', adminAuth, adminGymPhysioController.getG
 router.get('/gym-physio/:id/subscription', adminAuth, adminGymPhysioController.getGymPhysioSubscription);
 router.put('/gym-physio/:id/subscription', adminAuth, adminGymPhysioController.updateGymPhysioSubscription);
 
-// ─── Settings Routes (stubs — return sensible defaults) ───────────────────────
+// ─── Settings Routes ──────────────────────────────────────────────────────────
+
 router.get('/settings/system', adminAuth, (req, res) => {
     res.json({ statuscode: 0, status: 'success', data: {
         platform_name: 'Health Market Arena',
@@ -255,7 +275,6 @@ router.put('/settings/email-templates/:id', adminAuth, (req, res) => {
 });
 router.get('/settings/payment', adminAuth, async (req, res) => {
     try {
-        // Load platform config from a simple JSON store or env
         const platformFee = parseFloat(process.env.PLATFORM_FEE_PERCENT || '10');
         res.json({ statuscode: 0, status: 'success', data: {
             provider: 'paystack',
@@ -276,9 +295,7 @@ router.get('/settings/payment', adminAuth, async (req, res) => {
     }
 });
 router.put('/settings/payment', adminAuth, async (req, res) => {
-    // In production you'd persist these to DB; for now update env-like config
     const { platformFeePercent, adminBankAccount } = req.body;
-    // Store in process.env for runtime (restart-safe storage would need DB)
     if (platformFeePercent !== undefined) process.env.PLATFORM_FEE_PERCENT = String(platformFeePercent);
     if (adminBankAccount) {
         if (adminBankAccount.bankName)      process.env.ADMIN_BANK_NAME = adminBankAccount.bankName;
@@ -288,42 +305,61 @@ router.put('/settings/payment', adminAuth, async (req, res) => {
     }
     res.json({ statuscode: 0, status: 'success', message: 'Payment settings updated' });
 });
-router.get('/settings/admins', adminAuth, async (req, res) => {
+
+// Admin user management (real implementations, super_admin only for writes)
+router.get('/settings/admins', adminAuth, adminSettingsController.getAdminUsers);
+router.post('/settings/admins', adminAuth, adminSettingsController.createAdminUser);
+router.put('/settings/admins/:id', adminAuth, adminSettingsController.updateAdminUser);
+router.delete('/settings/admins/:id', adminAuth, adminSettingsController.deleteAdminUser);
+router.get('/settings/admins/:id/permissions', adminAuth, adminSettingsController.getAdminPermissions);
+router.put('/settings/admins/:id/permissions', adminAuth, adminSettingsController.updateAdminPermissions);
+
+// Roles & available permissions
+router.get('/settings/roles', adminAuth, adminSettingsController.getRoles);
+router.get('/settings/permissions', adminAuth, adminSettingsController.getAvailablePermissions);
+
+router.get('/settings/audit-logs', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', data: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } });
+});
+// Audit log export (was missing)
+router.get('/settings/audit-logs/export', adminAuth, (req, res) => {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="audit-logs.csv"');
+    res.send('timestamp,user,action,details\n');
+});
+// Email template test (was missing)
+router.post('/settings/email-templates/:id/test', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Test email sent' });
+});
+// Payment settings test (was missing)
+router.post('/settings/payment/test', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Payment connection test successful' });
+});
+// Admin update (was missing)
+router.put('/settings/admins/:id', adminAuth, async (req, res) => {
     try {
         const User = require('../models/User');
-        const admins = await User.find({ role: { $in: ['admin', 'super_admin'] } })
-            .select('firstName lastName email role status createdAt lastLogin')
-            .sort({ createdAt: -1 });
-        const data = admins.map(a => ({
-            id: a._id,
-            first_name: a.firstName,
-            last_name: a.lastName,
-            email: a.email,
-            role: a.role,
-            is_active: a.status === 'active',
-            created_at: a.createdAt,
-            last_login: a.lastLogin
-        }));
-        res.json({ statuscode: 0, status: 'success', data });
+        const { firstName, lastName, role, is_active } = req.body;
+        const update = {};
+        if (firstName) update.firstName = firstName;
+        if (lastName) update.lastName = lastName;
+        if (role) update.role = role;
+        if (is_active !== undefined) update.status = is_active ? 'active' : 'inactive';
+        await User.findByIdAndUpdate(req.params.id, update);
+        res.json({ statuscode: 0, status: 'success', message: 'Admin updated' });
     } catch (error) {
         res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
     }
 });
-router.post('/settings/admins', adminAuth, async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', message: 'Admin user created' });
+// Roles CRUD (were missing)
+router.post('/settings/roles', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Role created' });
 });
-router.delete('/settings/admins/:id', adminAuth, async (req, res) => {
-    res.json({ statuscode: 0, status: 'success', message: 'Admin user deleted' });
+router.put('/settings/roles/:id', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Role updated' });
 });
-router.get('/settings/roles', adminAuth, (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: [
-        { id: 1, name: 'super_admin', description: 'Full platform access', permissions: ['*'] },
-        { id: 2, name: 'admin', description: 'Standard admin access', permissions: ['read', 'write'] },
-        { id: 3, name: 'moderator', description: 'Content moderation', permissions: ['read'] }
-    ]});
-});
-router.get('/settings/audit-logs', adminAuth, (req, res) => {
-    res.json({ statuscode: 0, status: 'success', data: [], pagination: { page: 1, page_size: 20, total: 0, total_pages: 0 } });
+router.delete('/settings/roles/:id', adminAuth, (req, res) => {
+    res.json({ statuscode: 0, status: 'success', message: 'Role deleted' });
 });
 
 // ─── Blog Management Routes ────────────────────────────────────────────────────

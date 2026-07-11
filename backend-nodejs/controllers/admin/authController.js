@@ -25,9 +25,18 @@ const generateRefreshToken = async (userId) => {
     return token;
 };
 
-// Admin registration (for creating new admin users)
+// Admin registration (for creating new admin users — requires super_admin)
 exports.register = async (req, res) => {
     try {
+        // Only super_admin can register new admins
+        if (req.admin && req.admin.role !== 'super_admin') {
+            return res.status(403).json({
+                statuscode: 1,
+                status: 'error',
+                message: 'Only super admins can register new admin accounts'
+            });
+        }
+
         const { email, password, firstName, lastName, role = 'admin' } = req.body;
 
         // Validate required fields
@@ -260,6 +269,8 @@ exports.login = async (req, res) => {
                 admin: {
                     id: admin._id,
                     email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
                     role: admin.role,
                     permissions: Object.fromEntries(admin.permissions)
                 }
