@@ -26,20 +26,19 @@ class AmbulanceServiceClass {
     const res = await axios.get<PaginatedResponse<AmbulanceProvider>>(`${this.baseURL}?${q}`, this.h());
 
     // Map backend fields to frontend expected fields
-    const mapped = (res.data.data || []).map((p: any) => ({
-      ...p,
-      // Name: use serviceName from backend
-      provider_name: p.serviceName || p.provider_name || p.user?.firstName + ' ' + p.user?.lastName || '—',
-      // Location: split baseAddress or use city/state
-      city: p.city || (p.baseAddress ? p.baseAddress.split(',')[0]?.trim() : ''),
-      state: p.state || (p.baseAddress ? p.baseAddress.split(',').slice(-1)[0]?.trim() : ''),
-      // Availability
-      is_online: p.isAvailable ?? p.is_online ?? false,
-      // Verification
-      verification_status: p.isVerified ? 'verified' : (p.verificationStatus || 'pending'),
-      // Service type
-      service_type: p.serviceType || p.service_type || '—',
-    }));
+    const mapped = (res.data.data || []).map((p: any) => {
+      // baseAddress is a Mongoose subdocument object {street, city, state}, not a string
+      const addr = p.baseAddress || {};
+      return {
+        ...p,
+        provider_name: p.serviceName || p.provider_name || [p.user?.firstName, p.user?.lastName].filter(Boolean).join(' ') || '—',
+        city: p.city || addr.city || '',
+        state: p.state || addr.state || '',
+        is_online: p.isAvailable ?? p.is_online ?? false,
+        verification_status: p.isVerified ? 'verified' : (p.verificationStatus || 'pending'),
+        service_type: p.serviceType || p.service_type || '—',
+      };
+    });
 
     return { ...res.data, data: mapped };
   }

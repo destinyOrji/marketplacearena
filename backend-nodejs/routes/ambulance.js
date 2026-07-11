@@ -189,7 +189,13 @@ router.get('/bookings', protect, async (req, res) => {
             return res.json({ success: true, data: [] });
         }
 
-        const bookings = await EmergencyBooking.find({ provider: ambulance._id })
+        // Support status filter from query param
+        const query = { provider: ambulance._id };
+        if (req.query.status && req.query.status !== 'all') {
+            query.status = req.query.status;
+        }
+
+        const bookings = await EmergencyBooking.find(query)
             .populate({
                 path: 'client',
                 populate: {
@@ -278,9 +284,9 @@ router.put('/bookings/:id/cancel', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
         }
 
-        // Ownership check: only the assigned ambulance provider can cancel
+        // Ownership check using 'provider' field (matches how bookings are created/queried)
         const booking = await EmergencyBooking.findOneAndUpdate(
-            { _id: req.params.id, ambulance: ambulance._id },
+            { _id: req.params.id, provider: ambulance._id },
             { 
                 status: 'cancelled',
                 cancelledAt: new Date(),

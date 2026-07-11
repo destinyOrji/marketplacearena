@@ -882,12 +882,12 @@ router.get('/earnings', protect, async (req, res) => {
         if (!professional) return res.json({ success: true, data: { totalEarnings: 0, pendingPayments: 0, completedPayments: 0, platformFees: 0, netEarnings: 0 } });
 
         const appointments = await Appointment.find({ professional: professional._id, status: 'completed' });
-        const totalEarnings = appointments.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+        const totalEarnings = appointments.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
         const platformFees = totalEarnings * 0.1; // 10% platform fee
         const netEarnings = totalEarnings - platformFees;
 
         const pendingApts = await Appointment.find({ professional: professional._id, status: { $in: ['scheduled', 'confirmed'] } });
-        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.price || apt.amount || 0), 0);
+        const pendingPayments = pendingApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
 
         res.json({
             success: true,
@@ -1153,20 +1153,6 @@ router.put('/patient-records/:id/notes', protect, async (req, res) => {
         if (!apt) return res.status(404).json({ success: false, message: 'Record not found' });
 
         res.json({ success: true, message: 'Notes saved', data: apt });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-router.post('/change-password', protect, async (req, res) => {
-    try {
-        const { currentPassword, newPassword } = req.body;
-        const user = await User.findById(req.user._id);
-        const isValid = await user.comparePassword(currentPassword);
-        if (!isValid) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
-        user.password = newPassword;
-        await user.save();
-        res.json({ success: true, message: 'Password changed successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

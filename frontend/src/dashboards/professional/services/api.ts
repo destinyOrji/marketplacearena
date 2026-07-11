@@ -213,12 +213,12 @@ export const jobsApi = {
   },
 
   acceptOffer: async (applicationId: string): Promise<JobApplication> => {
-    const response = await apiClient.post(`/applications/${applicationId}/accept`);
+    const response = await apiClient.put(`/professionals/job-applications/${applicationId}/accept`);
     return response.data?.data ?? response.data;
   },
 
   declineOffer: async (applicationId: string, reason?: string): Promise<JobApplication> => {
-    const response = await apiClient.post(`/applications/${applicationId}/decline`, { reason });
+    const response = await apiClient.put(`/professionals/job-applications/${applicationId}/decline`, { reason });
     return response.data?.data ?? response.data;
   },
 

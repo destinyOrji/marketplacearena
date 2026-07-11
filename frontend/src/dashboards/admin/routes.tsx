@@ -161,6 +161,7 @@ const AdminRoutes: React.FC = () => {
                   {/* Ambulance Management Routes */}
                   {/* ⚠️ Static routes MUST come before /:providerId */}
                   <Route path="/ambulances" element={<AllProvidersPage />} />
+                  <Route path="/ambulances/service" element={<Navigate to="/admin/ambulances/all-fleet" replace />} />
                   <Route path="/ambulances/bookings" element={<EmergencyBookingsPage />} />
                   <Route path="/ambulances/availability" element={<AvailabilityMonitoringPage />} />
                   <Route path="/ambulances/verification" element={<AmbulanceVerificationPage />} />
