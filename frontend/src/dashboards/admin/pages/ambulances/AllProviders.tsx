@@ -1,398 +1,238 @@
 /**
- * All Ambulance Providers Page
- * Display paginated table of all ambulance providers with search and filters
+ * Admin — All Ambulance Providers — responsive card/table layout
  */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiEye, FiEdit, FiTrash2, FiCheckCircle, FiXCircle } from 'react-icons/fi';
-import DataTable, { Column } from '../../components/DataTable';
+import { FiEye, FiTrash2, FiCheckCircle, FiXCircle, FiSearch, FiTruck } from 'react-icons/fi';
 import { Modal, Button } from '../../components';
 import { ambulanceService } from '../../services/ambulanceService';
-import { AmbulanceProvider } from '../../types';
 
 const AllProviders: React.FC = () => {
   const navigate = useNavigate();
-  const [providers, setProviders] = useState<AmbulanceProvider[]>([]);
+  const [providers, setProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [serviceTypeFilter, setServiceTypeFilter] = useState('');
-  const [verificationStatusFilter, setVerificationStatusFilter] = useState<'pending' | 'verified' | 'rejected' | ''>('');
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    pageSize: 20,
-    totalItems: 0
-  });
-  const [deleteModal, setDeleteModal] = useState<{ show: boolean; provider: AmbulanceProvider | null }>({
-    show: false,
-    provider: null
-  });
-  const [verifyModal, setVerifyModal] = useState<{ show: boolean; provider: AmbulanceProvider | null }>({
-    show: false,
-    provider: null
-  });
-  const [rejectModal, setRejectModal] = useState<{ show: boolean; provider: AmbulanceProvider | null; reason: string }>({
-    show: false,
-    provider: null,
-    reason: ''
-  });
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
-  useEffect(() => {
-    fetchProviders();
-  }, [pagination.currentPage, searchQuery, serviceTypeFilter, verificationStatusFilter]);
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; p: any | null }>({ show: false, p: null });
+  const [verifyModal, setVerifyModal] = useState<{ show: boolean; p: any | null }>({ show: false, p: null });
+  const [rejectModal, setRejectModal] = useState<{ show: boolean; p: any | null; reason: string }>({ show: false, p: null, reason: '' });
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => { fetchProviders(); }, [page, typeFilter, statusFilter]);
 
   const fetchProviders = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await ambulanceService.getProviders({
-        page: pagination.currentPage,
-        page_size: pagination.pageSize,
-        search: searchQuery,
-        service_type: serviceTypeFilter,
-        verification_status: verificationStatusFilter
-      });
-
-      setProviders(response.data);
-      setPagination({
-        currentPage: response.pagination.page,
-        totalPages: response.pagination.total_pages,
-        pageSize: response.pagination.page_size,
-        totalItems: response.pagination.total
-      });
-    } catch (error) {
-      console.error('Failed to fetch providers:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await ambulanceService.getProviders({ page, page_size: 20, search, service_type: typeFilter, verification_status: statusFilter });
+      setProviders(res.data || []);
+      setTotalPages(res.pagination?.total_pages ?? 1);
+      setTotalItems(res.pagination?.total ?? res.data?.length ?? 0);
+    } catch { setProviders([]); }
+    finally { setLoading(false); }
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setPagination({ ...pagination, currentPage: 1 });
+  const handleSearch = (e: React.FormEvent) => { e.preventDefault(); setPage(1); fetchProviders(); };
+
+  const doVerify = async () => {
+    if (!verifyModal.p) return;
+    setActionLoading(true);
+    try { await ambulanceService.verifyProvider(verifyModal.p.id); setVerifyModal({ show: false, p: null }); fetchProviders(); }
+    catch { alert('Failed to verify'); } finally { setActionLoading(false); }
   };
 
-  const handleServiceTypeFilterChange = (type: string) => {
-    setServiceTypeFilter(type);
-    setPagination({ ...pagination, currentPage: 1 });
+  const doReject = async () => {
+    if (!rejectModal.p || !rejectModal.reason.trim()) { alert('Please provide a reason.'); return; }
+    setActionLoading(true);
+    try { await ambulanceService.rejectProvider(rejectModal.p.id, rejectModal.reason); setRejectModal({ show: false, p: null, reason: '' }); fetchProviders(); }
+    catch { alert('Failed to reject'); } finally { setActionLoading(false); }
   };
 
-  const handleVerificationStatusFilterChange = (status: 'pending' | 'verified' | 'rejected' | '') => {
-    setVerificationStatusFilter(status);
-    setPagination({ ...pagination, currentPage: 1 });
+  const doDelete = async () => {
+    if (!deleteModal.p) return;
+    setActionLoading(true);
+    try { await ambulanceService.deleteProvider(deleteModal.p.id); setDeleteModal({ show: false, p: null }); fetchProviders(); }
+    catch { alert('Failed to delete'); } finally { setActionLoading(false); }
   };
 
-  const handleView = (provider: AmbulanceProvider) => {
-    navigate(`/admin/ambulances/${provider.id}`);
-  };
-
-  const handleEdit = (provider: AmbulanceProvider) => {
-    navigate(`/admin/ambulances/${provider.id}/edit`);
-  };
-
-  const handleDeleteClick = (provider: AmbulanceProvider) => {
-    setDeleteModal({ show: true, provider });
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteModal.provider) return;
-
-    try {
-      await ambulanceService.deleteProvider(deleteModal.provider.id);
-      setDeleteModal({ show: false, provider: null });
-      fetchProviders();
-    } catch (error) {
-      console.error('Failed to delete provider:', error);
-      alert('Failed to delete provider. Please try again.');
-    }
-  };
-
-  const handleVerifyClick = (provider: AmbulanceProvider) => {
-    setVerifyModal({ show: true, provider });
-  };
-
-  const handleVerifyConfirm = async () => {
-    if (!verifyModal.provider) return;
-
-    try {
-      await ambulanceService.verifyProvider(verifyModal.provider.id);
-      setVerifyModal({ show: false, provider: null });
-      fetchProviders();
-    } catch (error) {
-      console.error('Failed to verify provider:', error);
-      alert('Failed to verify provider. Please try again.');
-    }
-  };
-
-  const handleRejectClick = (provider: AmbulanceProvider) => {
-    setRejectModal({ show: true, provider, reason: '' });
-  };
-
-  const handleRejectConfirm = async () => {
-    if (!rejectModal.provider || !rejectModal.reason.trim()) {
-      alert('Please provide a rejection reason.');
-      return;
-    }
-
-    try {
-      await ambulanceService.rejectProvider(rejectModal.provider.id, rejectModal.reason);
-      setRejectModal({ show: false, provider: null, reason: '' });
-      fetchProviders();
-    } catch (error) {
-      console.error('Failed to reject provider:', error);
-      alert('Failed to reject provider. Please try again.');
-    }
-  };
-
-  const columns: Column<AmbulanceProvider>[] = [
-    {
-      key: 'id',
-      label: 'Provider ID',
-      sortable: true
-    },
-    {
-      key: 'provider_name',
-      label: 'Provider Name',
-      sortable: true
-    },
-    {
-      key: 'service_type',
-      label: 'Service Type',
-      sortable: true
-    },
-    {
-      key: 'city',
-      label: 'Location',
-      sortable: true,
-      render: (provider) => `${provider.city}, ${provider.state}`
-    },
-    {
-      key: 'is_online',
-      label: 'Availability',
-      sortable: true,
-      render: (provider) => (
-        <span
-          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-            provider.is_online
-              ? 'bg-green-100 text-green-800'
-              : 'bg-gray-100 text-gray-800'
-          }`}
-        >
-          {provider.is_online ? 'Online' : 'Offline'}
-        </span>
-      )
-    },
-    {
-      key: 'verification_status',
-      label: 'Verification Status',
-      sortable: true,
-      render: (provider) => {
-        const status = provider.verification_status || 'pending';
-        return (
-          <span
-            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-              status === 'verified'
-                ? 'bg-green-100 text-green-800'
-                : status === 'pending'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </span>
-        );
-      }
-    }
-  ];
-
-  const renderActions = (provider: AmbulanceProvider) => (
-    <div className="flex space-x-2">
-      <button
-        onClick={() => handleView(provider)}
-        className="text-blue-600 hover:text-blue-800"
-        title="View"
-      >
-        <FiEye className="h-5 w-5" />
-      </button>
-      <button
-        onClick={() => handleEdit(provider)}
-        className="text-green-600 hover:text-green-800"
-        title="Edit"
-      >
-        <FiEdit className="h-5 w-5" />
-      </button>
-      {provider.verification_status === 'pending' && (
-        <>
-          <button
-            onClick={() => handleVerifyClick(provider)}
-            className="text-green-600 hover:text-green-800"
-            title="Verify"
-          >
-            <FiCheckCircle className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => handleRejectClick(provider)}
-            className="text-red-600 hover:text-red-800"
-            title="Reject"
-          >
-            <FiXCircle className="h-5 w-5" />
-          </button>
-        </>
-      )}
-      <button
-        onClick={() => handleDeleteClick(provider)}
-        className="text-red-600 hover:text-red-800"
-        title="Delete"
-      >
-        <FiTrash2 className="h-5 w-5" />
-      </button>
-    </div>
-  );
+  const statusBadge = (s: string) => s === 'verified' ? 'bg-green-100 text-green-800' : s === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800';
+  const onlineBadge = (online: boolean) => online ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">All Ambulance Providers</h1>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">All Ambulance Providers</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{totalItems} provider{totalItems !== 1 ? 's' : ''}</p>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Service Type
-            </label>
-            <select
-              value={serviceTypeFilter}
-              onChange={(e) => handleServiceTypeFilterChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Types</option>
-              <option value="Basic Life Support">Basic Life Support</option>
-              <option value="Advanced Life Support">Advanced Life Support</option>
-              <option value="Air Ambulance">Air Ambulance</option>
-              <option value="Patient Transport">Patient Transport</option>
-            </select>
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <form onSubmit={handleSearch} className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-48">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name, registration or location..."
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Verification Status
-            </label>
-            <select
-              value={verificationStatusFilter}
-              onChange={(e) => handleVerificationStatusFilterChange(e.target.value as 'pending' | 'verified' | 'rejected' | '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
+          <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Types</option>
+            <option value="Basic Life Support (BLS)">Basic Life Support</option>
+            <option value="Advanced Life Support (ALS)">Advanced Life Support</option>
+            <option value="Air Ambulance">Air Ambulance</option>
+            <option value="Patient Transport">Patient Transport</option>
+          </select>
+          <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">All Status</option>
+            <option value="verified">Verified</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button type="submit" className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700">Search</button>
+        </form>
       </div>
 
-      {/* Data Table */}
-      <DataTable
-        columns={columns}
-        data={providers}
-        searchable={true}
-        searchPlaceholder="Search by name, email, or registration number..."
-        onSearch={handleSearch}
-        pagination={{
-          currentPage: pagination.currentPage,
-          totalPages: pagination.totalPages,
-          pageSize: pagination.pageSize,
-          totalItems: pagination.totalItems,
-          onPageChange: (page) => setPagination({ ...pagination, currentPage: page })
-        }}
-        actions={renderActions}
-        loading={loading}
-        emptyMessage="No ambulance providers found"
-      />
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={deleteModal.show}
-        onClose={() => setDeleteModal({ show: false, provider: null })}
-        title="Delete Provider"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-700">
-            Are you sure you want to delete provider{' '}
-            <strong>{deleteModal.provider?.provider_name}</strong>
-            ? This action cannot be undone.
-          </p>
-          <div className="flex justify-end space-x-3">
-            <Button
-              variant="secondary"
-              onClick={() => setDeleteModal({ show: false, provider: null })}
-            >
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={handleDeleteConfirm}>
-              Delete
-            </Button>
+      {loading ? (
+        <div className="flex justify-center items-center h-48"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>
+      ) : providers.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-16 text-center text-gray-400">
+          <FiTruck className="h-10 w-10 mx-auto mb-3 opacity-40" />
+          <p className="font-medium">No ambulance providers found</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['Provider', 'Service Type', 'Registration', 'Location', 'Phone', 'Availability', 'Verification', ''].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {providers.map((p: any) => {
+                    const name = p.provider_name || p.serviceName || 'N/A';
+                    const vs   = p.verification_status || 'pending';
+                    return (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+                              <FiTruck className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{name}</p>
+                              <p className="text-xs text-gray-400">{p.email || ''}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{p.service_type || p.serviceType || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{p.registration_number || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{p.city && p.state ? `${p.city}, ${p.state}` : p.city || p.state || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{p.phone || '—'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${onlineBadge(p.is_online)}`}>{p.is_online ? 'Online' : 'Offline'}</span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${statusBadge(vs)}`}>{vs}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => navigate(`/admin/ambulances/${p.id}`)} title="View" className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"><FiEye className="h-4 w-4" /></button>
+                            {vs === 'pending' && <>
+                              <button onClick={() => setVerifyModal({ show: true, p })} title="Verify" className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md"><FiCheckCircle className="h-4 w-4" /></button>
+                              <button onClick={() => setRejectModal({ show: true, p, reason: '' })} title="Reject" className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><FiXCircle className="h-4 w-4" /></button>
+                            </>}
+                            <button onClick={() => setDeleteModal({ show: true, p })} title="Delete" className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><FiTrash2 className="h-4 w-4" /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {providers.map((p: any) => {
+              const name = p.provider_name || p.serviceName || 'N/A';
+              const vs   = p.verification_status || 'pending';
+              return (
+                <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+                        <FiTruck className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{name}</p>
+                        <p className="text-xs text-gray-400">{p.email || ''}</p>
+                      </div>
+                    </div>
+                    <span className={`flex-shrink-0 px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${statusBadge(vs)}`}>{vs}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs text-gray-600">
+                    <div><span className="text-gray-400">Type: </span>{p.service_type || p.serviceType || '—'}</div>
+                    <div><span className="text-gray-400">Reg: </span>{p.registration_number || '—'}</div>
+                    <div><span className="text-gray-400">Location: </span>{p.city && p.state ? `${p.city}, ${p.state}` : '—'}</div>
+                    <div><span className="text-gray-400">Phone: </span>{p.phone || '—'}</div>
+                    <div><span className="text-gray-400">Status: </span><span className={`font-semibold ${p.is_online ? 'text-green-600' : 'text-gray-500'}`}>{p.is_online ? 'Online' : 'Offline'}</span></div>
+                  </div>
+                  <div className="flex gap-2 pt-1 border-t border-gray-100">
+                    <button onClick={() => navigate(`/admin/ambulances/${p.id}`)} className="flex-1 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50">View</button>
+                    {vs === 'pending' && <>
+                      <button onClick={() => setVerifyModal({ show: true, p })} className="flex-1 py-1.5 text-xs font-semibold text-green-700 border border-green-200 rounded-lg hover:bg-green-50">Verify</button>
+                      <button onClick={() => setRejectModal({ show: true, p, reason: '' })} className="flex-1 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50">Reject</button>
+                    </>}
+                    <button onClick={() => setDeleteModal({ show: true, p })} className="py-1.5 px-3 text-xs font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50"><FiTrash2 className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3">
+              <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50">Previous</button>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modals */}
+      <Modal isOpen={verifyModal.show} onClose={() => setVerifyModal({ show: false, p: null })} title="Verify Provider">
+        <div className="space-y-4">
+          <p className="text-gray-700">Verify <strong>{verifyModal.p?.provider_name || verifyModal.p?.serviceName}</strong>?</p>
+          <div className="flex justify-end gap-3"><Button variant="secondary" onClick={() => setVerifyModal({ show: false, p: null })}>Cancel</Button><Button variant="primary" onClick={doVerify} disabled={actionLoading}>{actionLoading ? 'Verifying...' : 'Verify'}</Button></div>
         </div>
       </Modal>
-
-      {/* Verify Confirmation Modal */}
-      <Modal
-        isOpen={verifyModal.show}
-        onClose={() => setVerifyModal({ show: false, provider: null })}
-        title="Verify Provider"
-      >
+      <Modal isOpen={rejectModal.show} onClose={() => setRejectModal({ show: false, p: null, reason: '' })} title="Reject Provider">
         <div className="space-y-4">
-          <p className="text-gray-700">
-            Are you sure you want to verify provider{' '}
-            <strong>{verifyModal.provider?.provider_name}</strong>
-            ?
-          </p>
-          <div className="flex justify-end space-x-3">
-            <Button
-              variant="secondary"
-              onClick={() => setVerifyModal({ show: false, provider: null })}
-            >
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={handleVerifyConfirm}>
-              Verify
-            </Button>
-          </div>
+          <p className="text-gray-700">Reason for rejecting <strong>{rejectModal.p?.provider_name || rejectModal.p?.serviceName}</strong>:</p>
+          <textarea value={rejectModal.reason} onChange={e => setRejectModal({ ...rejectModal, reason: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" rows={4} placeholder="Enter rejection reason..." />
+          <div className="flex justify-end gap-3"><Button variant="secondary" onClick={() => setRejectModal({ show: false, p: null, reason: '' })}>Cancel</Button><Button variant="danger" onClick={doReject} disabled={actionLoading}>{actionLoading ? 'Rejecting...' : 'Reject'}</Button></div>
         </div>
       </Modal>
-
-      {/* Reject Confirmation Modal */}
-      <Modal
-        isOpen={rejectModal.show}
-        onClose={() => setRejectModal({ show: false, provider: null, reason: '' })}
-        title="Reject Provider"
-      >
+      <Modal isOpen={deleteModal.show} onClose={() => setDeleteModal({ show: false, p: null })} title="Delete Provider">
         <div className="space-y-4">
-          <p className="text-gray-700">
-            Please provide a reason for rejecting provider{' '}
-            <strong>{rejectModal.provider?.provider_name}</strong>
-            :
-          </p>
-          <textarea
-            value={rejectModal.reason}
-            onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={4}
-            placeholder="Enter rejection reason..."
-          />
-          <div className="flex justify-end space-x-3">
-            <Button
-              variant="secondary"
-              onClick={() => setRejectModal({ show: false, provider: null, reason: '' })}
-            >
-              Cancel
-            </Button>
-            <Button variant="danger" onClick={handleRejectConfirm}>
-              Reject
-            </Button>
-          </div>
+          <p className="text-gray-700">Delete <strong>{deleteModal.p?.provider_name || deleteModal.p?.serviceName}</strong>? This cannot be undone.</p>
+          <div className="flex justify-end gap-3"><Button variant="secondary" onClick={() => setDeleteModal({ show: false, p: null })}>Cancel</Button><Button variant="danger" onClick={doDelete} disabled={actionLoading}>{actionLoading ? 'Deleting...' : 'Delete'}</Button></div>
         </div>
       </Modal>
     </div>

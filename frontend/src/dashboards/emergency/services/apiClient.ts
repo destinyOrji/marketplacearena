@@ -36,6 +36,10 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('ambulance');
       window.location.href = '/login';
     }
+    if (error.response?.status === 429) {
+      (window as any).__rateLimited = true;
+      setTimeout(() => { (window as any).__rateLimited = false; }, 60000);
+    }
     return Promise.reject(error);
   }
 );

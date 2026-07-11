@@ -42,8 +42,11 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   useEffect(() => {
     fetchNotifications();
 
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    // Poll for new notifications every 60 seconds (raised from 30s to reduce requests)
+    // Skip the fetch if the client has been rate-limited
+    const interval = setInterval(() => {
+      if (!(window as any).__rateLimited) fetchNotifications();
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [fetchNotifications]);

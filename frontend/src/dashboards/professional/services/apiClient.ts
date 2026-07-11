@@ -45,12 +45,16 @@ apiClient.interceptors.response.use(
     if (appError.type === ErrorType.AUTH_ERROR) {
       const token = localStorage.getItem('professionalToken');
       if (!token) {
-        // No token at all — redirect to login
         localStorage.removeItem('professionalToken');
         localStorage.removeItem('professional');
         window.location.href = '/login';
       }
-      // If token exists but got 401, let the error bubble up to the caller
+    }
+
+    // Handle rate limiting — back off for 60 seconds
+    if ((error as AxiosError).response?.status === 429) {
+      (window as any).__rateLimited = true;
+      setTimeout(() => { (window as any).__rateLimited = false; }, 60000);
     }
 
     return Promise.reject(appError);

@@ -151,13 +151,14 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   }, [isAuthenticated, fetchNotifications]);
 
-  // Poll for new notifications every 30 seconds
+  // Poll for new notifications every 60 seconds (raised from 30s to reduce server load)
+  // Skip if rate-limited
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const interval = setInterval(() => {
-      fetchNotifications();
-    }, 30000); // 30 seconds
+      if (!(window as any).__rateLimited) fetchNotifications();
+    }, 60000); // 60 seconds
 
     return () => clearInterval(interval);
   }, [isAuthenticated, fetchNotifications]);

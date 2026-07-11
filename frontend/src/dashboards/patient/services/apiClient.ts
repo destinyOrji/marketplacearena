@@ -96,6 +96,14 @@ apiClient.interceptors.response.use(
           appError.message = 'Server error. Please try again later.';
           break;
 
+        case 429:
+          appError.type = ErrorType.SERVER_ERROR;
+          appError.message = 'Too many requests. Please wait a moment before trying again.';
+          // Pause polling contexts by setting a flag — components should check this
+          (window as any).__rateLimited = true;
+          setTimeout(() => { (window as any).__rateLimited = false; }, 60000); // lift after 60s
+          break;
+
         default:
           appError.message = (error.response.data as any)?.message || 'An error occurred.';
       }

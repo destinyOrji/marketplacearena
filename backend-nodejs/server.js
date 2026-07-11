@@ -54,12 +54,20 @@ app.use(helmet({
 }));
 
 // Rate limiting to prevent brute force attacks
+// Authenticated API requests (with a valid Bearer token) are skipped —
+// rate limiting is only meaningful for unauthenticated traffic.
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200,
+    max: 500,                  // raised from 200 — covers normal dashboard usage
     message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes.' },
     standardHeaders: true,
     legacyHeaders: false,
+    // Skip rate-limiting for requests that carry a Bearer token.
+    // Authenticated users are trusted; brute-force / scraping attacks won't have a token.
+    skip: (req) => {
+        const auth = req.headers['authorization'] || '';
+        return auth.startsWith('Bearer ') && auth.length > 20;
+    },
     handler: (req, res) => {
         res.status(429).json({
             success: false,

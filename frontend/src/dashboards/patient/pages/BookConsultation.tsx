@@ -107,7 +107,7 @@ const BookConsultation: React.FC = () => {
   useEffect(() => {
     if (selectedProvider && selectedDate) {
       fetchTimeSlots();
-      const poll = setInterval(() => fetchTimeSlots(true), 15000);
+      const poll = setInterval(() => fetchTimeSlots(true), 60000);
       return () => clearInterval(poll);
     }
   }, [selectedProvider, selectedDate]);
