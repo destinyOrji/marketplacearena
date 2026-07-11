@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 const GymPhysioDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

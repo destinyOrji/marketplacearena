@@ -88,7 +88,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     currency: {
         type: String,
-        default: 'USD'
+        default: 'NGN'
     },
     paymentStatus: {
         type: String,

@@ -4,7 +4,7 @@ import { FiChevronLeft, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 const statusColor: Record<string, string> = {
   scheduled:  'bg-blue-100 text-blue-800',
@@ -76,6 +76,7 @@ const GymPhysioAppointments: React.FC = () => {
         >
           <option value="">All</option>
           <option value="scheduled">Scheduled</option>
+          <option value="pending">Pending</option>
           <option value="confirmed">Confirmed</option>
           <option value="completed">Completed</option>
           <option value="cancelled">Cancelled</option>

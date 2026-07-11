@@ -270,6 +270,49 @@ router.get('/services', protect, async (req, res) => {
     }
 });
 
+router.get('/services/:id', protect, async (req, res) => {
+    try {
+        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
+        if (!gymPhysio) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+
+        const service = await Service.findOne({
+            _id: req.params.id,
+            $or: [{ professional: gymPhysio._id }, { gymPhysio: gymPhysio._id }]
+        });
+
+        if (!service) {
+            return res.status(404).json({ success: false, message: 'Service not found' });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                id: service._id.toString(),
+                title: service.title,
+                description: service.description,
+                category: service.category,
+                subcategory: service.subcategory,
+                price: service.price,
+                duration: service.duration,
+                status: service.status,
+                images: service.images || [],
+                tags: service.tags || [],
+                availability: service.availability,
+                rating: service.rating || 0,
+                reviewCount: service.reviewCount || 0,
+                bookingCount: service.bookingCount || 0,
+                createdAt: service.createdAt,
+                updatedAt: service.updatedAt
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching service:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 router.post('/services/create', protect, async (req, res) => {
     try {
         let gymPhysio = await GymPhysio.findOne({ user: req.user._id });
@@ -918,66 +961,6 @@ router.get('/payments', protect, async (req, res) => {
     }
 });
 
-// Payment Stats
-router.get('/payments/stats', protect, async (req, res) => {
-    try {
-        const gymPhysio = await GymPhysio.findOne({ user: req.user._id });
-        if (!gymPhysio) {
-            return res.json({ 
-                success: true, 
-                data: { 
-                    totalTransactions: 0, 
-                    completedPayments: 0, 
-                    failedPayments: 0,
-                    totalGross: 0,
-                    totalFees: 0,
-                    totalNet: 0
-                } 
-            });
-        }
-
-        const completedApts = await Appointment.find({ 
-            gymPhysio: gymPhysio._id,
-            status: 'completed',
-            paymentStatus: 'paid'
-        });
-
-        const failedApts = await Appointment.find({ 
-            gymPhysio: gymPhysio._id,
-            paymentStatus: 'failed'
-        });
-
-        const totalGross = completedApts.reduce((sum, apt) => sum + (apt.consultationFee || 0), 0);
-        const totalFees = Math.round(totalGross * 0.10);
-        const totalNet = totalGross - totalFees;
-
-        res.json({ 
-            success: true, 
-            data: { 
-                totalTransactions: completedApts.length + failedApts.length,
-                completedPayments: completedApts.length,
-                failedPayments: failedApts.length,
-                totalGross,
-                totalFees,
-                totalNet
-            } 
-        });
-    } catch (error) {
-        console.error('Payment stats error:', error);
-        res.json({ 
-            success: true, 
-            data: { 
-                totalTransactions: 0, 
-                completedPayments: 0, 
-                failedPayments: 0,
-                totalGross: 0,
-                totalFees: 0,
-                totalNet: 0
-            } 
-        });
-    }
-});
-
 // Bank account settings
 router.get('/bank-account', protect, async (req, res) => {
     try {
@@ -1335,13 +1318,14 @@ router.get('/client-records', protect, async (req, res) => {
             status: 'completed'
         };
 
-        const appointments = await Appointment.find(query)
+        let appointments = await Appointment.find(query)
             .populate({
                 path: 'client',
                 populate: { path: 'user', select: 'firstName lastName email phone' }
             })
             .populate('service', 'title category')
-            .sort({ scheduledDate: -1 });
+            .sort({ scheduledDate: -1 })
+            .lean();
 
         // Build records array
         let records = appointments.map(apt => {

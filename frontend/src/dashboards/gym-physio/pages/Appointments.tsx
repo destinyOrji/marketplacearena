@@ -20,6 +20,7 @@ const STATUS_STYLES: Record<string, { badge: string; dot: string }> = {
 const STATUS_TABS = [
   { value: 'all',       label: 'All' },
   { value: 'scheduled', label: 'New' },
+  { value: 'pending',   label: 'Pending' },
   { value: 'confirmed', label: 'Confirmed' },
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -314,7 +315,7 @@ const Appointments: React.FC = () => {
       </div>
 
       {/* New bookings alert */}
-      {counts['scheduled'] > 0 && (
+      {(counts['scheduled'] + (counts['pending'] || 0)) > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -324,7 +325,7 @@ const Appointments: React.FC = () => {
           </div>
           <div>
             <p className="text-sm font-semibold text-blue-900">
-              {counts['scheduled']} new booking{counts['scheduled'] !== 1 ? 's' : ''} awaiting response
+              {counts['scheduled'] + (counts['pending'] || 0)} new booking{(counts['scheduled'] + (counts['pending'] || 0)) !== 1 ? 's' : ''} awaiting response
             </p>
             <p className="text-xs text-blue-600">Accept or reject to notify the client</p>
           </div>
