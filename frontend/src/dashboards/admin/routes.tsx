@@ -77,6 +77,7 @@ const AllEarningsPage = lazy(() => import('./pages/professionals/AllEarnings'));
 
 // Hospital aggregate pages
 const AllHospitalApplicationsPage = lazy(() => import('./pages/hospitals/AllHospitalApplications'));
+const AdminApplicationDetailPage  = lazy(() => import('./pages/hospitals/AdminApplicationDetail'));
 const AllHospitalSubscriptionsPage = lazy(() => import('./pages/hospitals/AllHospitalSubscriptions'));
 const AllHospitalEarningsPage = lazy(() => import('./pages/hospitals/AllHospitalEarnings'));
 
@@ -149,6 +150,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/hospitals/vacancies" element={<HospitalVacanciesPage />} />
                   <Route path="/hospitals/verification" element={<HospitalVerificationPage />} />
                   <Route path="/hospitals/all-applications" element={<AllHospitalApplicationsPage />} />
+                  <Route path="/hospitals/all-applications/:hospitalId/:applicationId" element={<AdminApplicationDetailPage />} />
                   <Route path="/hospitals/all-subscriptions" element={<AllHospitalSubscriptionsPage />} />
                   <Route path="/hospitals/all-earnings" element={<AllHospitalEarningsPage />} />
                   <Route path="/hospitals/:hospitalId" element={<HospitalDetailPage />} />
