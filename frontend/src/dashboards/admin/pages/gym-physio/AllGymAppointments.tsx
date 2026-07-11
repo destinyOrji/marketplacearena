@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
+const API = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 const h = () => ({ headers: { Authorization: `Bearer ${authService.getAccessToken()}` } });
 
 const statusColor: Record<string, string> = {

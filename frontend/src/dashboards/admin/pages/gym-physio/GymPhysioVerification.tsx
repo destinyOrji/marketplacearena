@@ -4,7 +4,7 @@ import { FiCheckCircle, FiXCircle, FiEye } from 'react-icons/fi';
 import { authService } from '../../services/authService';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 const GymPhysioVerification: React.FC = () => {
   const navigate = useNavigate();

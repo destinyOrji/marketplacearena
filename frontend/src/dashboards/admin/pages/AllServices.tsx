@@ -5,7 +5,7 @@ import DataTable, { Column } from '../components/DataTable';
 import { authService } from '../services/authService';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://healthmarketarena.com/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
 interface Service {
   id: string;
