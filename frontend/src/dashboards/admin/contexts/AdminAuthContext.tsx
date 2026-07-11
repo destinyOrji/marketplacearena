@@ -10,6 +10,7 @@ interface AdminAuthContextType {
   admin: AdminProfile | null;
   loading: boolean;
   isAuthenticated: boolean;
+  isSuperAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => boolean;
@@ -93,6 +94,7 @@ export const AdminAuthProvider: React.FC<AdminAuthProviderProps> = ({ children }
     admin,
     loading,
     isAuthenticated,
+    isSuperAdmin: admin?.role === 'super_admin',
     login,
     logout,
     checkAuth

@@ -28,24 +28,39 @@ export interface PaymentSettings {
   secret_key: string;
   webhook_url: string;
   test_mode: boolean;
+  platformFeePercent?: number;
+  adminBankAccount?: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    bankCode: string;
+  };
 }
 
 export interface AdminUser {
-  id: number;
+  id: string;
   email: string;
   first_name: string;
   last_name: string;
   role: string;
+  permissions: Record<string, boolean>;
   is_active: boolean;
   created_at: string;
   last_login?: string;
 }
 
 export interface Role {
-  id: number;
+  id: string;
   name: string;
   description: string;
   permissions: string[];
+  isSystem?: boolean;
+}
+
+export interface AvailablePermission {
+  key: string;
+  label: string;
+  group: string;
 }
 
 export interface AuditLog {
@@ -67,4 +82,18 @@ export interface AuditLogFilters {
   end_date?: string;
   page?: number;
   page_size?: number;
+}
+
+export interface ApiResponse<T = any> {
+  statuscode: number;
+  status: string;
+  message?: string;
+  data?: T;
+}
+
+export interface PaginationMeta {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
 }
