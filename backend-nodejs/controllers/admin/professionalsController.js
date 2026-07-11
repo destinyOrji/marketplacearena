@@ -157,6 +157,10 @@ exports.getProfessionalById = async (req, res) => {
             city: professional.city,
             state: professional.state,
             country: professional.country,
+            // Documents
+            licenseDocument: professional.licenseDocument || null,
+            resumeFile: professional.resumeFile || null,
+            profilePicture: professional.profilePicture || null,
             isVerified: professional.isVerified,
             verificationDate: professional.verificationDate,
             isAvailable: professional.isAvailable,

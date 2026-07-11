@@ -1,8 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiChevronLeft, FiEdit, FiTrash2, FiMail, FiUser, FiCheckCircle, FiXCircle, FiFileText } from 'react-icons/fi';
+import {
+  FiChevronLeft, FiEdit, FiTrash2, FiMail, FiUser,
+  FiCheckCircle, FiXCircle, FiFileText, FiDownload,
+  FiExternalLink, FiAward, FiBook, FiStar, FiPhone
+} from 'react-icons/fi';
 import { Button, Modal } from '../../components';
 import { professionalService } from '../../services/professionalService';
+import { format } from 'date-fns';
+
+const BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com';
+
+const fullUrl = (path: string) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
+const isImage = (url: string) =>
+  /\.(jpe?g|png|gif|webp|svg|bmp)(\?.*)?$/i.test(url);
+
+const docLabel = (url: string, fallback: string) => {
+  try {
+    const name = url.split('/').pop()?.split('?')[0] || '';
+    return decodeURIComponent(name) || fallback;
+  } catch { return fallback; }
+};
+
+const DocCard: React.FC<{ url: string; label: string; tag?: string }> = ({ url, label, tag }) => {
+  const href = fullUrl(url);
+  const img  = isImage(url);
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
+      {img ? (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          <img src={href} alt={label}
+            className="w-full h-40 object-cover bg-gray-100"
+            onError={e => { (e.target as HTMLImageElement).src = '/placeholder-doc.png'; }} />
+        </a>
+      ) : (
+        <div className="w-full h-40 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+          <FiFileText className="h-14 w-14 text-blue-400" />
+        </div>
+      )}
+      <div className="p-3">
+        {tag && (
+          <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{tag}</span>
+        )}
+        <p className="mt-1.5 text-sm font-medium text-gray-800 truncate" title={label}>{label}</p>
+        <a href={href} target="_blank" rel="noopener noreferrer"
+          className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium">
+          {img ? <FiExternalLink className="h-3.5 w-3.5" /> : <FiDownload className="h-3.5 w-3.5" />}
+          {img ? 'View full size' : 'Download'}
+        </a>
+      </div>
+    </div>
+  );
+};
 
 const ProfessionalDetail: React.FC = () => {
   const { professionalId } = useParams<{ professionalId: string }>();
@@ -86,7 +140,20 @@ const ProfessionalDetail: React.FC = () => {
   const name = `${professional.user?.firstName || ''} ${professional.user?.lastName || ''}`.trim() || 'N/A';
   const email = professional.user?.email || 'N/A';
   const isVerified = professional.isVerified;
-  const verificationStatus = isVerified ? 'verified' : 'pending';
+
+  // Collect all documents
+  const docs: { url: string; label: string; tag: string }[] = [];
+  if (professional.profilePicture)  docs.push({ url: professional.profilePicture,  label: 'Profile Photo',                                       tag: 'Photo'       });
+  if (professional.resumeFile)      docs.push({ url: professional.resumeFile,      label: docLabel(professional.resumeFile, 'Resume / CV'),        tag: 'Resume'      });
+  if (professional.licenseDocument) docs.push({ url: professional.licenseDocument, label: docLabel(professional.licenseDocument, 'Medical License'), tag: 'License'   });
+  if (Array.isArray(professional.certifications)) {
+    professional.certifications.forEach((c: any, i: number) => {
+      if (c.certificateUrl) docs.push({ url: c.certificateUrl, label: c.name || `Certificate ${i + 1}`, tag: 'Certificate' });
+    });
+  }
+
+  const quals: any[] = Array.isArray(professional.qualifications) ? professional.qualifications : [];
+  const certs: any[] = Array.isArray(professional.certifications) ? professional.certifications : [];
 
   return (
     <div className="space-y-6">
@@ -205,6 +272,75 @@ const ProfessionalDetail: React.FC = () => {
           <p className="text-sm text-gray-500 mt-1">Average Rating</p>
         </div>
       </div>
+
+      {/* Documents & Files */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <FiFileText className="h-5 w-5 text-blue-600" />
+          Documents & Uploaded Files
+          <span className="ml-auto text-sm font-normal text-gray-400">{docs.length} file{docs.length !== 1 ? 's' : ''}</span>
+        </h3>
+        {docs.length === 0 ? (
+          <div className="text-center py-10 text-gray-400">
+            <FiFileText className="h-10 w-10 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">No documents uploaded by this professional</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {docs.map((doc, i) => (
+              <DocCard key={i} url={doc.url} label={doc.label} tag={doc.tag} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Qualifications */}
+      {quals.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <FiBook className="h-5 w-5 text-blue-600" /> Qualifications
+          </h3>
+          <ul className="space-y-2">
+            {quals.map((q: any, i: number) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                <FiCheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                <span>{typeof q === 'string' ? q : `${q.degree || ''}${q.institution ? ` — ${q.institution}` : ''}${q.year ? ` (${q.year})` : ''}`}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Certifications */}
+      {certs.filter((c: any) => c.name).length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <FiAward className="h-5 w-5 text-blue-600" /> Certifications
+          </h3>
+          <div className="space-y-3">
+            {certs.map((c: any, i: number) => (
+              <div key={i} className="flex items-start justify-between gap-4 p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{c.name}</p>
+                  {c.issuingBody && <p className="text-xs text-gray-500 mt-0.5">Issued by: {c.issuingBody}</p>}
+                  {c.issueDate && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {format(new Date(c.issueDate), 'MMM yyyy')}
+                      {c.expiryDate ? ` → ${format(new Date(c.expiryDate), 'MMM yyyy')}` : ''}
+                    </p>
+                  )}
+                </div>
+                {c.certificateUrl && (
+                  <a href={fullUrl(c.certificateUrl)} target="_blank" rel="noopener noreferrer"
+                    className="flex-shrink-0 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                    <FiExternalLink className="h-3.5 w-3.5" /> View
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <Modal isOpen={verifyModal} onClose={() => setVerifyModal(false)} title="Verify Professional">

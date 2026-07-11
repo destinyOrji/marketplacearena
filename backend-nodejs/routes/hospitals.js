@@ -785,16 +785,17 @@ router.get('/applications', protect, async (req, res) => {
         const jobs = await Job.find({ hospital: hospital._id });
         const jobIds = jobs.map(j => j._id);
 
-        // Get applications for these jobs
+        // Get applications for these jobs - populate full professional profile including documents
         const applications = await JobApplication.find({ job: { $in: jobIds } })
             .populate({
                 path: 'professional',
+                select: 'professionalType specialization yearsOfExperience licenseNumber licenseDocument resumeFile profilePicture qualifications certifications skills bio phone address city state country isVerified',
                 populate: {
                     path: 'user',
-                    select: 'firstName lastName email'
+                    select: 'firstName lastName email phone'
                 }
             })
-            .populate('job')
+            .populate('job', 'jobTitle department')
             .sort({ createdAt: -1 });
 
         res.json({ success: true, data: applications });
