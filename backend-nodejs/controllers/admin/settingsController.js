@@ -14,6 +14,7 @@ const DEFAULT_PERMISSIONS = {
         professionals_view: true, professionals_verify: true,
         hospitals_view: true, hospitals_verify: true,
         ambulances_view: true, ambulances_verify: true,
+        gym_view: true, gym_verify: true,
         dashboard_view: true, settings_edit: true,
         blog_view: true, blog_edit: true, blog_delete: true
     },
@@ -22,6 +23,7 @@ const DEFAULT_PERMISSIONS = {
         professionals_view: true, professionals_verify: true,
         hospitals_view: true, hospitals_verify: true,
         ambulances_view: true, ambulances_verify: true,
+        gym_view: true, gym_verify: true,
         dashboard_view: true, settings_edit: false,
         blog_view: true, blog_edit: true, blog_delete: false
     },
@@ -30,6 +32,7 @@ const DEFAULT_PERMISSIONS = {
         professionals_view: true, professionals_verify: false,
         hospitals_view: true, hospitals_verify: false,
         ambulances_view: true, ambulances_verify: false,
+        gym_view: true, gym_verify: false,
         dashboard_view: true, settings_edit: false,
         blog_view: true, blog_edit: false, blog_delete: false
     }
@@ -43,7 +46,7 @@ const DEFAULT_PERMISSIONS = {
  */
 exports.getAdminUsers = async (req, res) => {
     try {
-        const users = await User.find({ role: { $in: ['admin', 'super_admin'] } })
+        const users = await User.find({ role: { $in: ['admin', 'super_admin', 'moderator'] } })
             .select('firstName lastName email role status isActive createdAt lastLogin')
             .sort({ createdAt: -1 });
 
@@ -200,7 +203,7 @@ exports.updateAdminUser = async (req, res) => {
         }
 
         const user = await User.findById(id);
-        if (!user || !['admin', 'super_admin'].includes(user.role)) {
+        if (!user || !['admin', 'super_admin', 'moderator'].includes(user.role)) {
             return res.status(404).json({ statuscode: 1, status: 'error', message: 'Admin user not found' });
         }
 
@@ -271,7 +274,7 @@ exports.deleteAdminUser = async (req, res) => {
         }
 
         const user = await User.findById(id);
-        if (!user || !['admin', 'super_admin'].includes(user.role)) {
+        if (!user || !['admin', 'super_admin', 'moderator'].includes(user.role)) {
             return res.status(404).json({ statuscode: 1, status: 'error', message: 'Admin user not found' });
         }
 
@@ -308,6 +311,8 @@ const ALL_PERMISSIONS = [
     { key: 'hospitals_verify',      label: 'Verify Hospitals',          group: 'Hospitals' },
     { key: 'ambulances_view',       label: 'View Ambulances',           group: 'Ambulances' },
     { key: 'ambulances_verify',     label: 'Verify Ambulances',         group: 'Ambulances' },
+    { key: 'gym_view',              label: 'View Gym & Physio',         group: 'Gym & Physio' },
+    { key: 'gym_verify',            label: 'Verify Gym & Physio',       group: 'Gym & Physio' },
     { key: 'blog_view',             label: 'View Blog Posts',           group: 'Blog' },
     { key: 'blog_edit',             label: 'Create/Edit Blog Posts',    group: 'Blog' },
     { key: 'blog_delete',           label: 'Delete Blog Posts',         group: 'Blog' },

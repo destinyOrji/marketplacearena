@@ -11,7 +11,6 @@ export { default as Button } from './Button';
 export { default as Input } from './Input';
 export { default as ProtectedRoute } from './ProtectedRoute';
 export { default as RecentActivities } from './RecentActivities';
-export { default as PrivilegeGuard } from './PrivilegeGuard';
 
 export type { SidebarMenuItem } from './Sidebar';
 export type { Column } from './DataTable';

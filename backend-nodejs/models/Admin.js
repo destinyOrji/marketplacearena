@@ -24,7 +24,12 @@ const adminSchema = new mongoose.Schema({
             'hospitals_verify': false,
             'ambulances_view': true,
             'ambulances_verify': false,
+            'gym_view': true,
+            'gym_verify': false,
             'dashboard_view': true,
+            'blog_view': true,
+            'blog_edit': false,
+            'blog_delete': false,
             'settings_edit': false
         }
     },
@@ -32,13 +37,6 @@ const adminSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
-    },
-
-    // Menu-based privilege system
-    // Each entry mirrors a Privilege document with the functions/submenus the admin is allowed
-    menu: {
-        type: [mongoose.Schema.Types.Mixed],
-        default: []
     }
 }, {
     timestamps: true

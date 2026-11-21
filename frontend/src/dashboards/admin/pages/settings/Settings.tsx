@@ -3,18 +3,16 @@
  * Main settings page with tabbed interface
  */
 import React, { useState } from 'react';
-import { FiSettings, FiMail, FiCreditCard, FiUsers, FiLock, FiFileText, FiShield } from 'react-icons/fi';
+import { FiSettings, FiMail, FiCreditCard, FiUsers, FiLock, FiFileText } from 'react-icons/fi';
 import SystemSettings from './SystemSettings';
 import EmailTemplates from './EmailTemplates';
 import PaymentSettings from './PaymentSettings';
 import AdminUsers from './AdminUsers';
 import RolesPermissions from './RolesPermissions';
 import AuditLogs from './AuditLogs';
-import PrivilegesPage from './Privileges';
-import AssignPrivilegesPage from './AssignPrivileges';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 
-type TabType = 'system' | 'email' | 'payment' | 'admins' | 'roles' | 'audit' | 'privileges' | 'assign-privileges';
+type TabType = 'system' | 'email' | 'payment' | 'admins' | 'roles' | 'audit';
 
 const Settings: React.FC = () => {
   const { admin } = useAdminAuth();
@@ -23,14 +21,12 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('system');
 
   const allTabs = [
-    { id: 'system'            as TabType, label: 'System Settings',    icon: FiSettings,  superAdminOnly: false },
-    { id: 'email'             as TabType, label: 'Email Templates',    icon: FiMail,      superAdminOnly: false },
-    { id: 'payment'           as TabType, label: 'Payment Settings',   icon: FiCreditCard,superAdminOnly: false },
-    { id: 'admins'            as TabType, label: 'Admin Users',        icon: FiUsers,     superAdminOnly: true  },
-    { id: 'roles'             as TabType, label: 'Roles & Permissions',icon: FiLock,      superAdminOnly: true  },
-    { id: 'privileges'        as TabType, label: 'Privileges',         icon: FiShield,    superAdminOnly: true  },
-    { id: 'assign-privileges' as TabType, label: 'Assign Privileges',  icon: FiShield,    superAdminOnly: true  },
-    { id: 'audit'             as TabType, label: 'Audit Logs',         icon: FiFileText,  superAdminOnly: false }
+    { id: 'system' as TabType, label: 'System Settings', icon: FiSettings, superAdminOnly: false },
+    { id: 'email' as TabType, label: 'Email Templates', icon: FiMail, superAdminOnly: false },
+    { id: 'payment' as TabType, label: 'Payment Settings', icon: FiCreditCard, superAdminOnly: false },
+    { id: 'admins' as TabType, label: 'Admin Users', icon: FiUsers, superAdminOnly: true },
+    { id: 'roles' as TabType, label: 'Roles & Permissions', icon: FiLock, superAdminOnly: true },
+    { id: 'audit' as TabType, label: 'Audit Logs', icon: FiFileText, superAdminOnly: false }
   ];
 
   // Super admins see all tabs; regular admins see non-restricted tabs only
@@ -38,15 +34,20 @@ const Settings: React.FC = () => {
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'system':             return <SystemSettings />;
-      case 'email':              return <EmailTemplates />;
-      case 'payment':            return <PaymentSettings />;
-      case 'admins':             return <AdminUsers />;
-      case 'roles':              return <RolesPermissions />;
-      case 'privileges':         return <PrivilegesPage />;
-      case 'assign-privileges':  return <AssignPrivilegesPage />;
-      case 'audit':              return <AuditLogs />;
-      default:                   return <SystemSettings />;
+      case 'system':
+        return <SystemSettings />;
+      case 'email':
+        return <EmailTemplates />;
+      case 'payment':
+        return <PaymentSettings />;
+      case 'admins':
+        return <AdminUsers />;
+      case 'roles':
+        return <RolesPermissions />;
+      case 'audit':
+        return <AuditLogs />;
+      default:
+        return <SystemSettings />;
     }
   };
 

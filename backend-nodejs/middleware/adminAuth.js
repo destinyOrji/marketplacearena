@@ -26,7 +26,7 @@ exports.adminAuth = async (req, res, next) => {
         }
 
         // Check if user has admin role
-        if (!['super_admin', 'admin'].includes(user.role)) {
+        if (!['super_admin', 'admin', 'moderator'].includes(user.role)) {
             return res.status(403).json({
                 statuscode: 1,
                 status: 'error',
@@ -46,8 +46,6 @@ exports.adminAuth = async (req, res, next) => {
 
         req.user = user;
         req.admin = admin;
-        // Attach menu (assigned privileges) so controllers and future middleware can inspect it
-        req.adminMenu = Array.isArray(admin.menu) ? admin.menu : [];
         next();
     } catch (error) {
         console.error('Admin auth error:', error);
@@ -69,13 +67,17 @@ exports.checkPermission = (permission) => {
             });
         }
 
-        const hasPermission = req.admin.permissions.get(permission.replace('.', '_')) || req.user.role === 'super_admin';
-        
+        // super_admin always passes
+        if (req.admin.role === 'super_admin') return next();
+
+        const permKey = permission.replace(/\./g, '_');
+        const hasPermission = req.admin.permissions.get(permKey) === true;
+
         if (!hasPermission) {
             return res.status(403).json({
                 statuscode: 1,
                 status: 'error',
-                message: `Access denied. ${permission} permission required.`
+                message: `Access denied. '${permission}' permission required.`
             });
         }
 

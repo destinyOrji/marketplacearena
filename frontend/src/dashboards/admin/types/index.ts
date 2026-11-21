@@ -6,7 +6,7 @@ export interface AdminProfile {
   id: string;
   email: string;
   role: string;
-  permissions: Record<string, any>;
+  permissions: Record<string, boolean>;
 }
 
 export interface LoginCredentials {

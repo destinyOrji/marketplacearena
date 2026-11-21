@@ -86,13 +86,13 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Create user
+        // Create user — role stored directly (moderator is now a valid User role)
         const user = new User({
             email,
             password,
             firstName,
             lastName,
-            role: role === 'super_admin' ? 'super_admin' : 'admin',
+            role,
             isActive: true,
             isStaff: true,
             emailVerified: true,
@@ -101,48 +101,40 @@ exports.register = async (req, res) => {
 
         await user.save();
 
-        // Set permissions based on role
+        // Set permissions based on role (full catalogue including gym + blog)
         let permissions = new Map();
         if (role === 'super_admin') {
             permissions = new Map([
-                ['users_view', true],
-                ['users_edit', true],
-                ['users_delete', true],
-                ['professionals_view', true],
-                ['professionals_verify', true],
-                ['hospitals_view', true],
-                ['hospitals_verify', true],
-                ['ambulances_view', true],
-                ['ambulances_verify', true],
                 ['dashboard_view', true],
+                ['users_view', true], ['users_edit', true], ['users_delete', true],
+                ['professionals_view', true], ['professionals_verify', true],
+                ['hospitals_view', true], ['hospitals_verify', true],
+                ['ambulances_view', true], ['ambulances_verify', true],
+                ['gym_view', true], ['gym_verify', true],
+                ['blog_view', true], ['blog_edit', true], ['blog_delete', true],
                 ['settings_edit', true]
             ]);
         } else if (role === 'admin') {
             permissions = new Map([
-                ['users_view', true],
-                ['users_edit', true],
-                ['users_delete', false],
-                ['professionals_view', true],
-                ['professionals_verify', true],
-                ['hospitals_view', true],
-                ['hospitals_verify', true],
-                ['ambulances_view', true],
-                ['ambulances_verify', true],
                 ['dashboard_view', true],
+                ['users_view', true], ['users_edit', true], ['users_delete', false],
+                ['professionals_view', true], ['professionals_verify', true],
+                ['hospitals_view', true], ['hospitals_verify', true],
+                ['ambulances_view', true], ['ambulances_verify', true],
+                ['gym_view', true], ['gym_verify', true],
+                ['blog_view', true], ['blog_edit', true], ['blog_delete', false],
                 ['settings_edit', false]
             ]);
         } else {
+            // moderator — read-only everywhere
             permissions = new Map([
-                ['users_view', true],
-                ['users_edit', false],
-                ['users_delete', false],
-                ['professionals_view', true],
-                ['professionals_verify', false],
-                ['hospitals_view', true],
-                ['hospitals_verify', false],
-                ['ambulances_view', true],
-                ['ambulances_verify', false],
                 ['dashboard_view', true],
+                ['users_view', true], ['users_edit', false], ['users_delete', false],
+                ['professionals_view', true], ['professionals_verify', false],
+                ['hospitals_view', true], ['hospitals_verify', false],
+                ['ambulances_view', true], ['ambulances_verify', false],
+                ['gym_view', true], ['gym_verify', false],
+                ['blog_view', true], ['blog_edit', false], ['blog_delete', false],
                 ['settings_edit', false]
             ]);
         }
@@ -224,7 +216,7 @@ exports.login = async (req, res) => {
         }
 
         // Check if user has admin role
-        if (!['super_admin', 'admin'].includes(user.role)) {
+        if (!['super_admin', 'admin', 'moderator'].includes(user.role)) {
             return res.status(403).json({
                 statuscode: 1,
                 status: 'error',
@@ -237,7 +229,7 @@ exports.login = async (req, res) => {
         if (!admin) {
             admin = new Admin({
                 user: user._id,
-                role: user.role === 'super_admin' ? 'super_admin' : 'admin'
+                role: user.role
             });
             await admin.save();
         }
@@ -368,7 +360,7 @@ exports.refreshToken = async (req, res) => {
         }
 
         // Check admin role
-        if (!['super_admin', 'admin'].includes(user.role)) {
+        if (!['super_admin', 'admin', 'moderator'].includes(user.role)) {
             return res.status(403).json({
                 statuscode: 1,
                 status: 'error',

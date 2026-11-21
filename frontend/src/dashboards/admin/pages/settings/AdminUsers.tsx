@@ -145,18 +145,24 @@ const CreateAdminModal: React.FC<CreateAdminModalProps> = ({ availablePermission
 
   const DEFAULT_ROLE_PERMS: Record<string, Record<string, boolean>> = {
     admin: {
-      dashboard_view: true, users_view: true, users_edit: true, users_delete: false,
+      dashboard_view: true,
+      users_view: true, users_edit: true, users_delete: false,
       professionals_view: true, professionals_verify: true,
       hospitals_view: true, hospitals_verify: true,
       ambulances_view: true, ambulances_verify: true,
-      blog_view: true, blog_edit: true, blog_delete: false, settings_edit: false
+      gym_view: true, gym_verify: true,
+      blog_view: true, blog_edit: true, blog_delete: false,
+      settings_edit: false
     },
     moderator: {
-      dashboard_view: true, users_view: true, users_edit: false, users_delete: false,
+      dashboard_view: true,
+      users_view: true, users_edit: false, users_delete: false,
       professionals_view: true, professionals_verify: false,
       hospitals_view: true, hospitals_verify: false,
       ambulances_view: true, ambulances_verify: false,
-      blog_view: true, blog_edit: false, blog_delete: false, settings_edit: false
+      gym_view: true, gym_verify: false,
+      blog_view: true, blog_edit: false, blog_delete: false,
+      settings_edit: false
     }
   };
 
