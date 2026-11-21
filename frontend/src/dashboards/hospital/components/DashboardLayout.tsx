@@ -171,48 +171,51 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col
+          transform transition-transform duration-300 ease-in-out lg:translate-x-0
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex h-full flex-col">
-          {/* Logo */}
-          <div className="flex h-16 items-center justify-between px-6 border-b">
+          {/* Header */}
+          <div className="flex h-16 items-center justify-between px-6 border-b flex-shrink-0">
             <h1 className="text-xl font-bold text-blue-600">Hospital Portal</h1>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-gray-500 hover:text-gray-700"
+              className="lg:hidden p-1 rounded-md text-gray-500 hover:bg-gray-100"
             >
-              <FiX className="h-6 w-6" />
+              <FiX className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Hospital Info */}
+          {/* Profile card */}
           {hospital && (
-            <div className="px-6 py-4 border-b">
-              <p className="text-sm font-medium text-gray-900 truncate">{hospitalName}</p>
-              <p className="text-xs text-gray-500">
-                {(hospital as any).address?.city || (hospital as any).city || ''}
-                {((hospital as any).address?.state || (hospital as any).state)
-                  ? `, ${(hospital as any).address?.state || (hospital as any).state}`
-                  : ''}
-              </p>
-              <span
-                className={`inline-flex mt-2 items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  verificationStatus === 'verified'
-                    ? 'bg-green-100 text-green-800'
-                    : verificationStatus === 'rejected'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}
-              >
-                {verificationStatus.charAt(0).toUpperCase() + verificationStatus.slice(1)}
-              </span>
+            <div className="px-4 py-3 border-b flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm font-semibold">
+                    {hospitalName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{hospitalName}</p>
+                  <span
+                    className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded-full ${
+                      verificationStatus === 'verified'
+                        ? 'bg-green-100 text-green-800'
+                        : verificationStatus === 'rejected'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {verificationStatus.charAt(0).toUpperCase() + verificationStatus.slice(1)}
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+          <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
             {navigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
@@ -220,13 +223,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <Link
                   key={item.name}
                   to={item.href}
+                  onClick={() => setSidebarOpen(false)}
                   className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     active
                       ? 'bg-blue-50 text-blue-600'
                       : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  <Icon className={`mr-3 h-5 w-5 ${active ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <Icon className={`mr-3 h-5 w-5 flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-400'}`} />
                   {item.name}
                 </Link>
               );
@@ -234,10 +238,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </nav>
 
           {/* Logout */}
-          <div className="border-t px-3 py-4">
+          <div className="border-t px-3 py-4 flex-shrink-0">
             <button
               onClick={handleLogout}
-              className="flex w-full items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900"
+              className="flex w-full items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
             >
               <FiLogOut className="mr-3 h-5 w-5 text-gray-400" />
               Logout

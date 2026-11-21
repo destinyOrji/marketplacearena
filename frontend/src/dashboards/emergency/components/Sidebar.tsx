@@ -1,8 +1,20 @@
-// Sidebar Navigation Component
-
+/**
+ * Emergency (Ambulance) Sidebar Component
+ */
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { EmergencyProvider } from '../types';
+import {
+  FiHome, FiUser, FiTruck, FiAlertOctagon, FiBookOpen,
+  FiDollarSign, FiMap, FiPackage, FiBarChart2, FiSettings, FiLogOut, FiX,
+} from 'react-icons/fi';
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  path: string;
+}
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,26 +22,26 @@ interface SidebarProps {
   provider: EmergencyProvider | null;
 }
 
+const navItems: NavItem[] = [
+  { id: 'dashboard',       label: 'Dashboard',           icon: FiHome,         path: '/ambulance/dashboard' },
+  { id: 'profile',         label: 'Profile',             icon: FiUser,         path: '/ambulance/profile' },
+  { id: 'services',        label: 'My Services',         icon: FiTruck,        path: '/ambulance/services' },
+  { id: 'active',          label: 'Active Emergency',    icon: FiAlertOctagon, path: '/ambulance/active-emergency' },
+  { id: 'bookings',        label: 'Booking History',     icon: FiBookOpen,     path: '/ambulance/bookings' },
+  { id: 'earnings',        label: 'Earnings',            icon: FiDollarSign,   path: '/ambulance/earnings' },
+  { id: 'coverage',        label: 'Coverage Areas',      icon: FiMap,          path: '/ambulance/coverage' },
+  { id: 'vehicles',        label: 'Vehicles & Equipment',icon: FiPackage,      path: '/ambulance/vehicles' },
+  { id: 'analytics',       label: 'Analytics',           icon: FiBarChart2,    path: '/ambulance/analytics' },
+  { id: 'settings',        label: 'Settings',            icon: FiSettings,     path: '/ambulance/settings' },
+];
+
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, provider }) => {
   const location = useLocation();
 
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', path: '/ambulance/dashboard', icon: '🏠' },
-    { id: 'profile', label: 'Profile', path: '/ambulance/profile', icon: '👤' },
-    { id: 'services', label: 'My Services', path: '/ambulance/services', icon: '🚑' },
-    { id: 'active', label: 'Active Emergency', path: '/ambulance/active-emergency', icon: '🚨' },
-    { id: 'bookings', label: 'Booking History', path: '/ambulance/bookings', icon: '📋' },
-    { id: 'earnings', label: 'Earnings', path: '/ambulance/earnings', icon: '💰' },
-    { id: 'coverage', label: 'Coverage Areas', path: '/ambulance/coverage', icon: '🗺️' },
-    { id: 'vehicles', label: 'Vehicles & Equipment', path: '/ambulance/vehicles', icon: '🚗' },
-    { id: 'analytics', label: 'Analytics', path: '/ambulance/analytics', icon: '📊' },
-    { id: 'settings', label: 'Settings', path: '/ambulance/settings', icon: '⚙️' },
-  ];
-
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/');
 
   const handleLogout = () => {
-    // Clear all ambulance auth tokens
     localStorage.removeItem('authToken');
     localStorage.removeItem('ambulanceToken');
     localStorage.removeItem('emergency_token');
@@ -38,75 +50,84 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, provider }) => {
     window.location.href = '/login';
   };
 
+  const initials = provider?.organizationName
+    ? provider.organizationName.charAt(0).toUpperCase()
+    : 'E';
+
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Mobile overlay */}
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } flex flex-col`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col
+          transform transition-transform duration-300 ease-in-out lg:translate-x-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Provider Info */}
-        <div className="p-6 border-b border-gray-200 flex-shrink-0">
+        {/* Header */}
+        <div className="flex h-16 items-center justify-between px-6 border-b flex-shrink-0">
+          <h1 className="text-xl font-bold text-blue-600">Emergency Portal</h1>
+          <button onClick={onClose} className="lg:hidden p-1 rounded-md text-gray-500 hover:bg-gray-100">
+            <FiX className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Profile card */}
+        <div className="px-4 py-3 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
             {provider?.profilePhoto ? (
               <img
                 src={provider.profilePhoto}
                 alt={provider.organizationName}
-                className="w-12 h-12 rounded-full"
-                loading="lazy"
+                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
               />
             ) : (
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                <span className="text-red-600 font-semibold text-lg">
-                  {provider?.organizationName?.charAt(0) || 'E'}
-                </span>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm font-semibold">{initials}</span>
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 truncate">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">
                 {provider?.organizationName || 'Emergency Provider'}
               </p>
-              <p className="text-sm text-gray-600 truncate">{provider?.email}</p>
+              <p className="text-xs text-gray-500 truncate">{provider?.email || ''}</p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1 overflow-y-auto flex-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.id}
-              to={item.path}
-              onClick={onClose}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive(item.path)
-                  ? 'bg-red-50 text-red-600 font-medium'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+            return (
+              <Link
+                key={item.id}
+                to={item.path}
+                onClick={onClose}
+                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  active
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon className={`mr-3 h-5 w-5 flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-400'}`} />
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200 flex-shrink-0">
+        {/* Logout */}
+        <div className="border-t px-3 py-4 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+            className="flex w-full items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-50 hover:text-gray-900 transition-colors"
           >
-            <span className="text-xl">🚪</span>
-            <span>Logout</span>
+            <FiLogOut className="mr-3 h-5 w-5 text-gray-400" />
+            Logout
           </button>
         </div>
       </aside>
@@ -115,4 +136,3 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, provider }) => {
 };
 
 export default Sidebar;
-
