@@ -20,7 +20,9 @@ exports.getHospitals = async (req, res) => {
 
         const total = await Hospital.countDocuments(query);
 
-        const result = hospitals.map(hospital => ({
+        const result = hospitals
+            .filter(hospital => hospital.user != null)
+            .map(hospital => ({
             id: hospital._id,
             user: hospital.user,
             hospitalName: hospital.hospitalName,

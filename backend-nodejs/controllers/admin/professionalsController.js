@@ -42,10 +42,14 @@ exports.getProfessionals = async (req, res) => {
         if (search) {
             filteredProfessionals = professionals.filter(prof => {
                 const user = prof.user;
-                return user.firstName.toLowerCase().includes(search.toLowerCase()) ||
-                       user.lastName.toLowerCase().includes(search.toLowerCase()) ||
-                       user.email.toLowerCase().includes(search.toLowerCase());
+                if (!user) return false;
+                return user.firstName?.toLowerCase().includes(search.toLowerCase()) ||
+                       user.lastName?.toLowerCase().includes(search.toLowerCase()) ||
+                       user.email?.toLowerCase().includes(search.toLowerCase());
             });
+        } else {
+            // Always filter out orphaned records (user was deleted)
+            filteredProfessionals = professionals.filter(prof => prof.user != null);
         }
 
         const total = await Professional.countDocuments(professionalQuery);
@@ -429,7 +433,9 @@ exports.getPendingVerifications = async (req, res) => {
             .populate('user', 'firstName lastName email createdAt')
             .sort({ createdAt: -1 });
 
-        const result = pendingProfessionals.map(prof => ({
+        const result = pendingProfessionals
+            .filter(prof => prof.user != null)
+            .map(prof => ({
             id: prof._id,
             user: prof.user,
             professionalType: prof.professionalType,

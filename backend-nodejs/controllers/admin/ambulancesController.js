@@ -20,7 +20,9 @@ exports.getProviders = async (req, res) => {
 
         const total = await Ambulance.countDocuments(query);
 
-        const result = providers.map(provider => ({
+        const result = providers
+            .filter(provider => provider.user != null)
+            .map(provider => ({
             id: provider._id,
             user: provider.user,
             serviceName: provider.serviceName,
