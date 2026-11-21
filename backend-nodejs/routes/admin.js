@@ -8,6 +8,7 @@ const adminAmbulancesController = require('../controllers/admin/ambulancesContro
 const adminGymPhysioController = require('../controllers/admin/gymPhysioController');
 const adminBlogController = require('../controllers/admin/blogController');
 const adminSettingsController = require('../controllers/admin/settingsController');
+const adminPrivilegesController = require('../controllers/admin/privilegesController');
 const { adminAuth } = require('../middleware/adminAuth');
 
 const router = express.Router();
@@ -361,6 +362,17 @@ router.put('/settings/roles/:id', adminAuth, (req, res) => {
 router.delete('/settings/roles/:id', adminAuth, (req, res) => {
     res.json({ statuscode: 0, status: 'success', message: 'Role deleted' });
 });
+
+// ─── Privileges Routes ────────────────────────────────────────────────────────
+// IMPORTANT: static routes MUST come before /:privilege_id
+router.get('/privileges',                              adminAuth, adminPrivilegesController.getPrivileges);
+router.post('/privileges',                             adminAuth, adminPrivilegesController.createPrivilege);
+router.post('/privileges/assign',                      adminAuth, adminPrivilegesController.assignPrivilege);
+router.get('/privileges/assigned/:admin_user_id',      adminAuth, adminPrivilegesController.getAssignedPrivilege);
+router.delete('/privileges/assigned/:admin_user_id',   adminAuth, adminPrivilegesController.revokeAllPrivileges);
+router.get('/privileges/:privilege_id',                adminAuth, adminPrivilegesController.getPrivilege);
+router.put('/privileges/:privilege_id',                adminAuth, adminPrivilegesController.updatePrivilege);
+router.delete('/privileges/:privilege_id',             adminAuth, adminPrivilegesController.deletePrivilege);
 
 // ─── Blog Management Routes ────────────────────────────────────────────────────
 router.get('/blog/posts', adminAuth, adminBlogController.getAllPosts);

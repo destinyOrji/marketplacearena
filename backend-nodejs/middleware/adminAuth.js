@@ -46,6 +46,8 @@ exports.adminAuth = async (req, res, next) => {
 
         req.user = user;
         req.admin = admin;
+        // Attach menu (assigned privileges) so controllers and future middleware can inspect it
+        req.adminMenu = Array.isArray(admin.menu) ? admin.menu : [];
         next();
     } catch (error) {
         console.error('Admin auth error:', error);

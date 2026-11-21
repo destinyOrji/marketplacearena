@@ -1,6 +1,8 @@
 /**
  * Admin Sidebar Component
- * Sidebar navigation with collapsible dropdown menus
+ * Sidebar navigation with collapsible dropdown menus.
+ * Super-admins see the full static menu.
+ * Other admins see only the pages assigned to them via the privilege system.
  */
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -14,8 +16,11 @@ import {
   FiChevronDown,
   FiChevronRight,
   FiX,
-  FiAlertCircle
+  FiAlertCircle,
+  FiShield
 } from 'react-icons/fi';
+import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { AssignedMenuItem } from '../types/privileges';
 
 export interface SidebarMenuItem {
   id: string;
@@ -95,22 +100,57 @@ const sidebarMenu: SidebarMenuItem[] = [
   {
     id: 'settings', label: 'Settings', icon: FiSettings,
     children: [
-      { id: 'settings-main',    label: 'System Settings',    icon: FiSettings, path: '/admin/settings' },
-      { id: 'settings-users',   label: 'Admin Users',        icon: FiUsers,    path: '/admin/settings/users' },
-      { id: 'settings-roles',   label: 'Roles & Permissions',icon: FiSettings, path: '/admin/settings/roles' },
-      { id: 'settings-payment', label: 'Payment Settings',   icon: FiSettings, path: '/admin/settings/payments' },
-      { id: 'settings-audit',   label: 'Audit Logs',         icon: FiSettings, path: '/admin/settings/audit-logs' },
+      { id: 'settings-main',             label: 'System Settings',    icon: FiSettings, path: '/admin/settings' },
+      { id: 'settings-users',            label: 'Admin Users',        icon: FiUsers,    path: '/admin/settings/users' },
+      { id: 'settings-roles',            label: 'Roles & Permissions',icon: FiSettings, path: '/admin/settings/roles' },
+      { id: 'settings-privileges',       label: 'Privileges',         icon: FiShield,   path: '/admin/settings/privileges' },
+      { id: 'settings-assign-privs',     label: 'Assign Privileges',  icon: FiShield,   path: '/admin/settings/assign-privileges' },
+      { id: 'settings-payment',          label: 'Payment Settings',   icon: FiSettings, path: '/admin/settings/payments' },
+      { id: 'settings-audit',            label: 'Audit Logs',         icon: FiSettings, path: '/admin/settings/audit-logs' },
     ]
   },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const { isSuperAdmin, menu } = useAdminAuth();
+
+  // Build a dynamic menu from assigned privileges for non-super-admins
+  const buildDynamicMenu = (assigned: AssignedMenuItem[]): SidebarMenuItem[] => {
+    return assigned.map(item => {
+      const hasRealSub =
+        Array.isArray(item.submenu) &&
+        !(item.submenu.length === 1 && (item.submenu as any)[0] === '0');
+
+      return {
+        id: `priv-${item.privilege_id}`,
+        label: item.name,
+        icon: FiShield, // generic icon — dynamic icon lookup omitted for bundle size
+        path: !hasRealSub && item.page ? item.page : undefined,
+        children: hasRealSub
+          ? (item.submenu as any[]).map((sub: any, i: number) => ({
+              id: `priv-${item.privilege_id}-sub-${i}`,
+              label: sub.name,
+              icon: FiActivity,
+              path: sub.page || undefined
+            }))
+          : undefined
+      };
+    });
+  };
+
+  const activeMenu: SidebarMenuItem[] = isSuperAdmin
+    ? [
+        ...sidebarMenu,
+        // Settings always includes privilege management for super-admin
+        // (already in sidebarMenu — no duplication needed)
+      ]
+    : buildDynamicMenu(menu);
 
   // Auto-expand the section that contains the current path
   const getInitialExpanded = () => {
     const set = new Set<string>();
-    sidebarMenu.forEach(item => {
+    activeMenu.forEach(item => {
       if (item.children?.some(child => child.path && location.pathname.startsWith(child.path))) {
         set.add(item.id);
       }
@@ -220,7 +260,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-          {sidebarMenu.map(item => renderMenuItem(item))}
+          {activeMenu.map(item => renderMenuItem(item))}
         </nav>
       </div>
     </div>

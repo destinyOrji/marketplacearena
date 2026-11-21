@@ -105,6 +105,16 @@ class AuthService {
     try { return JSON.parse(str); } catch { return null; }
   }
 
+  getAdminMenu(): any[] {
+    const str = localStorage.getItem('admin_menu');
+    if (!str) return [];
+    try { return JSON.parse(str); } catch { return []; }
+  }
+
+  saveAdminMenu(menu: any[]): void {
+    localStorage.setItem('admin_menu', JSON.stringify(menu));
+  }
+
   getAccessToken(): string | null {
     return localStorage.getItem('admin_access_token') || localStorage.getItem('authToken');
   }
@@ -117,6 +127,7 @@ class AuthService {
     localStorage.removeItem('admin_access_token');
     localStorage.removeItem('admin_refresh_token');
     localStorage.removeItem('admin_profile');
+    localStorage.removeItem('admin_menu');
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
   }
