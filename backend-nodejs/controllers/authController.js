@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const OTPStorage = require('../models/OTPStorage');
-const { sendOTPEmail } = require('../services/emailService');
+const { sendOTPEmail, sendWelcomeEmail } = require('../services/emailService');
 
 // ─── Email transporter ────────────────────────────────────────────────────────
 // Emails are sent via services/emailService.js — configure EMAIL_USER and EMAIL_PASS in .env
@@ -323,6 +323,11 @@ exports.register = async (req, res) => {
 
         const token = generateToken(user._id);
         const refreshToken = await generateRefreshToken(user._id);
+
+        // Send welcome email (non-blocking — don't fail registration if email fails)
+        sendWelcomeEmail(user.email, user.firstName, userRole).catch(err =>
+            console.error('Welcome email failed (non-critical):', err.message)
+        );
 
         res.status(201).json({
             success: true,
