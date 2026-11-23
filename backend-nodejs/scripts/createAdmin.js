@@ -37,6 +37,7 @@ async function createAdmin() {
             user: adminUser._id,
             role: 'super_admin',
             permissions: new Map([
+                ['dashboard_view', true],
                 ['users_view', true],
                 ['users_edit', true],
                 ['users_delete', true],
@@ -46,7 +47,11 @@ async function createAdmin() {
                 ['hospitals_verify', true],
                 ['ambulances_view', true],
                 ['ambulances_verify', true],
-                ['dashboard_view', true],
+                ['gym_view', true],
+                ['gym_verify', true],
+                ['blog_view', true],
+                ['blog_edit', true],
+                ['blog_delete', true],
                 ['settings_edit', true]
             ]),
             isActive: true
