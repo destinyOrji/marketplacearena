@@ -261,8 +261,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
                 <span className={`inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded-full ${
-                  admin.role === 'super_admin' ? 'bg-purple-100 text-purple-800' :
-                  admin.role === 'admin'       ? 'bg-blue-100 text-blue-800' :
+                  admin.role === 'super_admin' ? 'bg-blue-100 text-blue-800' :
+                  admin.role === 'admin'       ? 'bg-gray-100 text-gray-700' :
                                                  'bg-amber-100 text-amber-800'
                 }`}>
                   {ROLE_LABELS[admin.role] ?? admin.role}

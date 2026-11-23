@@ -24,42 +24,42 @@ const DashboardHome: React.FC = () => {
       label: 'Active Services',
       value: stats.activeServices ?? 0,
       emoji: '💪',
-      color: 'from-orange-500 to-orange-700',
+      color: 'from-blue-500 to-blue-700',
       to: '/gym-physio/services',
     },
     {
       label: 'Upcoming Appointments',
       value: stats.upcomingAppointments ?? 0,
       emoji: '📅',
-      color: 'from-blue-500 to-blue-700',
+      color: 'from-green-500 to-green-700',
       to: '/gym-physio/appointments',
     },
     {
       label: 'Completed Sessions',
       value: stats.completedBookings ?? 0,
       emoji: '✅',
-      color: 'from-green-500 to-green-700',
+      color: 'from-blue-600 to-blue-800',
       to: '/gym-physio/appointments',
     },
     {
       label: 'Completion Rate',
       value: `${stats.completionRate ?? 0}%`,
       emoji: '📊',
-      color: 'from-teal-500 to-teal-700',
+      color: 'from-green-600 to-green-800',
       to: '/gym-physio/analytics',
     },
     {
       label: 'Average Rating',
       value: (stats.averageRating || 0).toFixed(1),
       emoji: '⭐',
-      color: 'from-yellow-500 to-yellow-700',
+      color: 'from-blue-500 to-blue-700',
       to: '/gym-physio/analytics',
     },
     {
       label: 'Total Reviews',
       value: stats.totalReviews ?? 0,
       emoji: '💬',
-      color: 'from-purple-500 to-purple-700',
+      color: 'from-green-500 to-green-700',
       to: '/gym-physio/analytics',
     },
   ];
@@ -74,7 +74,7 @@ const DashboardHome: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-700 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold mb-1">Welcome back, {name} 👋</h1>
@@ -92,7 +92,7 @@ const DashboardHome: React.FC = () => {
           </div>
           <Link
             to="/gym-physio/subscription"
-            className="px-4 py-2 bg-white text-orange-600 rounded-lg hover:bg-orange-50 transition-colors font-semibold text-sm whitespace-nowrap">
+            className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors font-semibold text-sm whitespace-nowrap">
             {subscription.status === 'active' ? 'Manage Subscription' : '⭐ Subscribe'}
           </Link>
         </div>
@@ -122,7 +122,7 @@ const DashboardHome: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {quickActions.map(({ to, label, emoji }) => (
             <Link key={to} to={to}
-              className="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors text-center">
+              className="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-center">
               <span className="text-2xl">{emoji}</span>
               <span className="text-sm font-medium text-gray-700">{label}</span>
             </Link>

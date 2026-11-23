@@ -21,16 +21,16 @@ interface RoleCardProps {
 
 const ROLE_COLOURS: Record<string, { bg: string; border: string; icon: string; badge: string }> = {
   super_admin: {
-    bg: 'bg-purple-50',
-    border: 'border-purple-200',
-    icon: 'text-purple-600',
-    badge: 'bg-purple-100 text-purple-800'
-  },
-  admin: {
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     icon: 'text-blue-600',
     badge: 'bg-blue-100 text-blue-800'
+  },
+  admin: {
+    bg: 'bg-gray-50',
+    border: 'border-gray-200',
+    icon: 'text-gray-600',
+    badge: 'bg-gray-100 text-gray-700'
   },
   moderator: {
     bg: 'bg-amber-50',

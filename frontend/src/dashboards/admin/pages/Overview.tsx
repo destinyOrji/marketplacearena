@@ -122,19 +122,19 @@ const Overview: React.FC = () => {
 
       {/* Row 1 - User Counts */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <StatsCard title="Total Patients" value={totalPatients} icon={FiUsers} iconBgColor="bg-green-100" iconColor="text-green-600" />
-        <StatsCard title="Total Professionals" value={totalProfessionals} icon={FiUserCheck} iconBgColor="bg-blue-100" iconColor="text-blue-600" />
-        <StatsCard title="Total Hospitals" value={totalHospitals} icon={FiActivity} iconBgColor="bg-purple-100" iconColor="text-purple-600" />
-        <StatsCard title="Total Ambulances" value={totalAmbulances} icon={FiTruck} iconBgColor="bg-orange-100" iconColor="text-orange-600" />
+        <StatsCard title="Total Patients"       value={totalPatients}       icon={FiUsers}     iconBgColor="bg-blue-100"  iconColor="text-blue-600" />
+        <StatsCard title="Total Professionals"  value={totalProfessionals}  icon={FiUserCheck} iconBgColor="bg-blue-100"  iconColor="text-blue-600" />
+        <StatsCard title="Total Hospitals"      value={totalHospitals}      icon={FiActivity}  iconBgColor="bg-blue-100"  iconColor="text-blue-600" />
+        <StatsCard title="Total Ambulances"     value={totalAmbulances}     icon={FiTruck}     iconBgColor="bg-blue-100"  iconColor="text-blue-600" />
       </div>
 
       {/* Row 2 - Activity Counts */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <StatsCard title="Total Appointments" value={totalAppointments} icon={FiCalendar} iconBgColor="bg-indigo-100" iconColor="text-indigo-600" />
-        <StatsCard title="Today's Appointments" value={todayAppointments} icon={FiCalendar} iconBgColor="bg-cyan-100" iconColor="text-cyan-600" />
-        <StatsCard title="Pending Verifications" value={pendingVerifications} icon={FiCheckCircle} iconBgColor="bg-yellow-100" iconColor="text-yellow-600" />
-        <StatsCard title="Pending Services" value={pendingServices} icon={FiAlertCircle} iconBgColor="bg-orange-100" iconColor="text-orange-600" />
-        <StatsCard title="New This Month" value={recentRegistrations} icon={FiUsers} iconBgColor="bg-pink-100" iconColor="text-pink-600" />
+        <StatsCard title="Total Appointments"   value={totalAppointments}   icon={FiCalendar}  iconBgColor="bg-blue-100"  iconColor="text-blue-600" />
+        <StatsCard title="Today's Appointments" value={todayAppointments}   icon={FiCalendar}  iconBgColor="bg-green-100" iconColor="text-green-600" />
+        <StatsCard title="Pending Verifications"value={pendingVerifications}icon={FiCheckCircle}iconBgColor="bg-amber-100" iconColor="text-amber-600" />
+        <StatsCard title="Pending Services"     value={pendingServices}     icon={FiAlertCircle}iconBgColor="bg-amber-100" iconColor="text-amber-600" />
+        <StatsCard title="New This Month"       value={recentRegistrations} icon={FiUsers}     iconBgColor="bg-green-100" iconColor="text-green-600" />
       </div>
 
       {/* Charts Row 1 */}

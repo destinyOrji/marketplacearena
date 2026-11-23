@@ -34,11 +34,11 @@ const DashboardHome: React.FC = () => {
 
   const statCards = [
     { title: 'Total Earnings', value: `₦${(stats.totalEarnings || 0).toLocaleString()}`, bg: 'from-blue-500 to-blue-700', to: '/professional/payments', emoji: '💰' },
-    { title: 'Pending Payments', value: `₦${(stats.pendingPayments || 0).toLocaleString()}`, bg: 'from-yellow-500 to-yellow-700', to: '/professional/payments', emoji: '⏳' },
-    { title: 'Upcoming Appointments', value: stats.upcomingAppointments || 0, bg: 'from-green-500 to-green-700', to: '/professional/appointments', emoji: '📅' },
-    { title: 'Active Services', value: stats.activeServices || 0, bg: 'from-purple-500 to-purple-700', to: '/professional/services', emoji: '🏥' },
-    { title: 'Completion Rate', value: `${stats.completionRate || 0}%`, bg: 'from-teal-500 to-teal-700', to: undefined, emoji: '✅' },
-    { title: 'Average Rating', value: (stats.averageRating || 0).toFixed(1), bg: 'from-orange-500 to-orange-700', to: undefined, emoji: '⭐' },
+    { title: 'Pending Payments', value: `₦${(stats.pendingPayments || 0).toLocaleString()}`, bg: 'from-green-500 to-green-700', to: '/professional/payments', emoji: '⏳' },
+    { title: 'Upcoming Appointments', value: stats.upcomingAppointments || 0, bg: 'from-blue-600 to-blue-800', to: '/professional/appointments', emoji: '📅' },
+    { title: 'Active Services', value: stats.activeServices || 0, bg: 'from-green-600 to-green-800', to: '/professional/services', emoji: '🏥' },
+    { title: 'Completion Rate', value: `${stats.completionRate || 0}%`, bg: 'from-blue-500 to-blue-700', to: undefined, emoji: '✅' },
+    { title: 'Average Rating', value: (stats.averageRating || 0).toFixed(1), bg: 'from-green-500 to-green-700', to: undefined, emoji: '⭐' },
   ];
 
   const quickActions = [

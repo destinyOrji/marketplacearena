@@ -43,12 +43,12 @@ const Dashboard: React.FC = () => {
   const isVerified = h.isVerified || h.verification_status === 'verified';
 
   const statCards = [
-    { name: 'Active Vacancies', value: s.active_vacancies ?? s.activeVacancies ?? 0, icon: FiFileText, color: 'bg-blue-500', link: '/hospital/vacancies' },
-    { name: 'Total Applications', value: s.total_applications ?? s.totalApplications ?? 0, icon: FiUsers, color: 'bg-green-500', link: '/hospital/applications' },
-    { name: 'Pending Review', value: s.pending_applications ?? s.pendingApplications ?? 0, icon: FiClock, color: 'bg-yellow-500', link: '/hospital/applications' },
-    { name: 'Total Vacancies', value: s.total_vacancies ?? s.totalVacancies ?? 0, icon: FiTrendingUp, color: 'bg-purple-500', link: '/hospital/vacancies' },
-    { name: 'Total Beds', value: s.totalBeds ?? 0, icon: FiCheckCircle, color: 'bg-indigo-500', link: '/hospital/profile' },
-    { name: 'Available Beds', value: s.availableBeds ?? 0, icon: FiCheckCircle, color: 'bg-teal-500', link: '/hospital/profile' },
+    { name: 'Active Vacancies',    value: s.active_vacancies ?? s.activeVacancies ?? 0,         icon: FiFileText,    color: 'bg-blue-500',  link: '/hospital/vacancies' },
+    { name: 'Total Applications',  value: s.total_applications ?? s.totalApplications ?? 0,     icon: FiUsers,       color: 'bg-green-500', link: '/hospital/applications' },
+    { name: 'Pending Review',      value: s.pending_applications ?? s.pendingApplications ?? 0, icon: FiClock,       color: 'bg-blue-600',  link: '/hospital/applications' },
+    { name: 'Total Vacancies',     value: s.total_vacancies ?? s.totalVacancies ?? 0,           icon: FiTrendingUp,  color: 'bg-green-600', link: '/hospital/vacancies' },
+    { name: 'Total Beds',          value: s.totalBeds ?? 0,                                     icon: FiCheckCircle, color: 'bg-blue-700',  link: '/hospital/profile' },
+    { name: 'Available Beds',      value: s.availableBeds ?? 0,                                 icon: FiCheckCircle, color: 'bg-green-700', link: '/hospital/profile' },
   ];
 
   return (
@@ -97,8 +97,8 @@ const Dashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-900">Review Applications</span>
           </Link>
           <Link to="/hospital/profile"
-            className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors">
-            <FiCheckCircle className="h-6 w-6 text-purple-600 mr-3" />
+            className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+            <FiCheckCircle className="h-6 w-6 text-blue-600 mr-3" />
             <span className="text-sm font-medium text-gray-900">Update Profile</span>
           </Link>
         </div>

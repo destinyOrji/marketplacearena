@@ -84,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, provider }) => {
                 className="w-9 h-9 rounded-full object-cover flex-shrink-0"
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center flex-shrink-0">
                 <span className="text-white text-sm font-semibold">{initials}</span>
               </div>
             )}

@@ -18,9 +18,9 @@ const Badge: React.FC<{ active: boolean }> = ({ active }) => (
 
 const RoleBadge: React.FC<{ role: string }> = ({ role }) => {
   const colours: Record<string, string> = {
-    super_admin: 'bg-purple-100 text-purple-800',
-    admin: 'bg-blue-100 text-blue-800',
-    moderator: 'bg-yellow-100 text-yellow-800'
+    super_admin: 'bg-blue-100 text-blue-800',
+    admin: 'bg-gray-100 text-gray-700',
+    moderator: 'bg-amber-100 text-amber-800'
   };
   return (
     <span className={`px-2 py-1 text-xs font-medium rounded-full ${colours[role] || 'bg-gray-100 text-gray-800'}`}>

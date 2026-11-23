@@ -55,8 +55,8 @@ const DashboardHome: React.FC = () => {
   const statCards = [
     { label: 'Upcoming Appointments', value: stats.upcomingAppointments ?? appointments.length ?? 0, emoji: '📅', color: 'from-blue-500 to-blue-700', to: '/patient/appointments' },
     { label: 'Pending Payments', value: stats.pendingPayments ?? 0, emoji: '💳', color: 'from-green-500 to-green-700', to: '/patient/payments' },
-    { label: 'Total Appointments', value: stats.totalAppointments ?? 0, emoji: '🏥', color: 'from-purple-500 to-purple-700', to: '/patient/appointments' },
-    { label: 'Medical Records', value: stats.totalRecords ?? 0, emoji: '📋', color: 'from-teal-500 to-teal-700', to: '/patient/medical-records' },
+    { label: 'Total Appointments', value: stats.totalAppointments ?? 0, emoji: '🏥', color: 'from-blue-600 to-blue-800', to: '/patient/appointments' },
+    { label: 'Medical Records', value: stats.totalRecords ?? 0, emoji: '📋', color: 'from-green-600 to-green-800', to: '/patient/medical-records' },
   ];
 
   return (
@@ -123,10 +123,10 @@ const DashboardHome: React.FC = () => {
           <span className="text-3xl">🩺</span>
         </button>
         <button onClick={() => navigate('/patient/emergency')}
-          className="bg-red-600 text-white rounded-xl p-6 hover:bg-red-700 transition-colors flex items-center justify-between">
+          className="bg-green-600 text-white rounded-xl p-6 hover:bg-green-700 transition-colors flex items-center justify-between">
           <div className="text-left">
             <h3 className="text-lg font-semibold">Call Ambulance</h3>
-            <p className="text-sm text-red-100 mt-1">Request emergency medical transportation</p>
+            <p className="text-sm text-green-100 mt-1">Request emergency medical transportation</p>
           </div>
           <span className="text-3xl">🚑</span>
         </button>
