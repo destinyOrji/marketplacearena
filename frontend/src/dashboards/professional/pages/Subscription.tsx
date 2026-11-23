@@ -78,7 +78,12 @@ const PlanCard: React.FC<{
     </div>
 
     <ul className="space-y-2 mb-6 flex-1">
-      {plan.features.map(f => (
+      {(Array.isArray(plan.features)
+        ? plan.features
+        : Object.entries(plan.features || {}).filter(([, v]) => v).map(([k]) =>
+            k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())
+          )
+      ).map(f => (
         <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
           <svg className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
