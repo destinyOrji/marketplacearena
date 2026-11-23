@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { sendPasswordResetEmail, verifyConnection } = require('../services/emailService');
 
 // Phone OTP Routes (Most Important)
 // These handle both /api/auth/otp/* and /api/otp/* patterns
@@ -46,33 +47,9 @@ router.post('/forgot-password', async (req, res) => {
         await OTPStorage.deleteMany({ phone: email });
         await OTPStorage.create({ phone: email, otpCode, expiresAt });
 
-        // Send OTP via email
+        // Send password reset OTP via email service
         try {
-            const nodemailer = require('nodemailer');
-            if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-                const transporter = nodemailer.createTransport({
-                    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-                    port: parseInt(process.env.EMAIL_PORT || '587'),
-                    secure: false,
-                    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-                });
-                await transporter.sendMail({
-                    from: `"Health Market Arena" <${process.env.EMAIL_USER}>`,
-                    to: email,
-                    subject: 'Password Reset Code — Health Market Arena',
-                    html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
-                        <h2 style="color:#2563eb;text-align:center;">Password Reset</h2>
-                        <div style="background:#fff;border-radius:8px;padding:24px;text-align:center;">
-                            <p style="color:#374151;">Your password reset code (expires in 10 minutes):</p>
-                            <div style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#2563eb;background:#eff6ff;border-radius:8px;padding:16px 24px;margin:20px 0;display:inline-block;">${otpCode}</div>
-                            <p style="color:#6b7280;font-size:13px;">If you did not request this, please ignore this email.</p>
-                        </div>
-                    </div>`,
-                });
-                console.log(`📧 Password reset OTP sent to ${email}`);
-            } else {
-                console.log(`\n🔑 [DEV] Password reset OTP for ${email} → ${otpCode}\n`);
-            }
+            await sendPasswordResetEmail(email, otpCode);
         } catch (emailError) {
             console.error('Failed to send reset email:', emailError.message);
             console.log(`\n🔑 [FALLBACK] Password reset OTP for ${email} → ${otpCode}\n`);
@@ -150,26 +127,17 @@ router.post('/reset-password-otp', async (req, res) => {
     }
 });
 
-// ─── Email test endpoint (dev only) ──────────────────────────────────────────
+// ─── Email connection test (dev only) ────────────────────────────────────────
 router.get('/test-email', async (req, res) => {
-    // Block in production - this reveals config details
     if (process.env.NODE_ENV === 'production') {
         return res.status(404).json({ success: false, message: 'Not found' });
     }
-    try {
-        const nodemailer = require('nodemailer');
-        const config = {
-            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.EMAIL_PORT || '587'),
-            secure: false,
-            auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-        };
-        const transporter = nodemailer.createTransport(config);
-        await transporter.verify();
-        res.json({ success: true, message: 'Email connection OK', user: process.env.EMAIL_USER });
-    } catch (err) {
-        res.json({ success: false, message: err.message, code: err.code });
-    }
+    const result = await verifyConnection();
+    res.json({
+        success: result.ok,
+        message: result.ok ? 'SMTP connection OK' : result.error,
+        from: process.env.EMAIL_USER || 'not configured',
+    });
 });
 
 console.log("✅ Auth routes loaded successfully");

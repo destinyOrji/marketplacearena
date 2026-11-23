@@ -1,52 +1,12 @@
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTPStorage = require('../models/OTPStorage');
+const { sendOTPEmail } = require('../services/emailService');
 
 // ─── Email transporter ────────────────────────────────────────────────────────
-const createTransporter = () => nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-const sendOTPEmail = async (email, otpCode) => {
-    // If no email credentials configured, just log (dev mode)
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.log(`\n📧 [DEV] OTP for ${email} → ${otpCode}\n`);
-        return;
-    }
-
-    const transporter = createTransporter();
-    await transporter.sendMail({
-        from: `"Health Market Arena" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Your Health Market Arena Verification Code',
-        html: `
-            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
-                <div style="text-align:center;margin-bottom:24px;">
-                    <h2 style="color:#2563eb;margin:0;">Health Market Arena</h2>
-                    <p style="color:#6b7280;margin:4px 0 0;">Email Verification</p>
-                </div>
-                <div style="background:#fff;border-radius:8px;padding:24px;text-align:center;">
-                    <p style="color:#374151;margin-top:0;">Use the code below to verify your email address. It expires in <strong>10 minutes</strong>.</p>
-                    <div style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#2563eb;background:#eff6ff;border-radius:8px;padding:16px 24px;margin:20px 0;display:inline-block;">
-                        ${otpCode}
-                    </div>
-                    <p style="color:#6b7280;font-size:13px;margin-bottom:0;">If you did not request this code, please ignore this email.</p>
-                </div>
-                <p style="text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;">© 2026 Health Market Arena · healthmarketarena.com</p>
-            </div>
-        `,
-    });
-    console.log(`📧 OTP email sent to ${email}`);
-};
+// Emails are sent via services/emailService.js — configure EMAIL_USER and EMAIL_PASS in .env
 
 // Generate JWT token with 2-hour expiration for active sessions
 const generateToken = (userId) => {
