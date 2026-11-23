@@ -186,8 +186,8 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Map role
-        const userRole = role || 'client';
+        // Map role — normalize 'patient' to 'client' for consistency
+        const userRole = (role === 'patient' ? 'client' : role) || 'client';
 
         // Create user
         const user = await User.create({

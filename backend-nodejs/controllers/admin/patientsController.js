@@ -8,8 +8,8 @@ exports.getPatients = async (req, res) => {
         const { page = 1, page_size = 10, search, status } = req.query;
         const skip = (page - 1) * page_size;
 
-        // Build query
-        let userQuery = { role: 'client' };
+        // Build query — patients can have role 'client' or 'patient'
+        let userQuery = { role: { $in: ['client', 'patient'] } };
         if (search) {
             userQuery.$or = [
                 { firstName: { $regex: search, $options: 'i' } },
@@ -93,7 +93,7 @@ exports.getPatientById = async (req, res) => {
         }
 
         const user = await User.findById(id);
-        if (!user || user.role !== 'client') {
+        if (!user || !['client', 'patient'].includes(user.role)) {
             return res.status(404).json({
                 statuscode: 1,
                 status: 'error',
@@ -154,7 +154,7 @@ exports.updatePatient = async (req, res) => {
         const updateData = req.body;
 
         const user = await User.findById(id);
-        if (!user || user.role !== 'client') {
+        if (!user || !['client', 'patient'].includes(user.role)) {
             return res.status(404).json({
                 statuscode: 1,
                 status: 'error',
@@ -211,7 +211,7 @@ exports.deletePatient = async (req, res) => {
         const { id } = req.params;
 
         const user = await User.findById(id);
-        if (!user || user.role !== 'client') {
+        if (!user || !['client', 'patient'].includes(user.role)) {
             return res.status(404).json({
                 statuscode: 1,
                 status: 'error',

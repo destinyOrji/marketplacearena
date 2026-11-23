@@ -16,7 +16,7 @@ exports.getStats = async (req, res) => {
             totalAppointments, todayAppointments, recentRegistrations, pendingServices
         ] = await Promise.all([
             User.countDocuments(),
-            User.countDocuments({ role: 'client' }),
+            User.countDocuments({ role: { $in: ['client', 'patient'] } }),
             User.countDocuments({ role: 'professional' }),
             User.countDocuments({ role: 'hospital' }),
             User.countDocuments({ role: 'ambulance' }),

@@ -359,6 +359,11 @@ module.exports = router;
 const providerRouter = express.Router();
 
 const PROVIDER_PLANS = {
+    professional: [
+        { id: 'prof-monthly',  name: 'Monthly',  duration: 'monthly',  durationMonths: 1,  price: 3000,  features: ['List your services', 'Accept appointments', 'Patient management', 'Basic analytics'] },
+        { id: 'prof-6months', name: '6 Months', duration: '6-months', durationMonths: 6,  price: 15000, features: ['All Monthly features', 'Priority listing', 'Advanced analytics', 'Save ₦3,000'], popular: true },
+        { id: 'prof-yearly',  name: 'Yearly',   duration: 'yearly',   durationMonths: 12, price: 25000, features: ['All features', 'Featured placement', 'Dedicated support', 'Save ₦11,000'] },
+    ],
     hospital: [
         { id: 'hospital-monthly',  name: 'Monthly',   duration: 'monthly',   price: 15000, durationMonths: 1,  jobPostings: 5,   features: ['5 job postings/month', 'Application management', 'Candidate messaging', 'Basic analytics'] },
         { id: 'hospital-6months',  name: '6 Months',  duration: '6-months',  price: 75000, durationMonths: 6,  jobPostings: 30,  features: ['30 job postings', 'Priority listing', 'Advanced analytics', 'Email support', 'Save ₦15,000'], popular: true },

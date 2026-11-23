@@ -152,6 +152,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('patientSubPrompted'); // reset so next login re-prompts
     setAuthState({
       isAuthenticated: false,
       user: null,

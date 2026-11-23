@@ -23,7 +23,22 @@ const DashboardHome: React.FC = () => {
       ]);
 
       if (statsRes.status === 'fulfilled') setStats(statsRes.value.data?.data || {});
-      if (subRes.status === 'fulfilled') setSubscription(subRes.value.data?.data || null);
+
+      if (subRes.status === 'fulfilled') {
+        const subData = subRes.value.data?.data || null;
+        setSubscription(subData);
+
+        // Auto-redirect new users to subscription page on first visit.
+        // Once dismissed (user clicks "Skip" or subscribes), we don't redirect again
+        // in the same session so they can freely navigate back to the dashboard.
+        const alreadyPrompted = sessionStorage.getItem('patientSubPrompted');
+        if (!alreadyPrompted && subData && !subData.hasActiveSubscription) {
+          sessionStorage.setItem('patientSubPrompted', '1');
+          navigate('/patient/subscription', { replace: true });
+          return;
+        }
+      }
+
       if (apptRes.status === 'fulfilled') {
         const d = apptRes.value.data?.data;
         setAppointments(Array.isArray(d) ? d : []);
