@@ -144,7 +144,20 @@ const ProfessionalSubscription: React.FC = () => {
         }),
       ]);
       const plansJson = await plansRes.json();
-      if (plansJson.success) setPlans(plansJson.data);
+      if (plansJson.success) {
+        // Normalize both DB plan shape (planName/effectivePrice/billingInterval)
+        // and legacy fallback shape (name/price/duration) into a single format.
+        const normalized = (plansJson.data || []).map((p: any) => ({
+          id:            p.id || p._id,
+          name:          p.planName || p.name || 'Plan',
+          duration:      p.billingInterval || p.duration || 'monthly',
+          durationMonths: p.durationMonths ?? 1,
+          price:         p.effectivePrice ?? p.promotionalPrice ?? p.regularPrice ?? p.price ?? 0,
+          features:      p.features || [],
+          popular:       p.popular || false,
+        }));
+        setPlans(normalized);
+      }
 
       const statusJson = await statusRes.json();
       if (statusJson.success && statusJson.data?.subscription) {
