@@ -22,8 +22,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area — offset by sidebar width on desktop */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         {/* Header */}
         <Header onToggleSidebar={toggleSidebar} />
 
