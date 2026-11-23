@@ -3,6 +3,66 @@ const crypto = require('crypto');
 const User = require('../../models/User');
 const Admin = require('../../models/Admin');
 
+// ─── Brute-force login protection ────────────────────────────────────────────
+// Tracks failed attempts per IP. After 10 failures in 15 min, that IP is locked
+// out for 15 minutes. Resets on successful login.
+//
+// In-memory is intentional for a single PM2 process. If you scale to multiple
+// processes, replace with a Redis store.
+
+const LOGIN_MAX_ATTEMPTS = 10;
+const LOGIN_WINDOW_MS    = 15 * 60 * 1000; // 15 minutes
+const LOGIN_LOCKOUT_MS   = 15 * 60 * 1000; // 15 minutes
+
+const loginAttempts = new Map(); // key: IP address
+
+const getAttemptRecord = (ip) => {
+    const now = Date.now();
+    let record = loginAttempts.get(ip);
+
+    // Reset if window has expired
+    if (record && now - record.windowStart > LOGIN_WINDOW_MS) {
+        loginAttempts.delete(ip);
+        record = null;
+    }
+
+    if (!record) {
+        record = { count: 0, windowStart: now, lockedUntil: null };
+        loginAttempts.set(ip, record);
+    }
+
+    return record;
+};
+
+const checkLoginAllowed = (ip) => {
+    const record = getAttemptRecord(ip);
+    if (record.lockedUntil && Date.now() < record.lockedUntil) {
+        const remaining = Math.ceil((record.lockedUntil - Date.now()) / 60000);
+        return { allowed: false, minutesLeft: remaining };
+    }
+    return { allowed: true };
+};
+
+const recordFailedLogin = (ip) => {
+    const record = getAttemptRecord(ip);
+    record.count += 1;
+    if (record.count >= LOGIN_MAX_ATTEMPTS) {
+        record.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+    }
+};
+
+const resetLoginAttempts = (ip) => {
+    loginAttempts.delete(ip);
+};
+
+// Clean up stale records every 30 minutes to prevent memory growth
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of loginAttempts.entries()) {
+        if (now - record.windowStart > LOGIN_WINDOW_MS * 2) loginAttempts.delete(ip);
+    }
+}, 30 * 60 * 1000);
+
 // Generate short-lived access token (2 hours)
 const generateAccessToken = (userId) => {
     const secret = process.env.JWT_SECRET;
@@ -176,8 +236,7 @@ exports.register = async (req, res) => {
         res.status(500).json({
             statuscode: 1,
             status: 'error',
-            message: 'Registration failed',
-            error: error.message
+            message: process.env.NODE_ENV === 'production' ? 'Registration failed' : error.message
         });
     }
 };
@@ -195,9 +254,21 @@ exports.login = async (req, res) => {
             });
         }
 
+        // Check IP lockout before hitting the database
+        const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+        const lockCheck = checkLoginAllowed(ip);
+        if (!lockCheck.allowed) {
+            return res.status(429).json({
+                statuscode: 1,
+                status: 'error',
+                message: `Too many failed login attempts. Try again in ${lockCheck.minutesLeft} minute${lockCheck.minutesLeft !== 1 ? 's' : ''}.`
+            });
+        }
+
         // Find user
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: email.toLowerCase().trim() });
         if (!user) {
+            recordFailedLogin(ip);
             return res.status(401).json({
                 statuscode: 1,
                 status: 'error',
@@ -208,6 +279,7 @@ exports.login = async (req, res) => {
         // Check password
         const isPasswordValid = await user.comparePassword(password);
         if (!isPasswordValid) {
+            recordFailedLogin(ip);
             return res.status(401).json({
                 statuscode: 1,
                 status: 'error',
@@ -246,6 +318,9 @@ exports.login = async (req, res) => {
         admin.lastLogin = new Date();
         await admin.save();
         await user.updateLoginInfo();
+
+        // Clear failed-attempt counter on successful login
+        resetLoginAttempts(ip);
 
         // Generate tokens
         const accessToken = generateAccessToken(user._id);

@@ -5,6 +5,46 @@ const User = require('../models/User');
 const OTPStorage = require('../models/OTPStorage');
 const { sendOTPEmail, sendWelcomeEmail } = require('../services/emailService');
 
+// ─── OTP send rate limiter (per email address) ────────────────────────────────
+// Max 5 OTP sends per email per 15 minutes to prevent spam / SMS flooding.
+
+const OTP_MAX_SENDS   = 5;
+const OTP_WINDOW_MS   = 15 * 60 * 1000;
+
+const otpSendLog = new Map(); // key: email → { count, windowStart }
+
+const canSendOTP = (identifier) => {
+    const key = identifier.toLowerCase();
+    const now = Date.now();
+    let entry = otpSendLog.get(key);
+
+    if (entry && now - entry.windowStart > OTP_WINDOW_MS) {
+        otpSendLog.delete(key);
+        entry = null;
+    }
+
+    if (!entry) {
+        entry = { count: 0, windowStart: now };
+        otpSendLog.set(key, entry);
+    }
+
+    if (entry.count >= OTP_MAX_SENDS) {
+        const remaining = Math.ceil((OTP_WINDOW_MS - (now - entry.windowStart)) / 60000);
+        return { allowed: false, minutesLeft: remaining };
+    }
+
+    entry.count += 1;
+    return { allowed: true };
+};
+
+// Clean stale entries every 30 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of otpSendLog.entries()) {
+        if (now - v.windowStart > OTP_WINDOW_MS * 2) otpSendLog.delete(k);
+    }
+}, 30 * 60 * 1000);
+
 // ─── Email transporter ────────────────────────────────────────────────────────
 // Emails are sent via services/emailService.js — configure EMAIL_USER and EMAIL_PASS in .env
 
@@ -47,6 +87,15 @@ exports.sendOTP = async (req, res) => {
             return res.status(400).json({
                 statuscode: 1, status: "error",
                 message: "Email is required"
+            });
+        }
+
+        // Per-email rate limit — prevents OTP spam
+        const rateCheck = canSendOTP(identifier);
+        if (!rateCheck.allowed) {
+            return res.status(429).json({
+                statuscode: 1, status: "error",
+                message: `Too many verification codes requested. Try again in ${rateCheck.minutesLeft} minute${rateCheck.minutesLeft !== 1 ? 's' : ''}.`
             });
         }
 

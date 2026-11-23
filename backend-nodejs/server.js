@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
 
 // Load environment variables
 // Always load .env first, then .env.production overrides (if present)
@@ -28,6 +29,9 @@ if (!process.env.MONGODB_URI) {
 
 const app = express();
 
+// Hide Express server fingerprint — don't advertise what framework we use
+app.disable('x-powered-by');
+
 // Trust proxy (required when behind Nginx)
 app.set('trust proxy', 1);
 
@@ -40,17 +44,28 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Security Middleware
-// Helmet helps secure Express apps by setting various HTTP headers
+// Helmet: sets 11 security-relevant HTTP response headers
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'"],
-            imgSrc: ["'self'", "data:", "https:"],
+            styleSrc:   ["'self'", "'unsafe-inline'"],
+            scriptSrc:  ["'self'"],
+            imgSrc:     ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://api.paystack.co"],
+            frameSrc:   ["'none'"],
+            objectSrc:  ["'none'"],
         },
     },
     crossOriginEmbedderPolicy: false,
+    // Prevent browsers from MIME-sniffing away from declared content type
+    noSniff: true,
+    // Block pages from loading in iframes (clickjacking protection)
+    frameguard: { action: 'deny' },
+    // Force HTTPS for 1 year
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+    // Referrer policy — don't leak URL to third parties
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 // Rate limiting to prevent brute force attacks
@@ -97,6 +112,36 @@ const authLimiter = rateLimit({
 
 // Data sanitization against NoSQL injection
 app.use(mongoSanitize());
+
+// HTTP Parameter Pollution protection
+// Prevents attacks that duplicate query params (e.g. ?role=admin&role=super_admin)
+app.use(hpp());
+
+// XSS sanitization — strip script tags from req.body string values
+// (xss-clean is unmaintained; this lightweight inline version covers the same cases)
+app.use((req, _res, next) => {
+    const sanitizeValue = (val) => {
+        if (typeof val !== 'string') return val;
+        return val
+            .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+            .replace(/javascript\s*:/gi, '')
+            .replace(/on\w+\s*=/gi, '');
+    };
+    const sanitizeObject = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        for (const key of Object.keys(obj)) {
+            if (typeof obj[key] === 'string') {
+                obj[key] = sanitizeValue(obj[key]);
+            } else if (typeof obj[key] === 'object') {
+                sanitizeObject(obj[key]);
+            }
+        }
+        return obj;
+    };
+    if (req.body)  sanitizeObject(req.body);
+    if (req.query) sanitizeObject(req.query);
+    next();
+});
 
 // CORS configuration — allow the production domain, localhost variants, and requests
 // with no Origin header (mobile apps, Postman, direct API calls)
@@ -175,10 +220,7 @@ if (process.env.NODE_ENV !== 'production') {
     app.use('/api/debug', require('./routes/debug'));
 }
 
-// Temporary admin setup routes (REMOVE IN PRODUCTION!)
-// These routes allow creating admin users without authentication
-// Only for initial setup and testing
-app.use('/api/temp', require('./routes/temp-admin-setup'));
+// Temporary admin setup route removed — use scripts/createAdmin.js instead
 
 // Robots.txt - tells Google what to crawl
 app.get('/robots.txt', (req, res) => {
@@ -251,19 +293,22 @@ app.use('*', (req, res) => {
     });
 });
 
-// Global error handler — always JSON
+// Global error handler — always JSON, never leaks internals in production
 app.use((error, req, res, next) => {
-    console.error('Error:', error);
+    // Log full error server-side
+    console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} →`, error.message);
 
     // CORS errors
     if (error.message && error.message.startsWith('CORS:')) {
-        return res.status(403).json({ success: false, message: error.message });
+        return res.status(403).json({ success: false, message: 'Origin not allowed' });
     }
 
+    // In production: generic message only — no stack traces, no internal details
+    const isProd = process.env.NODE_ENV === 'production';
     res.status(error.status || 500).json({
         success: false,
-        message: error.message || 'Internal server error',
-        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        message: isProd ? 'An unexpected error occurred' : (error.message || 'Internal server error'),
+        ...(isProd ? {} : { stack: error.stack })
     });
 });
 
