@@ -522,7 +522,6 @@ providerRouter.post('/subscribe', protect, async (req, res) => {
             status: 'pending',
             paymentStatus: 'pending',
         });
-        });
 
         res.status(201).json({ success: true, data: subscription });
     } catch (error) {
