@@ -5,6 +5,7 @@ const Subscription = require('../models/Subscription');
 const Client = require('../models/Client');
 const User = require('../models/User');
 const { initializeTransaction, verifyTransaction } = require('../services/paystackService');
+const { sendInvoiceEmail, sendReceiptEmail } = require('../services/emailService');
 
 // Get subscription plans
 router.get('/plans', async (req, res) => {
@@ -189,6 +190,18 @@ router.post('/initialize-payment/:subscriptionId', protect, async (req, res) => 
         subscription.paymentReference = reference;
         await subscription.save();
 
+        // Send invoice email (payment request — user is about to pay)
+        sendInvoiceEmail(user.email, {
+            firstName:       user.firstName || user.email.split('@')[0],
+            invoiceNumber:   `INV-${subscription._id.toString().slice(-8).toUpperCase()}`,
+            description:     `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Subscription — Health Market Arena`,
+            amount:          subscription.amount,
+            currency:        'NGN',
+            billingInterval: subscription.plan,
+            dueDate:         new Date(Date.now() + 24 * 60 * 60 * 1000),
+            paymentUrl:      paystackResponse.data.authorization_url,
+        }).catch(err => console.error('Invoice email failed (client):', err.message));
+
         res.json({ 
             success: true, 
             data: {
@@ -263,6 +276,22 @@ router.post('/verify-payment/:reference', async (req, res) => {
             type: 'payment',
             data: { subscriptionId: subscription._id, plan: subscription.plan, endDate: subscription.endDate }
         }).catch(() => {});
+
+        // Send receipt email (payment confirmed)
+        const paidUser = await User.findById(subscription.user).select('email firstName').catch(() => null);
+        if (paidUser) {
+            sendReceiptEmail(paidUser.email, {
+                firstName:           paidUser.firstName || paidUser.email.split('@')[0],
+                receiptNumber:       `RCP-${subscription._id.toString().slice(-8).toUpperCase()}`,
+                description:         `${subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)} Subscription — Health Market Arena`,
+                amount:              subscription.amount,
+                currency:            'NGN',
+                billingInterval:     subscription.plan,
+                paidAt:              new Date(),
+                paymentReference:    reference,
+                subscriptionEndDate: subscription.endDate,
+            }).catch(err => console.error('Receipt email failed (client):', err.message));
+        }
 
         res.json({ 
             success: true, 
@@ -528,6 +557,18 @@ providerRouter.post('/initialize-payment/:subscriptionId', protect, async (req, 
         subscription.paymentReference = reference;
         await subscription.save();
 
+        // Send invoice email (payment request — provider)
+        sendInvoiceEmail(user.email, {
+            firstName:       user.firstName || user.email.split('@')[0],
+            invoiceNumber:   `INV-${subscription._id.toString().slice(-8).toUpperCase()}`,
+            description:     `${subscription.planName || subscription.plan} Subscription — Health Market Arena`,
+            amount:          subscription.amount,
+            currency:        'NGN',
+            billingInterval: subscription.plan,
+            dueDate:         new Date(Date.now() + 24 * 60 * 60 * 1000),
+            paymentUrl:      paystackResponse.data.authorization_url,
+        }).catch(err => console.error('Invoice email failed (provider):', err.message));
+
         res.json({
             success: true,
             data: {
@@ -572,6 +613,22 @@ providerRouter.post('/verify-payment/:reference', async (req, res) => {
             type: 'payment',
             data: { subscriptionId: subscription._id, plan: subscription.plan, endDate: subscription.endDate }
         }).catch(() => {});
+
+        // Send receipt email (payment confirmed — provider)
+        const paidUser = await User.findById(subscription.user).select('email firstName').catch(() => null);
+        if (paidUser) {
+            sendReceiptEmail(paidUser.email, {
+                firstName:           paidUser.firstName || paidUser.email.split('@')[0],
+                receiptNumber:       `RCP-${subscription._id.toString().slice(-8).toUpperCase()}`,
+                description:         `${subscription.planName || subscription.plan} Subscription — Health Market Arena`,
+                amount:              subscription.amount,
+                currency:            'NGN',
+                billingInterval:     subscription.plan,
+                paidAt:              new Date(),
+                paymentReference:    req.params.reference,
+                subscriptionEndDate: subscription.endDate,
+            }).catch(err => console.error('Receipt email failed (provider):', err.message));
+        }
 
         res.json({ success: true, data: subscription, message: 'Subscription activated!' });
     } catch (error) {

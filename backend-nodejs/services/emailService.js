@@ -371,10 +371,247 @@ const verifyConnection = async () => {
     }
 };
 
+// ─── Invoice Email (before payment — "please pay") ───────────────────────────
+
+/**
+ * @param {string} email
+ * @param {object} data
+ *   firstName, invoiceNumber, description, amount, currency,
+ *   billingInterval, dueDate, paymentUrl
+ */
+const sendInvoiceEmail = async (email, data) => {
+    const {
+        firstName = 'Customer',
+        invoiceNumber,
+        description,
+        amount,
+        currency = 'NGN',
+        billingInterval,
+        dueDate,
+        paymentUrl,
+    } = data;
+
+    const fmtAmount = new Intl.NumberFormat('en-NG', {
+        style: 'currency', currency, maximumFractionDigits: 0,
+    }).format(amount);
+
+    const fmtDate = dueDate
+        ? new Date(dueDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
+        : 'Upon receipt';
+
+    const html = brandedHtml(`
+      <!-- Blue header -->
+      <div style="background:linear-gradient(135deg,${BRAND_BLUE} 0%,${BRAND_DARK} 100%);padding:28px 32px 24px;border-radius:8px 8px 0 0;margin:-24px -24px 24px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.3px;">INVOICE</h1>
+            <p style="margin:4px 0 0;color:rgba(255,255,255,0.75);font-size:13px;">Health Market Arena</p>
+          </div>
+          <div style="text-align:right;">
+            <p style="margin:0;color:rgba(255,255,255,0.75);font-size:12px;">Invoice #</p>
+            <p style="margin:2px 0 0;color:#fff;font-size:14px;font-weight:700;">${invoiceNumber || 'INV-' + Date.now()}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Greeting -->
+      <p style="color:${DARK_TEXT};font-size:15px;margin:0 0 20px;">Hi <strong>${firstName}</strong>,</p>
+      <p style="color:${GRAY_TEXT};font-size:14px;line-height:1.6;margin:0 0 24px;">
+        Thank you for choosing Health Market Arena. Please find your invoice below and complete payment to activate your subscription.
+      </p>
+
+      <!-- Line items table -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER_COLOR};border-radius:8px;overflow:hidden;margin-bottom:24px;">
+        <thead>
+          <tr style="background:#F9FAFB;">
+            <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:700;color:${GRAY_TEXT};text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid ${BORDER_COLOR};">Description</th>
+            <th style="padding:10px 16px;text-align:right;font-size:12px;font-weight:700;color:${GRAY_TEXT};text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid ${BORDER_COLOR};">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:14px 16px;font-size:14px;color:${DARK_TEXT};">
+              ${description}
+              ${billingInterval ? `<br/><span style="font-size:12px;color:${GRAY_TEXT};">${billingInterval} billing</span>` : ''}
+            </td>
+            <td style="padding:14px 16px;font-size:14px;font-weight:700;color:${DARK_TEXT};text-align:right;">${fmtAmount}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:#F9FAFB;border-top:1px solid ${BORDER_COLOR};">
+            <td style="padding:12px 16px;font-size:14px;font-weight:700;color:${DARK_TEXT};">Total Due</td>
+            <td style="padding:12px 16px;font-size:18px;font-weight:800;color:${BRAND_BLUE};text-align:right;">${fmtAmount}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Due date -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:4px;padding:12px 16px;">
+            <p style="margin:0;font-size:13px;color:#92400E;">
+              <strong>Payment due:</strong> ${fmtDate}
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA -->
+      ${paymentUrl ? `
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${paymentUrl}"
+           style="display:inline-block;background-color:${BRAND_BLUE};color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">
+          Pay Now →
+        </a>
+      </div>` : ''}
+
+      <p style="color:${GRAY_TEXT};font-size:12px;text-align:center;margin:0;border-top:1px solid ${BORDER_COLOR};padding-top:16px;">
+        Questions? Email us at <a href="mailto:support@healthmarketarena.com" style="color:${BRAND_BLUE};text-decoration:none;">support@healthmarketarena.com</a>
+      </p>
+    `);
+
+    await sendEmail({
+        to:      email,
+        subject: `Invoice #${invoiceNumber || 'INV'} — ${fmtAmount} due`,
+        html,
+        text:    `Hi ${firstName},\n\nPlease pay ${fmtAmount} for: ${description}.\n\nDue: ${fmtDate}\n\n${paymentUrl ? 'Pay here: ' + paymentUrl : ''}\n\nHealth Market Arena`,
+    });
+};
+
+// ─── Receipt Email (after payment — "payment received") ──────────────────────
+
+/**
+ * @param {string} email
+ * @param {object} data
+ *   firstName, receiptNumber, description, amount, currency,
+ *   billingInterval, paidAt, paymentReference, subscriptionEndDate
+ */
+const sendReceiptEmail = async (email, data) => {
+    const {
+        firstName = 'Customer',
+        receiptNumber,
+        description,
+        amount,
+        currency = 'NGN',
+        billingInterval,
+        paidAt,
+        paymentReference,
+        subscriptionEndDate,
+    } = data;
+
+    const fmtAmount = new Intl.NumberFormat('en-NG', {
+        style: 'currency', currency, maximumFractionDigits: 0,
+    }).format(amount);
+
+    const fmtPaidAt = paidAt
+        ? new Date(paidAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const fmtEndDate = subscriptionEndDate
+        ? new Date(subscriptionEndDate).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
+        : null;
+
+    const html = brandedHtml(`
+      <!-- Green success header -->
+      <div style="background:linear-gradient(135deg,#059669 0%,#047857 100%);padding:28px 32px 24px;border-radius:8px 8px 0 0;margin:-24px -24px 24px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:10px;">✅</div>
+        <h1 style="margin:0;color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.3px;">Payment Confirmed</h1>
+        <p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Health Market Arena</p>
+      </div>
+
+      <!-- Greeting -->
+      <p style="color:${DARK_TEXT};font-size:15px;margin:0 0 16px;">Hi <strong>${firstName}</strong>,</p>
+      <p style="color:${GRAY_TEXT};font-size:14px;line-height:1.6;margin:0 0 24px;">
+        Your payment has been received and your subscription is now active. Here is your receipt for your records.
+      </p>
+
+      <!-- Receipt table -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER_COLOR};border-radius:8px;overflow:hidden;margin-bottom:24px;">
+        <thead>
+          <tr style="background:#F9FAFB;">
+            <th style="padding:10px 16px;text-align:left;font-size:12px;font-weight:700;color:${GRAY_TEXT};text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid ${BORDER_COLOR};">Description</th>
+            <th style="padding:10px 16px;text-align:right;font-size:12px;font-weight:700;color:${GRAY_TEXT};text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid ${BORDER_COLOR};">Amount Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:14px 16px;font-size:14px;color:${DARK_TEXT};">
+              ${description}
+              ${billingInterval ? `<br/><span style="font-size:12px;color:${GRAY_TEXT};">${billingInterval} billing</span>` : ''}
+            </td>
+            <td style="padding:14px 16px;font-size:14px;font-weight:700;color:#059669;text-align:right;">${fmtAmount}</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:#F0FDF4;border-top:1px solid ${BORDER_COLOR};">
+            <td style="padding:12px 16px;font-size:14px;font-weight:700;color:${DARK_TEXT};">Total Paid</td>
+            <td style="padding:12px 16px;font-size:18px;font-weight:800;color:#059669;text-align:right;">${fmtAmount}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Payment details -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER_COLOR};border-radius:8px;overflow:hidden;margin-bottom:24px;">
+        <tbody>
+          <tr style="border-bottom:1px solid ${BORDER_COLOR};">
+            <td style="padding:10px 16px;font-size:13px;color:${GRAY_TEXT};width:45%;">Receipt Number</td>
+            <td style="padding:10px 16px;font-size:13px;color:${DARK_TEXT};font-weight:600;">${receiptNumber || 'RCP-' + Date.now()}</td>
+          </tr>
+          <tr style="border-bottom:1px solid ${BORDER_COLOR};">
+            <td style="padding:10px 16px;font-size:13px;color:${GRAY_TEXT};">Payment Date</td>
+            <td style="padding:10px 16px;font-size:13px;color:${DARK_TEXT};font-weight:600;">${fmtPaidAt}</td>
+          </tr>
+          ${paymentReference ? `
+          <tr style="border-bottom:1px solid ${BORDER_COLOR};">
+            <td style="padding:10px 16px;font-size:13px;color:${GRAY_TEXT};">Reference</td>
+            <td style="padding:10px 16px;font-size:12px;color:${DARK_TEXT};font-family:monospace;">${paymentReference}</td>
+          </tr>` : ''}
+          ${fmtEndDate ? `
+          <tr>
+            <td style="padding:10px 16px;font-size:13px;color:${GRAY_TEXT};">Access Valid Until</td>
+            <td style="padding:10px 16px;font-size:13px;color:#059669;font-weight:700;">${fmtEndDate}</td>
+          </tr>` : ''}
+        </tbody>
+      </table>
+
+      <!-- Success message -->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+        <tr>
+          <td style="background:#F0FDF4;border-left:4px solid #059669;border-radius:4px;padding:12px 16px;">
+            <p style="margin:0;font-size:13px;color:#065F46;">
+              🎉 <strong>Your subscription is now active.</strong> Log in to start using all features.
+            </p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA -->
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${SITE_URL}/auth/login"
+           style="display:inline-block;background-color:#059669;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;">
+          Go to Dashboard →
+        </a>
+      </div>
+
+      <p style="color:${GRAY_TEXT};font-size:12px;text-align:center;margin:0;border-top:1px solid ${BORDER_COLOR};padding-top:16px;">
+        Keep this email as your payment record. For support: <a href="mailto:support@healthmarketarena.com" style="color:${BRAND_BLUE};text-decoration:none;">support@healthmarketarena.com</a>
+      </p>
+    `);
+
+    await sendEmail({
+        to:      email,
+        subject: `Payment confirmed — ${fmtAmount} received`,
+        html,
+        text:    `Hi ${firstName},\n\nYour payment of ${fmtAmount} has been received.\n\nDescription: ${description}\nReference: ${paymentReference || 'N/A'}\nPaid: ${fmtPaidAt}\n${fmtEndDate ? 'Valid until: ' + fmtEndDate : ''}\n\nThank you!\nHealth Market Arena`,
+    });
+};
+
 module.exports = {
     sendEmail,
     sendOTPEmail,
     sendPasswordResetEmail,
     sendWelcomeEmail,
+    sendInvoiceEmail,
+    sendReceiptEmail,
     verifyConnection,
 };

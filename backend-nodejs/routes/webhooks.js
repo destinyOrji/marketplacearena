@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { validateWebhookSignature } = require('../services/paystackService');
 const Subscription = require('../models/Subscription');
+const { sendReceiptEmail } = require('../services/emailService');
 
 /**
  * POST /api/webhooks/paystack
@@ -56,6 +57,23 @@ router.post('/paystack', express.raw({ type: 'application/json' }), async (req, 
         subscription.paymentReference = reference;
         await subscription.save();
 
+        // Send receipt email (payment confirmed)
+        const User = require('../models/User');
+        const subUser = await User.findById(subscription.user).select('email firstName').catch(() => null);
+        if (subUser) {
+            sendReceiptEmail(subUser.email, {
+                firstName:           subUser.firstName || subUser.email.split('@')[0],
+                receiptNumber:       `RCP-${subscription._id.toString().slice(-8).toUpperCase()}`,
+                description:         `${subscription.planName || subscription.plan} Subscription — Health Market Arena`,
+                amount:              subscription.amount,
+                currency:            'NGN',
+                billingInterval:     subscription.plan,
+                paidAt:              new Date(),
+                paymentReference:    reference,
+                subscriptionEndDate: subscription.endDate,
+            }).catch(err => console.error('Receipt email failed (webhook):', err.message));
+        }
+
         console.log(`✅ Subscription ${subscriptionId} activated via webhook (ref: ${reference})`);
       }
 
@@ -92,6 +110,28 @@ router.post('/paystack', express.raw({ type: 'application/json' }), async (req, 
         await vacancy.save();
 
         console.log(`✅ Vacancy ${vacancyId} activated via webhook (ref: ${reference})`);
+
+        // Send receipt email to hospital for vacancy posting
+        try {
+            const User = require('../models/User');
+            const hospital = vacancy.hospital;
+            const hospitalUser = hospital?.user
+                ? await User.findById(hospital.user).select('email firstName').catch(() => null)
+                : null;
+            if (hospitalUser) {
+                sendReceiptEmail(hospitalUser.email, {
+                    firstName:        hospitalUser.firstName || hospitalUser.email.split('@')[0],
+                    receiptNumber:    `RCP-VAC-${vacancy._id.toString().slice(-8).toUpperCase()}`,
+                    description:      `Job Vacancy Posting — ${vacancy.jobTitle || 'Healthcare Position'}`,
+                    amount:           event.data.amount / 100, // Paystack sends kobo
+                    currency:         'NGN',
+                    paidAt:           new Date(),
+                    paymentReference: reference,
+                }).catch(err => console.error('Vacancy receipt email failed:', err.message));
+            }
+        } catch (emailErr) {
+            console.error('Vacancy receipt lookup error:', emailErr.message);
+        }
 
         // Notify all professionals
         try {

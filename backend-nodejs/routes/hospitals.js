@@ -7,6 +7,7 @@ const { protect } = require('../middleware/auth');
 const { requireVerification } = require('../middleware/requireVerification');
 const Hospital = require('../models/Hospital');
 const User = require('../models/User');
+const { sendInvoiceEmail } = require('../services/emailService');
 
 // Configure multer for hospital image uploads
 const storage = multer.diskStorage({
@@ -328,6 +329,17 @@ router.post('/vacancies/create/', protect, async (req, res) => {
             },
             message: 'Vacancy created. Please complete payment to publish.' 
         });
+
+        // Send invoice email (non-blocking — after response is sent)
+        sendInvoiceEmail(hospital.user.email, {
+            firstName:     hospital.user.firstName || hospital.user.email.split('@')[0],
+            invoiceNumber: `INV-VAC-${job._id.toString().slice(-8).toUpperCase()}`,
+            description:   `Job Vacancy Posting — ${job.jobTitle || 'Healthcare Position'}`,
+            amount:        fee,
+            currency:      'NGN',
+            dueDate:       new Date(Date.now() + 24 * 60 * 60 * 1000),
+            paymentUrl:    paystackResponse.data.authorization_url,
+        }).catch(err => console.error('Vacancy invoice email failed:', err.message));
     } catch (error) {
         console.error('Error creating vacancy:', error);
         res.status(500).json({ statuscode: 1, status: 'error', message: error.message });
