@@ -48,7 +48,11 @@ const ambulanceSchema = new mongoose.Schema({
     coverageAreas: [{
         city: String,
         state: String,
-        radius: Number // in kilometers
+        radius: { type: Number, default: 5 }, // in kilometers
+        latitude:  { type: Number, default: null },
+        longitude: { type: Number, default: null },
+        serviceTypes: { type: [String], default: ['ambulance'] },
+        isActive: { type: Boolean, default: true }
     }],
     
     // Fleet Information

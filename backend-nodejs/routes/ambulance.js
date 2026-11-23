@@ -617,21 +617,20 @@ router.put('/settings/update', protect, async (req, res) => {
 router.get('/coverage-area', protect, async (req, res) => {
     try {
         const ambulance = await Ambulance.findOne({ user: req.user._id });
-        
-        if (!ambulance) {
-            return res.json({ success: true, data: [] });
-        }
+        if (!ambulance) return res.json({ success: true, data: [] });
 
-        // Transform coverageAreas to match frontend format
-        const coverageZones = (ambulance.coverageAreas || []).map((area, index) => ({
-            id: area._id || `area-${index}`,
-            name: `${area.city}, ${area.state}`,
-            city: area.city,
-            state: area.state,
-            radius: area.radius * 1000, // Convert km to meters
-            serviceTypes: ['ambulance', 'paramedic'], // Default service types
-            isActive: true,
-            boundaries: []
+        const coverageZones = (ambulance.coverageAreas || []).map(area => ({
+            id:           area._id,
+            name:         area.city && area.state ? `${area.city}, ${area.state}` : (area.city || 'Coverage Zone'),
+            city:         area.city,
+            state:        area.state,
+            radius:       (area.radius || 5) * 1000, // km → metres for frontend
+            serviceTypes: area.serviceTypes?.length ? area.serviceTypes : ['ambulance'],
+            isActive:     area.isActive !== false,
+            center:       area.latitude && area.longitude
+                            ? { latitude: area.latitude, longitude: area.longitude }
+                            : null,
+            boundaries:   []
         }));
 
         res.json({ success: true, data: coverageZones });
@@ -644,45 +643,101 @@ router.get('/coverage-area', protect, async (req, res) => {
 router.post('/coverage-area/create', protect, async (req, res) => {
     try {
         const ambulance = await Ambulance.findOne({ user: req.user._id });
-        
-        if (!ambulance) {
-            return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
-        }
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
 
-        const { name, radius, serviceTypes, isActive } = req.body;
-        
-        // Parse city and state from name (e.g., "New York, NY")
-        const [city, state] = name.split(',').map(s => s.trim());
+        const { name, radius, serviceTypes, isActive, center } = req.body;
+        const [city, state] = (name || '').split(',').map(s => s.trim());
 
         const newArea = {
-            city: city || name,
-            state: state || '',
-            radius: (radius || 5000) / 1000 // Convert meters to km
+            city:         city || name,
+            state:        state || '',
+            radius:       Math.round((radius || 5000) / 1000), // metres → km
+            serviceTypes: serviceTypes?.length ? serviceTypes : ['ambulance'],
+            isActive:     isActive !== false,
+            latitude:     center?.latitude  || null,
+            longitude:    center?.longitude || null,
         };
 
         ambulance.coverageAreas.push(newArea);
         await ambulance.save();
 
-        // Return the newly created area in the expected format
-        const createdArea = ambulance.coverageAreas[ambulance.coverageAreas.length - 1];
-        const responseData = {
-            id: createdArea._id,
-            name: `${createdArea.city}, ${createdArea.state}`,
-            city: createdArea.city,
-            state: createdArea.state,
-            radius: createdArea.radius * 1000,
-            serviceTypes: serviceTypes || ['ambulance', 'paramedic'],
-            isActive: isActive !== undefined ? isActive : true,
-            boundaries: []
-        };
-
-        res.status(201).json({ 
-            success: true, 
-            data: responseData,
-            message: 'Coverage area added successfully' 
+        const created = ambulance.coverageAreas[ambulance.coverageAreas.length - 1];
+        res.status(201).json({
+            success: true,
+            data: {
+                id:           created._id,
+                name:         `${created.city}${created.state ? ', ' + created.state : ''}`,
+                city:         created.city,
+                state:        created.state,
+                radius:       created.radius * 1000,
+                serviceTypes: created.serviceTypes,
+                isActive:     created.isActive,
+                center:       created.latitude ? { latitude: created.latitude, longitude: created.longitude } : null,
+                boundaries:   []
+            },
+            message: 'Coverage area added successfully'
         });
     } catch (error) {
         console.error('Error adding coverage area:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.put('/coverage-area/:id/update', protect, async (req, res) => {
+    try {
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
+
+        const area = ambulance.coverageAreas.id(req.params.id);
+        if (!area) return res.status(404).json({ success: false, message: 'Coverage area not found' });
+
+        const { name, radius, serviceTypes, isActive, center } = req.body;
+
+        if (name) {
+            const [city, state] = name.split(',').map(s => s.trim());
+            area.city  = city || name;
+            area.state = state || '';
+        }
+        if (radius !== undefined)      area.radius       = Math.round(radius / 1000);
+        if (serviceTypes !== undefined) area.serviceTypes = serviceTypes;
+        if (isActive !== undefined)    area.isActive     = isActive;
+        if (center?.latitude  !== undefined) area.latitude  = center.latitude;
+        if (center?.longitude !== undefined) area.longitude = center.longitude;
+
+        await ambulance.save();
+
+        res.json({
+            success: true,
+            data: {
+                id:           area._id,
+                name:         `${area.city}${area.state ? ', ' + area.state : ''}`,
+                city:         area.city,
+                state:        area.state,
+                radius:       area.radius * 1000,
+                serviceTypes: area.serviceTypes,
+                isActive:     area.isActive,
+                center:       area.latitude ? { latitude: area.latitude, longitude: area.longitude } : null,
+                boundaries:   []
+            },
+            message: 'Coverage area updated successfully'
+        });
+    } catch (error) {
+        console.error('Error updating coverage area:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+router.delete('/coverage-area/:id/delete', protect, async (req, res) => {
+    try {
+        const ambulance = await Ambulance.findOne({ user: req.user._id });
+        if (!ambulance) return res.status(404).json({ success: false, message: 'Ambulance provider not found' });
+
+        ambulance.coverageAreas.pull(req.params.id);
+        await ambulance.save();
+
+        res.json({ success: true, message: 'Coverage area deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting coverage area:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

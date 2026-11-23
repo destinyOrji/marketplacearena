@@ -50,7 +50,7 @@ const CoverageAreas: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -64,7 +64,7 @@ const CoverageAreas: React.FC = () => {
         </div>
         <button
           onClick={handleAddArea}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
         >
           + Add Coverage Area
         </button>
@@ -73,11 +73,11 @@ const CoverageAreas: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Map View */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative z-[1]">
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-green-50">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               🗺️ Coverage Map
             </h2>
-            <p className="text-sm text-gray-600 mt-1">Active coverage areas shown as red circles</p>
+            <p className="text-sm text-gray-600 mt-1">Active coverage areas shown as blue circles</p>
           </div>
           <div className="p-4">
             <Map
@@ -89,12 +89,12 @@ const CoverageAreas: React.FC = () => {
                 .map(a => ({
                   center: a.center ? [a.center.latitude, a.center.longitude] as [number, number] : [9.0820, 8.6753] as [number, number],
                   radius: a.radius || 5000,
-                  color: '#ef4444',
+                  color: '#2563eb',
                 }))}
             />
             <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-red-500 rounded-full opacity-40 border-2 border-red-500 inline-block"></span>
+                <span className="w-3 h-3 bg-blue-500 rounded-full opacity-40 border-2 border-blue-500 inline-block"></span>
                 Active Coverage Zones
               </div>
               <span>{coverageAreas.filter(a => a.isActive).length} active</span>
@@ -104,7 +104,7 @@ const CoverageAreas: React.FC = () => {
 
         {/* Coverage Areas List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative z-[2]">
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-green-50">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               📍 Coverage Zones
             </h2>
@@ -114,8 +114,8 @@ const CoverageAreas: React.FC = () => {
           <div className="p-4">
             {coverageAreas.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -124,7 +124,7 @@ const CoverageAreas: React.FC = () => {
                 <p className="text-gray-500 mb-4 text-sm">Add your first coverage area to start receiving bookings</p>
                 <button
                   onClick={handleAddArea}
-                  className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                 >
                   + Add Coverage Area
                 </button>
@@ -132,7 +132,7 @@ const CoverageAreas: React.FC = () => {
             ) : (
               <div className="space-y-3 max-h-[450px] overflow-y-auto pr-1">
                 {coverageAreas.map((area) => (
-                  <div key={area.id} className="border border-gray-200 rounded-xl p-4 hover:border-red-200 transition-all">
+                  <div key={area.id} className="border border-gray-200 rounded-xl p-4 hover:border-blue-200 transition-all">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
