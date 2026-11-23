@@ -8,6 +8,7 @@ const adminAmbulancesController = require('../controllers/admin/ambulancesContro
 const adminGymPhysioController = require('../controllers/admin/gymPhysioController');
 const adminBlogController = require('../controllers/admin/blogController');
 const adminSettingsController = require('../controllers/admin/settingsController');
+const planController = require('../controllers/admin/planController');
 const { adminAuth, checkPermission } = require('../middleware/adminAuth');
 
 const router = express.Router();
@@ -334,5 +335,22 @@ router.delete('/blog/posts/:id',     adminAuth, checkPermission('blog_delete'), 
 router.post('/blog/posts/:id/publish', adminAuth, checkPermission('blog_edit'), adminBlogController.publishPost);
 router.post('/blog/posts/bulk-delete', adminAuth, checkPermission('blog_delete'), adminBlogController.bulkDelete);
 router.get('/blog/analytics',        adminAuth, checkPermission('blog_view'),   adminBlogController.getAnalytics);
+
+// ─── Plans (super_admin manages; any admin can read) ──────────────────────────
+// Public options (no auth needed — frontend form dropdowns)
+router.get('/plans/options',                   planController.getPlanOptions);
+// Active plans — public, used by subscription pages
+router.get('/plans/active',                    planController.listActivePlans);
+// Admin reads
+router.get('/plans',          adminAuth,       planController.listPlans);
+router.get('/plans/:id',      adminAuth,       planController.getPlan);
+// Super admin writes
+router.post('/plans',               adminAuth, checkPermission('settings_edit'), planController.createPlan);
+router.put('/plans/:id',            adminAuth, checkPermission('settings_edit'), planController.updatePlan);
+router.delete('/plans/:id',         adminAuth, checkPermission('settings_edit'), planController.deletePlan);
+router.patch('/plans/:id/toggle',   adminAuth, checkPermission('settings_edit'), planController.toggleStatus);
+router.patch('/plans/:id/default',  adminAuth, checkPermission('settings_edit'), planController.setDefault);
+router.post('/plans/:id/duplicate', adminAuth, checkPermission('settings_edit'), planController.duplicatePlan);
+router.post('/plans/assign',        adminAuth, checkPermission('settings_edit'), planController.assignPlan);
 
 module.exports = router;

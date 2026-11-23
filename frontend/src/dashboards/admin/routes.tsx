@@ -63,6 +63,7 @@ const SystemSettingsPage = lazy(() => import('./pages/settings/SystemSettings'))
 const PaymentSettingsPage = lazy(() => import('./pages/settings/PaymentSettings'));
 const EmailTemplatesPage = lazy(() => import('./pages/settings/EmailTemplates'));
 const AuditLogsPage = lazy(() => import('./pages/settings/AuditLogs'));
+const PlansPage = lazy(() => import('./pages/settings/Plans'));
 
 // Patient aggregate pages
 const AllAppointmentsPage = lazy(() => import('./pages/patients/AllAppointments'));
@@ -190,6 +191,7 @@ const AdminRoutes: React.FC = () => {
                   <Route path="/settings/payments" element={<PaymentSettingsPage />} />
                   <Route path="/settings/email-templates" element={<EmailTemplatesPage />} />
                   <Route path="/settings/audit-logs" element={<AuditLogsPage />} />
+                  <Route path="/settings/plans" element={<PlansPage />} />
                   <Route path="/notifications" element={<NotificationsPage />} />
                   
                   {/* Blog Management Routes */}

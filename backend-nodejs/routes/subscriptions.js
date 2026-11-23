@@ -353,12 +353,17 @@ router.put('/auto-renew/:subscriptionId', protect, async (req, res) => {
 
 module.exports = router;
 
-// ─── Provider Subscription Routes (Hospital, Gym-Physio, Ambulance) ───────────
-// These are separate from patient subscriptions
+// ─── Provider Subscription Routes (Hospital, Gym-Physio, Ambulance, Professional) ─
+// These are separate from patient subscriptions.
+// Plans are now loaded from the Plan collection in MongoDB (managed by super_admin).
+// The hardcoded PROVIDER_PLANS table is kept as a FALLBACK so existing subscribers
+// are never broken if no DB plans exist yet for their role.
 
 const providerRouter = express.Router();
+const Plan = require('../models/Plan');
 
-const PROVIDER_PLANS = {
+// Fallback static plans — used only when no DB plans exist for a role
+const FALLBACK_PLANS = {
     professional: [
         { id: 'prof-monthly',  name: 'Monthly',  duration: 'monthly',  durationMonths: 1,  price: 3000,  features: ['List your services', 'Accept appointments', 'Patient management', 'Basic analytics'] },
         { id: 'prof-6months', name: '6 Months', duration: '6-months', durationMonths: 6,  price: 15000, features: ['All Monthly features', 'Priority listing', 'Advanced analytics', 'Save ₦3,000'], popular: true },
@@ -382,10 +387,28 @@ const PROVIDER_PLANS = {
 };
 
 // GET /subscriptions/provider/plans?role=hospital
+// Tries DB plans first; falls back to hardcoded FALLBACK_PLANS if none exist yet.
 providerRouter.get('/plans', async (req, res) => {
     const { role } = req.query;
-    const plans = PROVIDER_PLANS[role] || [];
-    res.json({ success: true, data: plans });
+    if (!role) return res.json({ success: true, data: [] });
+
+    try {
+        // DB plans: active, matching eligibility (exact role OR 'all')
+        const dbPlans = await Plan.find({
+            status: 'active',
+            eligibility: { $in: [role, 'all'] },
+        }).sort({ sortOrder: 1, regularPrice: 1 });
+
+        if (dbPlans.length > 0) {
+            return res.json({ success: true, data: dbPlans.map(p => p.toPublic()), source: 'db' });
+        }
+    } catch (err) {
+        console.error('Plan DB lookup error:', err.message);
+    }
+
+    // Fallback to hardcoded plans
+    const plans = FALLBACK_PLANS[role] || [];
+    res.json({ success: true, data: plans, source: 'fallback' });
 });
 
 // GET /subscriptions/provider/status — check if provider has active subscription
@@ -415,11 +438,35 @@ providerRouter.get('/status', protect, async (req, res) => {
 providerRouter.post('/subscribe', protect, async (req, res) => {
     try {
         const { planId } = req.body;
-        const role = req.user.role; // hospital | gym-physio | ambulance
+        const role = req.user.role;
 
-        const allPlans = PROVIDER_PLANS[role] || [];
-        const plan = allPlans.find(p => p.id === planId);
-        if (!plan) return res.status(400).json({ success: false, message: 'Invalid plan' });
+        // ── Try DB plan first ────────────────────────────────────────────────
+        let planDoc = null;
+        let planData = null;
+
+        const mongoose = require('mongoose');
+        const isObjectId = mongoose.Types.ObjectId.isValid(planId);
+
+        if (isObjectId) {
+            planDoc = await Plan.findOne({ _id: planId, status: 'active' });
+            if (planDoc) {
+                planData = {
+                    id:             String(planDoc._id),
+                    name:           planDoc.planName,
+                    price:          planDoc.promotionalPrice > 0 ? planDoc.promotionalPrice : planDoc.regularPrice,
+                    durationMonths: planDoc.durationMonths,
+                    planRef:        planDoc._id,
+                };
+            }
+        }
+
+        // ── Fall back to hardcoded plans ─────────────────────────────────────
+        if (!planData) {
+            const allPlans = FALLBACK_PLANS[role] || [];
+            const found = allPlans.find(p => p.id === planId);
+            if (!found) return res.status(400).json({ success: false, message: 'Invalid plan' });
+            planData = { id: found.id, name: found.name, price: found.price, durationMonths: found.durationMonths, planRef: null };
+        }
 
         // Check existing active subscription
         const existing = await Subscription.findOne({
@@ -432,18 +479,20 @@ providerRouter.post('/subscribe', protect, async (req, res) => {
 
         const startDate = new Date();
         const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + plan.durationMonths);
+        endDate.setMonth(endDate.getMonth() + planData.durationMonths);
 
         const subscription = await Subscription.create({
             user: req.user._id,
             providerType: role,
-            plan: plan.id,
-            planName: plan.name,
-            amount: plan.price,
+            plan: planData.id,
+            planName: planData.name,
+            planRef: planData.planRef,
+            amount: planData.price,
             startDate,
             endDate,
             status: 'pending',
             paymentStatus: 'pending',
+        });
         });
 
         res.status(201).json({ success: true, data: subscription });

@@ -101,6 +101,7 @@ const sidebarMenu: SidebarMenuItem[] = [
     id: 'settings', label: 'Settings', icon: FiSettings,
     children: [
       { id: 'settings-main',    label: 'System Settings',     icon: FiSettings, path: '/admin/settings',           permission: 'settings_edit' },
+      { id: 'settings-plans',   label: 'Plans',               icon: FiShield,   path: '/admin/settings/plans',    permission: 'settings_edit' },
       { id: 'settings-users',   label: 'Admin Users',         icon: FiUsers,    path: '/admin/settings/users',     permission: 'settings_edit' },
       { id: 'settings-roles',   label: 'Roles & Permissions', icon: FiShield,   path: '/admin/settings/roles' },   // all roles can view
       { id: 'settings-payment', label: 'Payment Settings',    icon: FiSettings, path: '/admin/settings/payments',  permission: 'settings_edit' },

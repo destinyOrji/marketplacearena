@@ -15,6 +15,15 @@ const subscriptionSchema = new mongoose.Schema({
         type: String,
         default: 'client'
     },
+    // Reference to the Plan document (populated when subscribing to a DB-managed plan)
+    planRef: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Plan',
+        default: null,
+    },
+    // Manual assignment audit fields
+    assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    assignReason: { type: String, default: '' },
     plan: {
         type: String,
         required: true
