@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { sendPasswordResetEmail, verifyConnection } = require('../services/emailService');
+const validatePassword = require('../utils/validatePassword');
 
 // Phone OTP Routes (Most Important)
 // These handle both /api/auth/otp/* and /api/otp/* patterns
@@ -36,7 +37,10 @@ router.post('/forgot-password', async (req, res) => {
         const { email } = req.body;
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        // Always normalize to lowercase — user records are stored lowercase
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             // Don't reveal whether the account exists
             return res.json({ success: true, message: 'If an account with that email exists, a reset code has been sent.' });
@@ -44,8 +48,9 @@ router.post('/forgot-password', async (req, res) => {
 
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        await OTPStorage.deleteMany({ phone: email });
-        await OTPStorage.create({ phone: email, otpCode, expiresAt });
+        // Store against normalized email so reset-password lookup always matches
+        await OTPStorage.deleteMany({ phone: normalizedEmail });
+        await OTPStorage.create({ phone: normalizedEmail, otpCode, expiresAt });
 
         // Send password reset OTP via email service
         try {
@@ -67,17 +72,15 @@ router.post('/reset-password', async (req, res) => {
         const User = require('../models/User');
         const OTPStorage = require('../models/OTPStorage');
         const { token, password, email, otpCode } = req.body;
-        const emailVal = email;
+        // Normalize email to lowercase — OTP is stored with lowercase, user record is lowercase
+        const emailVal = (email || '').toLowerCase().trim();
         const otp = token || otpCode;
         if (!emailVal || !otp || !password) {
             return res.status(400).json({ success: false, message: 'Email, OTP code, and new password are required' });
         }
-        // Password strength validation
-        if (password.length < 8) {
-            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
-        }
-        if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-            return res.status(400).json({ success: false, message: 'Password must contain at least one uppercase letter and one number' });
+        const pwCheck = validatePassword(password);
+        if (!pwCheck.valid) {
+            return res.status(400).json({ success: false, message: pwCheck.message });
         }
         const record = await OTPStorage.findOne({ phone: emailVal, otpCode: otp });
         if (!record) return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
@@ -85,7 +88,7 @@ router.post('/reset-password', async (req, res) => {
             await OTPStorage.deleteOne({ _id: record._id });
             return res.status(400).json({ success: false, message: 'Reset code has expired' });
         }
-        const user = await User.findOne({ email: emailVal.toLowerCase() });
+        const user = await User.findOne({ email: emailVal });
         if (!user) return res.status(404).json({ success: false, message: 'Account not found' });
         user.password = password;
         await user.save();
@@ -106,8 +109,9 @@ router.post('/reset-password-otp', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Phone, OTP, and new password are required' });
         }
         // Password strength validation
-        if (newPassword.length < 8) {
-            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        const pwCheckOtp = validatePassword(newPassword);
+        if (!pwCheckOtp.valid) {
+            return res.status(400).json({ success: false, message: pwCheckOtp.message });
         }
         const record = await OTPStorage.findOne({ phone, otpCode });
         if (!record) return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });

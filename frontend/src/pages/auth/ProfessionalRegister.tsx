@@ -3,6 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PasswordStrengthMeter from '../../components/PasswordStrengthMeter';
 
 // All professional types with their matching specializations
 const PROFESSIONAL_TYPES: Record<string, string[]> = {
@@ -243,6 +244,7 @@ const ProfessionalRegister: React.FC = () => {
                 <div>
                   <label className={labelClass}>Password *</label>
                   <input name="password" type="password" required value={formData.password} onChange={handleChange} className={inputClass} placeholder="Enter Password" />
+                  <PasswordStrengthMeter password={formData.password} showChecklist={false} />
                 </div>
                 <div>
                   <label className={labelClass}>Confirm Password *</label>

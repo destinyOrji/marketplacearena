@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import { showSuccessToast, showErrorToast } from '../utils/toast';
+import PasswordStrengthMeter, { getPasswordStrength } from '../../../components/PasswordStrengthMeter';
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -47,8 +48,8 @@ const ForgotPassword: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (getPasswordStrength(password) < 5) {
+      setError('Password is too weak. Please meet all the requirements shown below.');
       return;
     }
 
@@ -283,9 +284,7 @@ const ForgotPassword: React.FC = () => {
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Must be at least 6 characters
-              </p>
+              <PasswordStrengthMeter password={password} />
             </div>
 
             <div>

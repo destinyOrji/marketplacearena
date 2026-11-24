@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import PasswordStrengthMeter from '../../components/PasswordStrengthMeter';
 const hospitalTypes = [
   'General Hospital',
   'Specialist Hospital',
@@ -177,6 +177,7 @@ const HospitalRegister: React.FC = () => {
                   <label className={labelClass}>Password *</label>
                   <input name="password" type="password" required value={formData.password}
                     onChange={handleChange} className={inputClass} placeholder="Enter password" />
+                  <PasswordStrengthMeter password={formData.password} showChecklist={false} />
                 </div>
                 <div>
                   <label className={labelClass}>Confirm Password *</label>

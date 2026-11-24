@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../../models/User');
 const Admin = require('../../models/Admin');
+const validatePassword = require('../../utils/validatePassword');
 
 // ─── Brute-force login protection ────────────────────────────────────────────
 // Tracks failed attempts per IP. After 10 failures in 15 min, that IP is locked
@@ -119,11 +120,11 @@ exports.register = async (req, res) => {
         }
 
         // Validate password strength
-        if (password.length < 8) {
+        const pwCheck = validatePassword(password);
+        if (!pwCheck.valid) {
             return res.status(400).json({
-                statuscode: 1,
-                status: 'error',
-                message: 'Password must be at least 8 characters long'
+                statuscode: 1, status: 'error',
+                message: pwCheck.message
             });
         }
 

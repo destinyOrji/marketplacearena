@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LockIcon, EyeIcon, EyeSlashIcon } from '../../components/Icons';
+import PasswordStrengthMeter from '../../components/PasswordStrengthMeter';
 
 const GymPhysioRegisterStep4: React.FC = () => {
   const navigate = useNavigate();
@@ -100,6 +101,7 @@ const GymPhysioRegisterStep4: React.FC = () => {
                       {showPassword ? <EyeSlashIcon className="w-5 h-5 text-gray-400 hover:text-gray-600" /> : <EyeIcon className="w-5 h-5 text-gray-400 hover:text-gray-600" />}
                     </button>
                   </div>
+                  <PasswordStrengthMeter password={formData.password} />
                 </div>
 
                 <div className="mb-6">

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const OTPStorage = require('../models/OTPStorage');
 const { sendOTPEmail, sendWelcomeEmail } = require('../services/emailService');
+const validatePassword = require('../utils/validatePassword');
 
 // ─── OTP send rate limiter (per email address) ────────────────────────────────
 // Max 5 OTP sends per email per 15 minutes to prevent spam / SMS flooding.
@@ -81,7 +82,9 @@ exports.sendOTP = async (req, res) => {
     try {
         // Accept email (new) or phone/phoneNumber (legacy fallback)
         const { email, phone, phoneNumber } = req.body;
-        const identifier = email || phone || phoneNumber;
+        const raw = email || phone || phoneNumber;
+        // Normalize email identifiers to lowercase so OTP storage and user lookup always match
+        const identifier = raw && raw.includes('@') ? raw.toLowerCase().trim() : raw;
 
         if (!identifier) {
             return res.status(400).json({
@@ -211,8 +214,9 @@ exports.register = async (req, res) => {
         }
 
         // Password strength validation
-        if (password.length < 8) {
-            return res.status(400).json({ success: false, message: 'Password must be at least 8 characters' });
+        const pwCheck = validatePassword(password);
+        if (!pwCheck.valid) {
+            return res.status(400).json({ success: false, message: pwCheck.message });
         }
 
         // Name length validation

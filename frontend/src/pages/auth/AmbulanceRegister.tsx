@@ -2,6 +2,7 @@
  * Ambulance Service Registration
  */
 import React, { useState } from 'react';
+import PasswordStrengthMeter from '../../components/PasswordStrengthMeter';
 import { useNavigate } from 'react-router-dom';
 
 const serviceTypes = [
@@ -167,6 +168,7 @@ const AmbulanceRegister: React.FC = () => {
                 <div>
                   <label className={labelClass}>Password *</label>
                   <input name="password" type="password" required value={formData.password} onChange={handleChange} className={inputClass} />
+                  <PasswordStrengthMeter password={formData.password} showChecklist={false} />
                 </div>
                 <div>
                   <label className={labelClass}>Confirm Password *</label>

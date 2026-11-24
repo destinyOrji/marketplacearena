@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
+const validatePassword = require('../utils/validatePassword');
 const fs = require('fs');
 const BlogPost = require('../models/BlogPost');
 const BlogAdmin = require('../models/BlogAdmin');
@@ -175,8 +176,9 @@ router.put('/change-password', blogAdminAuth, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Current and new password are required' });
         }
 
-        if (newPassword.length < 6) {
-            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        const pwCheck = validatePassword(newPassword);
+        if (!pwCheck.valid) {
+            return res.status(400).json({ success: false, message: pwCheck.message });
         }
 
         const admin = await BlogAdmin.findById(req.admin._id).select('+password');

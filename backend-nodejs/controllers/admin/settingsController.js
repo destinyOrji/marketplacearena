@@ -5,6 +5,7 @@
 const User = require('../../models/User');
 const Admin = require('../../models/Admin');
 const bcrypt = require('bcryptjs');
+const validatePassword = require('../../utils/validatePassword');
 
 // ─── Default permissions per role ────────────────────────────────────────────
 
@@ -108,11 +109,9 @@ exports.createAdminUser = async (req, res) => {
             return res.status(400).json({ statuscode: 1, status: 'error', message: 'Invalid email format' });
         }
 
-        if (password.length < 8) {
-            return res.status(400).json({
-                statuscode: 1, status: 'error',
-                message: 'Password must be at least 8 characters'
-            });
+        const pwCheck = validatePassword(password);
+        if (!pwCheck.valid) {
+            return res.status(400).json({ statuscode: 1, status: 'error', message: pwCheck.message });
         }
 
         if (!['admin', 'moderator'].includes(role)) {

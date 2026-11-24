@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserIcon, PhoneIcon, EnvelopeIcon } from '../../components/Icons';
 import axios from 'axios';
+import PasswordStrengthMeter from '../../components/PasswordStrengthMeter';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
@@ -241,6 +242,7 @@ const PatientRegister: React.FC = () => {
                       required
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     />
+                    <PasswordStrengthMeter password={formData.password} />
                   </div>
                 </div>
 
