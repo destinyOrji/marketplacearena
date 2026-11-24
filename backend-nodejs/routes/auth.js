@@ -105,21 +105,25 @@ router.post('/reset-password-otp', async (req, res) => {
         const User = require('../models/User');
         const OTPStorage = require('../models/OTPStorage');
         const { phone, otpCode, newPassword } = req.body;
-        if (!phone || !otpCode || !newPassword) {
-            return res.status(400).json({ success: false, message: 'Phone, OTP, and new password are required' });
+        // 'phone' field carries the email address (legacy naming from the frontend API client)
+        const identifier = (phone || '').toLowerCase().trim();
+        if (!identifier || !otpCode || !newPassword) {
+            return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required' });
         }
         // Password strength validation
         const pwCheckOtp = validatePassword(newPassword);
         if (!pwCheckOtp.valid) {
             return res.status(400).json({ success: false, message: pwCheckOtp.message });
         }
-        const record = await OTPStorage.findOne({ phone, otpCode });
+        // OTP is stored against the identifier (email, lowercased)
+        const record = await OTPStorage.findOne({ phone: identifier, otpCode });
         if (!record) return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         if (new Date() > record.expiresAt) {
             await OTPStorage.deleteOne({ _id: record._id });
             return res.status(400).json({ success: false, message: 'OTP has expired' });
         }
-        const user = await User.findOne({ phone });
+        // Look up by email — users are stored with lowercase email, not phone
+        const user = await User.findOne({ email: identifier });
         if (!user) return res.status(404).json({ success: false, message: 'Account not found' });
         user.password = newPassword;
         await user.save();
