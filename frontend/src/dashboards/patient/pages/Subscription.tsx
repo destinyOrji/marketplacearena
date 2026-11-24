@@ -70,11 +70,11 @@ const Subscription: React.FC = () => {
         return;
       }
 
-      // 1. Create subscription record (status: pending)
+      // 1. Subscribe — send planId (ObjectId from DB)
       const subRes = await fetch(`${API_URL}/subscriptions/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ plan: planId }),
+        body: JSON.stringify({ planId }),
       });
       
       if (!subRes.ok) {
@@ -86,6 +86,13 @@ const Subscription: React.FC = () => {
       const subData = await subRes.json();
       if (!subData.success) {
         setMessage({ type: 'error', text: subData.message || 'Failed to create subscription.' });
+        return;
+      }
+
+      // Free plan — already activated, no payment needed
+      if (subData.isFree) {
+        setMessage({ type: 'success', text: 'Your free plan is now active!' });
+        await fetchData();
         return;
       }
 

@@ -44,6 +44,17 @@ const planSchema = new mongoose.Schema(
             default: 'draft',
         },
         isDefault: { type: Boolean, default: false },   // only one plan can be default at a time
+
+        // ── Free plan ─────────────────────────────────────────────────────────
+        // isFree: when true, price is treated as 0, no Paystack step required,
+        // and the subscription is activated instantly on subscribe.
+        isFree: { type: Boolean, default: false },
+
+        // autoAssignOnRegistration: when true + isFree, every new user whose
+        // role matches eligibility gets this plan assigned automatically on sign-up.
+        // Only one plan per eligibility group should have this set.
+        autoAssignOnRegistration: { type: Boolean, default: false },
+
         eligibility: {
             type: String,
             // which user roles may subscribe
@@ -118,6 +129,7 @@ planSchema.pre('save', function (next) {
  * effectivePrice — returns promotionalPrice if set, otherwise regularPrice.
  */
 planSchema.virtual('effectivePrice').get(function () {
+    if (this.isFree || this.regularPrice === 0) return 0;
     return this.promotionalPrice > 0 ? this.promotionalPrice : this.regularPrice;
 });
 
@@ -132,13 +144,15 @@ planSchema.methods.toPublic = function (subscribedPlanId = null) {
         description:           obj.description,
         regularPrice:          obj.regularPrice,
         promotionalPrice:      obj.promotionalPrice,
-        effectivePrice:        obj.effectivePrice,
+        effectivePrice:        obj.isFree ? 0 : obj.effectivePrice,
+        isFree:                obj.isFree || obj.regularPrice === 0,
         currency:              obj.currency,
         billingInterval:       obj.billingInterval,
         durationMonths:        obj.durationMonths,
         trialPeriodDays:       obj.trialPeriodDays,
         status:                obj.status,
         isDefault:             obj.isDefault,
+        autoAssignOnRegistration: obj.autoAssignOnRegistration,
         eligibility:           obj.eligibility,
         maxJobPostings:        obj.maxJobPostings,
         maxServices:           obj.maxServices,

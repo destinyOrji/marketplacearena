@@ -6,6 +6,77 @@ const OTPStorage = require('../models/OTPStorage');
 const { sendOTPEmail, sendWelcomeEmail } = require('../services/emailService');
 const validatePassword = require('../utils/validatePassword');
 
+// ─── Auto-assign free plan on registration ────────────────────────────────────
+/**
+ * If the admin has created a Plan with autoAssignOnRegistration: true whose
+ * eligibility matches this user's role (or 'all'), activate it immediately
+ * with a 100-year end date — no payment needed.
+ *
+ * Runs non-blocking so it never breaks the registration response.
+ */
+const autoAssignFreePlan = async (userId, userRole) => {
+    try {
+        const Plan         = require('../models/Plan');
+        const Subscription = require('../models/Subscription');
+        const Client       = require('../models/Client');
+
+        // Look for a free, active plan marked for auto-assignment that fits this role
+        const plan = await Plan.findOne({
+            status: 'active',
+            isFree: true,
+            autoAssignOnRegistration: true,
+            eligibility: { $in: [userRole, 'all'] },
+        }).sort({ sortOrder: 1 });
+
+        if (!plan) return; // No free auto-assign plan configured — that's fine
+
+        // Don't duplicate if the user somehow already has one
+        const existing = await Subscription.findOne({
+            user: userId, status: 'active', paymentStatus: 'completed',
+            endDate: { $gte: new Date() }
+        });
+        if (existing) return;
+
+        // For client/patient roles ensure a Client profile exists
+        let clientId;
+        if (['client', 'patient'].includes(userRole)) {
+            let client = await Client.findOne({ user: userId });
+            if (!client) {
+                const user = await User.findById(userId);
+                client = await Client.create({
+                    user: userId,
+                    phone: user.phone || '0000000000',
+                    address: { city: user.city || '', state: user.state || '', country: 'Nigeria' }
+                });
+            }
+            clientId = client._id;
+        }
+
+        const startDate = new Date();
+        const endDate   = new Date(startDate);
+        endDate.setFullYear(endDate.getFullYear() + 100); // effectively permanent for free plans
+
+        await Subscription.create({
+            user:          userId,
+            client:        clientId,
+            planRef:       plan._id,
+            plan:          plan.planName,
+            planName:      plan.planName,
+            providerType:  userRole,
+            amount:        0,
+            currency:      plan.currency || 'NGN',
+            startDate,
+            endDate,
+            status:        'active',
+            paymentStatus: 'completed',
+        });
+
+        console.log(`✅ Free plan "${plan.planName}" auto-assigned to user ${userId} (${userRole})`);
+    } catch (err) {
+        console.error('autoAssignFreePlan error (non-critical):', err.message);
+    }
+};
+
 // ─── OTP send rate limiter (per email address) ────────────────────────────────
 // Max 5 OTP sends per email per 15 minutes to prevent spam / SMS flooding.
 
@@ -382,6 +453,8 @@ exports.register = async (req, res) => {
             console.error('Welcome email failed (non-critical):', err.message)
         );
 
+        // Auto-assign free plan if one is configured for this role (non-blocking)
+        autoAssignFreePlan(user._id, userRole).catch(() => {});
         res.status(201).json({
             success: true,
             message: "Registration successful",

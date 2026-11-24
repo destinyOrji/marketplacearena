@@ -110,6 +110,8 @@ const PlanCard: React.FC<{
           </svg>
           Processing…
         </span>
+      ) : (plan as any).isFree || plan.price === 0 ? (
+        `Activate Free Plan`
       ) : (
         `Get ${plan.name}`
       )}
@@ -176,7 +178,7 @@ const ProfessionalSubscription: React.FC = () => {
     setSuccess('');
 
     try {
-      // 1. Create subscription record
+      // 1. Subscribe — free plans activate instantly, paid plans return pending
       const subRes = await fetch(`${API_URL}/subscriptions/provider/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -188,9 +190,16 @@ const ProfessionalSubscription: React.FC = () => {
         return;
       }
 
+      // Free plan — already active, no Paystack needed
+      if (subJson.isFree) {
+        setSuccess('Your free plan is now active!');
+        await fetchData(); // refresh active sub card
+        return;
+      }
+
       const subscriptionId = subJson.data._id;
 
-      // 2. Initialize Paystack payment
+      // 2. Initialize Paystack payment for paid plans
       const initRes = await fetch(
         `${API_URL}/subscriptions/provider/initialize-payment/${subscriptionId}`,
         {
