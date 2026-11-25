@@ -18,6 +18,7 @@ import { FiSave, FiPlus, FiX } from 'react-icons/fi';
 import apiClient from '../services/apiClient';
 import PasswordStrengthMeter, { getPasswordStrength } from '../../../components/PasswordStrengthMeter';
 import DocumentsTab, { DocSlot } from '../../../components/DocumentsTab';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 // ─── Tag input component ──────────────────────────────────────────────────────
 
@@ -534,4 +535,10 @@ const ProfileOnboarding: React.FC = () => {
   );
 };
 
-export default ProfileOnboarding;
+const ProfileOnboardingWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <ProfileOnboarding />
+  </ErrorBoundary>
+);
+
+export default ProfileOnboardingWithBoundary;

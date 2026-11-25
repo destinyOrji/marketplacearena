@@ -16,6 +16,8 @@ import { toast } from 'react-toastify';
 import { FiSave, FiPlus, FiX } from 'react-icons/fi';
 import apiClient from '../services/apiClient';
 import PasswordStrengthMeter, { getPasswordStrength } from '../../../components/PasswordStrengthMeter';
+import DocumentsTab, { DocSlot } from '../../../components/DocumentsTab';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 // ─── Tag input ────────────────────────────────────────────────────────────────
 
@@ -97,7 +99,7 @@ const validateProfile = (f: any) => {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'certifications' | 'password';
+type Tab = 'profile' | 'certifications' | 'documents' | 'password';
 
 const ProfileOnboarding: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
@@ -119,6 +121,8 @@ const ProfileOnboarding: React.FC = () => {
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
 
+  const [existingDocs, setExistingDocs] = useState<Record<string, string | undefined>>({});
+
   useEffect(() => { loadProfile(); }, []);
 
   const loadProfile = async () => {
@@ -127,6 +131,10 @@ const ProfileOnboarding: React.FC = () => {
       const res = await apiClient.get('/ambulance/profile');
       const d   = res.data?.data || res.data;
       setIsVerified(d.isVerified || d.verification_status === 'verified' || false);
+      setExistingDocs({
+        licenseDocument:  d.licenseDocument  || undefined,
+        insuranceDocument: d.insuranceDocument || undefined,
+      });
       setForm({
         serviceName:          d.serviceName      || d.provider_name     || '',
         serviceType:          d.serviceType      || d.service_type      || '',
@@ -242,6 +250,7 @@ const ProfileOnboarding: React.FC = () => {
   const TABS: { id: Tab; label: string }[] = [
     { id: 'profile',        label: '🚑 Profile' },
     { id: 'certifications', label: '🎓 Certifications' },
+    { id: 'documents',      label: '📄 Documents' },
     { id: 'password',       label: '🔒 Password' },
   ];
 
@@ -400,6 +409,19 @@ const ProfileOnboarding: React.FC = () => {
             </form>
           )}
 
+          {/* ── DOCUMENTS ──────────────────────────────────────────────────── */}
+          {activeTab === 'documents' && (
+            <DocumentsTab
+              uploadEndpoint="/ambulance/documents/upload"
+              slots={[
+                { key: 'licenseDocument',   label: 'Ambulance / Service Operating License', required: true,  hint: 'License issued by the relevant transport or health authority' },
+                { key: 'insuranceDocument', label: 'Vehicle / Service Insurance Certificate', required: true, hint: 'Third-party or comprehensive insurance document' },
+              ] as DocSlot[]}
+              existingDocs={existingDocs}
+              onUploadSuccess={(key, url) => setExistingDocs(d => ({ ...d, [key]: url }))}
+            />
+          )}
+
           {/* ── PASSWORD ──────────────────────────────────────────────────── */}
           {activeTab === 'password' && (
             <form onSubmit={handleChangePassword} noValidate className="space-y-4 max-w-md">
@@ -437,4 +459,10 @@ const ProfileOnboarding: React.FC = () => {
   );
 };
 
-export default ProfileOnboarding;
+const ProfileOnboardingWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <ProfileOnboarding />
+  </ErrorBoundary>
+);
+
+export default ProfileOnboardingWithBoundary;

@@ -22,6 +22,7 @@ import { useHospital } from '../contexts/HospitalContext';
 import { hospitalApi } from '../services/api';
 import PasswordStrengthMeter, { getPasswordStrength } from '../../../components/PasswordStrengthMeter';
 import DocumentsTab, { DocSlot } from '../../../components/DocumentsTab';
+import ErrorBoundary from '../../professional/components/ErrorBoundary';
 
 // ─── Shared tag input (same as professional) ──────────────────────────────────
 
@@ -549,6 +550,20 @@ const Profile: React.FC = () => {
             </form>
           )}
 
+          {/* ── DOCUMENTS TAB ─────────────────────────────────────────────── */}
+          {activeTab === 'documents' && (
+            <DocumentsTab
+              uploadEndpoint="/hospitals/documents/upload"
+              slots={[
+                { key: 'licenseDocument',         label: 'Hospital Operating License',          required: true,  hint: 'License issued by the relevant health ministry or authority' },
+                { key: 'registrationCertificate', label: 'CAC / Business Registration Certificate', required: true,  hint: 'Corporate Affairs Commission or equivalent' },
+                { key: 'accreditationDocument',   label: 'Accreditation Certificate',           required: false, hint: 'NHIS, ISO, or any professional accreditation body' },
+              ] as DocSlot[]}
+              existingDocs={existingDocs}
+              onUploadSuccess={(key, url) => setExistingDocs(d => ({ ...d, [key]: url }))}
+            />
+          )}
+
           {/* ── PASSWORD TAB ──────────────────────────────────────────────── */}
           {activeTab === 'password' && (
             <form onSubmit={handleChangePassword} noValidate className="space-y-4 max-w-md">
@@ -589,4 +604,10 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile;
+const ProfileWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <Profile />
+  </ErrorBoundary>
+);
+
+export default ProfileWithBoundary;
