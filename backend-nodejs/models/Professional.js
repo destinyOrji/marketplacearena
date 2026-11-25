@@ -9,7 +9,12 @@ const professionalSchema = new mongoose.Schema({
     professionalType: {
         type: String,
         required: true,
-        enum: ['doctor', 'nurse', 'technician', 'therapist', 'pharmacist', 'physiotherapist', 'other']
+        enum: [
+            'doctor', 'nurse', 'pharmacist', 'dentist', 'physiotherapist',
+            'radiologist', 'laboratory scientist', 'optometrist', 'dietitian',
+            'psychologist', 'surgeon', 'cardiologist', 'dermatologist',
+            'pediatrician', 'gynecologist', 'technician', 'therapist', 'other'
+        ]
     },
     licenseNumber: {
         type: String,

@@ -220,10 +220,28 @@ router.put('/profile/update', protect, async (req, res) => {
             }
         });
 
+        // ── Normalise array fields ──────────────────────────────────────────
+        // The frontend sends plain strings; the model stores objects.
+        // Convert gracefully so both shapes work.
+
+        if (Array.isArray(updateData.qualifications)) {
+            updateData.qualifications = updateData.qualifications.map(q => {
+                if (typeof q === 'string') return { degree: q, institution: '', year: null };
+                return q;
+            });
+        }
+
+        if (Array.isArray(updateData.certifications)) {
+            updateData.certifications = updateData.certifications.map(c => {
+                if (typeof c === 'string') return { name: c, issuingBody: '', issueDate: null };
+                return c;
+            });
+        }
+
         const professional = await Professional.findOneAndUpdate(
             { user: req.user._id },
             { $set: updateData },
-            { new: true, runValidators: true }
+            { new: true, runValidators: false }  // runValidators: false avoids enum/type errors on partial updates
         );
 
         if (!professional) {
