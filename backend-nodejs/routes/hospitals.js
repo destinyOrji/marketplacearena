@@ -117,7 +117,8 @@ router.put('/profile/update', protect, async (req, res) => {
             'website', 'description', 'specializations', 'services', 'operatingHours',
             'emergencyServices', 'totalBeds', 'availableBeds', 'icuBeds',
             'profileImage', 'logo', 'licenseNumber', 'licenseExpiry',
-            'contactPerson', 'contactPhone', 'contactEmail'
+            'contactPerson', 'contactPhone', 'contactEmail',
+            'facilities', 'departments', 'acceptedInsurance', 'paymentMethods'
         ];
 
         const updateData = {};
