@@ -240,11 +240,6 @@ const ProfileOnboarding: React.FC = () => {
   const TABS: { id: Tab; label: string }[] = [
     { id: 'profile',     label: '👤 Profile' },
     { id: 'credentials', label: '🎓 Credentials' },
-    { id: 'password',    label: '🔒 Password' },
-  ];
-  const TABS: { id: Tab; label: string }[] = [
-    { id: 'profile',     label: '👤 Profile' },
-    { id: 'credentials', label: '🎓 Credentials' },
     { id: 'documents',   label: '📄 Documents' },
     { id: 'password',    label: '🔒 Password' },
   ];
