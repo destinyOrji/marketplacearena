@@ -43,7 +43,7 @@ interface PlanOptions {
   resetPolicy: string[];
   unusedCreditsPolicy: string[];
   limitAction: string[];
-  suggestedFeatures: { key: string; label: string }[];
+  featuresByRole: Record<string, { key: string; label: string }[]>;
 }
 
 const EMPTY_FORM = {
