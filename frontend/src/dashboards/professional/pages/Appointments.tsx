@@ -203,14 +203,24 @@ const Appointments: React.FC = () => {
                           )}
                           {apt.status === 'confirmed' && (
                             <>
-                              {(apt.type === 'video_call' || apt.type === 'video') && (
+                              {(apt.type === 'video_call' || apt.type === 'video' || apt.type === 'phone_call' ||
+                                apt.appointmentMode === 'video_call' || apt.appointmentMode === 'phone_call') && (
                                 <button onClick={() => navigate(`/professional/video-call/${apt.id}`)}
-                                  className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+                                  className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm ${
+                                    (apt.type === 'phone_call' || apt.appointmentMode === 'phone_call')
+                                      ? 'bg-green-600 hover:bg-green-700'
+                                      : 'bg-blue-600 hover:bg-blue-700'
+                                  }`}>
                                   <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                      d={(apt.type === 'phone_call' || apt.appointmentMode === 'phone_call')
+                                        ? "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                        : "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      } />
                                   </svg>
-                                  <span className="hidden xs:inline">Join Call</span>
+                                  <span className="hidden xs:inline">
+                                    {(apt.type === 'phone_call' || apt.appointmentMode === 'phone_call') ? 'Join Call' : 'Join Video'}
+                                  </span>
                                 </button>
                               )}
                               <button onClick={() => setSelectedAppointment({ ...apt, _action: 'message' })}
@@ -562,16 +572,26 @@ const AppointmentModal: React.FC<ModalProps> = ({ appointment, onClose, onUpdate
 
           {!isRejectMode && !isMessageMode && appointment.status === 'confirmed' && (
             <>
-              {(appointment.type === 'video_call' || appointment.type === 'video') && (
+              {(appointment.type === 'video_call' || appointment.type === 'video' || appointment.type === 'phone_call' ||
+                appointment.appointmentMode === 'video_call' || appointment.appointmentMode === 'phone_call') && (
                 <button
                   onClick={() => { onClose(); navigate(`/professional/video-call/${appointment.id}`); }}
                   disabled={loading}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 transition-colors">
+                  className={`flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl disabled:opacity-50 transition-colors ${
+                    (appointment.type === 'phone_call' || appointment.appointmentMode === 'phone_call')
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      d={(appointment.type === 'phone_call' || appointment.appointmentMode === 'phone_call')
+                        ? "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                        : "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      } />
                   </svg>
-                  Join Video Call
+                  {(appointment.type === 'phone_call' || appointment.appointmentMode === 'phone_call')
+                    ? 'Join Phone Call'
+                    : 'Join Video Call'}
                 </button>
               )}
               <button onClick={handleComplete} disabled={loading}
