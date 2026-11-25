@@ -39,7 +39,7 @@ const getOrCreateRoom = async (appointmentId, expiryHours = 24) => {
     try {
         const existing = await client.get(`/rooms/${name}`);
         const token    = await createMeetingToken(name, expiry);
-        return { url: existing.data.url, name, token };
+        return { url: existing.data.url, name, token, isNew: false };
     } catch (err) {
         // 404 means room doesn't exist yet — create it
         if (err.response?.status !== 404) throw err;
@@ -65,7 +65,7 @@ const getOrCreateRoom = async (appointmentId, expiryHours = 24) => {
     });
 
     const token = await createMeetingToken(name, expiry);
-    return { url: res.data.url, name, token };
+    return { url: res.data.url, name, token, isNew: true };
 };
 
 /**

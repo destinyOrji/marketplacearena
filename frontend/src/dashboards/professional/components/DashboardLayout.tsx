@@ -1,11 +1,10 @@
 // Dashboard Layout Component
-// Integrates sidebar and header with main content area
-
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import ErrorBoundary from './ErrorBoundary';
+import IncomingCallBanner from '../../../components/IncomingCallBanner';
 
 interface DashboardLayoutProps {
   children?: React.ReactNode;
@@ -14,16 +13,14 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const closeSidebar  = () => setIsSidebarOpen(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Incoming call banner — sits above everything */}
+      <IncomingCallBanner />
+
       {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
 

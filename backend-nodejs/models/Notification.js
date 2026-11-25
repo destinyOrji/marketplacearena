@@ -10,7 +10,7 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
     type: {
         type: String,
-        enum: ['appointment', 'payment', 'system', 'job_posted', 'application_received', 'application_status', 'general'],
+        enum: ['appointment', 'payment', 'system', 'job_posted', 'application_received', 'application_status', 'call_started', 'general'],
         default: 'general'
     },
     data: { type: mongoose.Schema.Types.Mixed },

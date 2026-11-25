@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import IncomingCallBanner from '../../../components/IncomingCallBanner';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -9,16 +10,14 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-  };
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const closeSidebar  = () => setSidebarOpen(false);
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Incoming call banner — sits above everything */}
+      <IncomingCallBanner />
+
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
