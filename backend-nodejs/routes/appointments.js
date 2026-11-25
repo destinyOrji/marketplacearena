@@ -52,14 +52,54 @@ router.post('/book', protect, async (req, res) => {
             consultationFee
         } = req.body;
 
-        // Get client
+        // ── Validation ──────────────────────────────────────────────────────
+        if (!scheduledDate || !scheduledTime) {
+            return res.status(400).json({ success: false, message: 'scheduledDate and scheduledTime are required' });
+        }
+
+        const bookingDate = new Date(scheduledDate);
+        if (isNaN(bookingDate.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid scheduledDate' });
+        }
+
+        // Prevent past-date bookings (compare date only, not time, to allow same-day)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (bookingDate < today) {
+            return res.status(400).json({ success: false, message: 'Cannot book an appointment in the past' });
+        }
+
+        if (!professionalId && !gymPhysioId && !hospitalId) {
+            return res.status(400).json({ success: false, message: 'A provider (professional, gym, or hospital) is required' });
+        }
+
+        // ── Double-booking check ──────────────────────────────────────────────
+        // Check if the same provider already has a confirmed/scheduled appointment at this date+time
+        const conflictQuery: any = {
+            scheduledDate: bookingDate,
+            scheduledTime,
+            status: { $in: ['scheduled', 'confirmed'] },
+        };
+        if (professionalId) conflictQuery.professional = professionalId;
+        else if (gymPhysioId) conflictQuery.gymPhysio   = gymPhysioId;
+
+        if (professionalId || gymPhysioId) {
+            const conflict = await Appointment.findOne(conflictQuery);
+            if (conflict) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'This time slot is already booked. Please choose a different time.'
+                });
+            }
+        }
+
+        // ── Get client ───────────────────────────────────────────────────────
         const client = await Client.findOne({ user: req.user._id });
         if (!client) {
             return res.status(404).json({ success: false, message: 'Client profile not found' });
         }
 
-        // Create appointment data
-        const appointmentData = {
+        const appointmentData: any = {
             client: client._id,
             appointmentType: appointmentType || 'consultation',
             appointmentMode: appointmentMode || 'in_person',

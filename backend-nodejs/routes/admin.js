@@ -45,8 +45,8 @@ router.get('/patients/:id/emergencies',     adminAuth, checkPermission('users_vi
 router.get('/professionals',                           adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.getProfessionals);
 router.get('/professionals/verification/pending',      adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.getPendingVerifications);
 router.get('/professionals/:id',                       adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.getProfessionalById);
-router.put('/professionals/:id/update',                adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.updateProfessional);
-router.delete('/professionals/:id/delete',             adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.deleteProfessional);
+router.put('/professionals/:id/update',                adminAuth, checkPermission('professionals_verify'), adminProfessionalsController.updateProfessional);
+router.delete('/professionals/:id/delete',             adminAuth, checkPermission('professionals_verify'), adminProfessionalsController.deleteProfessional);
 router.get('/professionals/:id/services',              adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.getProfessionalServices);
 router.patch('/professionals/:id/services/:serviceId', adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.toggleServiceStatus);
 router.get('/professionals/:id/applications',          adminAuth, checkPermission('professionals_view'),   adminProfessionalsController.getProfessionalApplications);

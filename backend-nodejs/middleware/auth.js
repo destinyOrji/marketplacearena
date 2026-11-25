@@ -30,6 +30,14 @@ exports.protect = async (req, res, next) => {
             });
         }
 
+        // Block suspended accounts even with a valid token
+        if (user.status === 'suspended') {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account has been suspended. Please contact support.'
+            });
+        }
+
         req.user = user;
         next();
     } catch (error) {

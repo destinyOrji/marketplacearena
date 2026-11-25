@@ -487,6 +487,39 @@ exports.register = async (req, res) => {
 };
 
 // ─── Login ───────────────────────────────────────────────────────────────────
+// ─── Login brute-force protection ────────────────────────────────────────────
+// Tracks failed login attempts per IP — mirrors the admin login lockout.
+
+const LOGIN_MAX = 10;
+const LOGIN_WIN = 15 * 60 * 1000; // 15 min window
+const LOGIN_LOCK = 15 * 60 * 1000; // 15 min lockout
+const loginAttempts = new Map();
+
+const checkLoginAllowed = (ip) => {
+    const now = Date.now();
+    let r = loginAttempts.get(ip);
+    if (r && now - r.windowStart > LOGIN_WIN) { loginAttempts.delete(ip); r = null; }
+    if (!r) { r = { count: 0, windowStart: now, lockedUntil: null }; loginAttempts.set(ip, r); }
+    if (r.lockedUntil && now < r.lockedUntil) {
+        return { allowed: false, minutesLeft: Math.ceil((r.lockedUntil - now) / 60000) };
+    }
+    return { allowed: true };
+};
+const recordFailedLogin = (ip) => {
+    const r = loginAttempts.get(ip) || { count: 0, windowStart: Date.now(), lockedUntil: null };
+    r.count += 1;
+    if (r.count >= LOGIN_MAX) r.lockedUntil = Date.now() + LOGIN_LOCK;
+    loginAttempts.set(ip, r);
+};
+const resetLoginAttempts = (ip) => loginAttempts.delete(ip);
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of loginAttempts.entries()) {
+        if (now - v.windowStart > LOGIN_WIN * 2) loginAttempts.delete(k);
+    }
+}, 30 * 60 * 1000);
+
+// ─── Login ───────────────────────────────────────────────────────────────────
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -497,9 +530,20 @@ exports.login = async (req, res) => {
             });
         }
 
+        // IP-based brute-force check
+        const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+        const lock = checkLoginAllowed(ip);
+        if (!lock.allowed) {
+            return res.status(429).json({
+                success: false,
+                message: `Too many failed login attempts. Try again in ${lock.minutesLeft} minute${lock.minutesLeft !== 1 ? 's' : ''}.`
+            });
+        }
+
         const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
         if (!user) {
+            recordFailedLogin(ip);
             return res.status(401).json({
                 success: false, message: "Invalid credentials"
             });
@@ -507,6 +551,7 @@ exports.login = async (req, res) => {
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
+            recordFailedLogin(ip);
             return res.status(401).json({
                 success: false, message: "Invalid credentials"
             });
@@ -518,6 +563,7 @@ exports.login = async (req, res) => {
             });
         }
 
+        resetLoginAttempts(ip);
         await user.updateLoginInfo();
 
         const token = generateToken(user._id);

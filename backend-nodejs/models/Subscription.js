@@ -75,6 +75,8 @@ const subscriptionSchema = new mongoose.Schema({
 subscriptionSchema.index({ client: 1, status: 1 });
 subscriptionSchema.index({ user: 1, status: 1 });
 subscriptionSchema.index({ endDate: 1, status: 1 });
+// Prevent double-processing of the same Paystack reference
+subscriptionSchema.index({ paymentReference: 1 }, { unique: true, sparse: true });
 
 // Method to check if subscription is active
 subscriptionSchema.methods.isActive = function() {

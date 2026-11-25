@@ -256,19 +256,29 @@ router.post('/upload-photo', protect, upload.single('photo'), async (req, res) =
     }
 });
 
-// Upload document
+// Upload document — saves URL to the professional's model field
 router.post('/documents/upload', protect, upload.single('document'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
-        
-        const documentUrl = `/uploads/services/${req.file.filename}`;
-        
-        res.json({ 
-            success: true, 
-            data: { documentUrl },
-            message: 'Document uploaded successfully' 
+
+        const documentUrl  = `/uploads/services/${req.file.filename}`;
+        const documentType = req.body.documentType; // e.g. 'licenseDocument', 'identityDocument', 'certifications'
+
+        // Allowed document fields on the Professional model
+        const ALLOWED_DOC_FIELDS = ['licenseDocument', 'identityDocument', 'resumeFile'];
+
+        const updateData: any = {};
+        if (documentType && ALLOWED_DOC_FIELDS.includes(documentType)) {
+            updateData[documentType] = documentUrl;
+            await Professional.findOneAndUpdate({ user: req.user._id }, { $set: updateData });
+        }
+
+        res.json({
+            success: true,
+            data: { documentUrl, documentType },
+            message: 'Document uploaded successfully'
         });
     } catch (error) {
         console.error('Error uploading document:', error);
@@ -402,8 +412,8 @@ router.post('/services/create', protect, async (req, res) => {
         }
         
         // Validate price and duration
-        if (req.body.price < 0) {
-            return res.status(400).json({ success: false, message: 'Price must be >= 0' });
+        if (req.body.price <= 0) {
+            return res.status(400).json({ success: false, message: 'Price must be greater than 0' });
         }
         
         if (req.body.duration < 15) {
