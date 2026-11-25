@@ -301,6 +301,14 @@ const PlanForm: React.FC<PlanFormProps> = ({ initial, options, token, onDone, on
 
 // ─── Assign Plan Modal ────────────────────────────────────────────────────────
 
+const ROLES = [
+  { value: 'client',       label: 'Patient / Client' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'hospital',     label: 'Hospital' },
+  { value: 'ambulance',    label: 'Ambulance Provider' },
+  { value: 'gym-physio',   label: 'Gym & Physio Provider' },
+];
+
 interface AssignModalProps {
   plans: Plan[];
   token: string;
@@ -309,26 +317,32 @@ interface AssignModalProps {
 }
 
 const AssignModal: React.FC<AssignModalProps> = ({ plans, token, onDone, onClose }) => {
-  const [form, setForm]   = useState({ targetUserId: '', planId: '', reason: '' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [mode, setMode]       = useState<'user' | 'role'>('user');
+  const [form, setForm]       = useState({ targetUserId: '', targetRole: '', planId: '', reason: '' });
+  const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState('');
   const [success, setSuccess] = useState('');
 
   const handleSubmit = async () => {
-    if (!form.targetUserId.trim()) { setError('User ID is required'); return; }
-    if (!form.planId)              { setError('Select a plan'); return; }
-    if (!form.reason.trim())       { setError('Reason is required'); return; }
+    if (mode === 'user' && !form.targetUserId.trim()) { setError('User ID is required'); return; }
+    if (mode === 'role' && !form.targetRole)           { setError('Select a role'); return; }
+    if (!form.planId)                                  { setError('Select a plan'); return; }
+    if (!form.reason.trim())                           { setError('Reason is required'); return; }
     setSaving(true); setError('');
     try {
+      const body: any = { planId: form.planId, reason: form.reason };
+      if (mode === 'user') body.targetUserId = form.targetUserId.trim();
+      else                 body.targetRole   = form.targetRole;
+
       const res  = await fetch(`${API}/admin/plans/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok || json.statuscode !== 0) throw new Error(json.message || 'Assignment failed');
-      setSuccess(`Plan assigned to ${json.data.user.email}`);
-      setTimeout(() => { onDone(); onClose(); }, 1500);
+      setSuccess(json.message);
+      setTimeout(() => { onDone(); onClose(); }, 2000);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -342,27 +356,77 @@ const AssignModal: React.FC<AssignModalProps> = ({ plans, token, onDone, onClose
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-bold text-gray-900">Assign Plan to User</h2>
+          <h2 className="text-lg font-bold text-gray-900">Assign Plan</h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100"><FiX className="h-5 w-5 text-gray-500" /></button>
         </div>
         <div className="px-6 py-5 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">User ID (MongoDB _id)</label>
-            <input value={form.targetUserId} onChange={e => setForm(f => ({ ...f, targetUserId: e.target.value }))} className={inputCls} placeholder="6b044a858e74ce165f0c5305" />
+
+          {/* Mode toggle */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => setMode('user')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${mode === 'user' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              Specific User
+            </button>
+            <button
+              onClick={() => setMode('role')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${mode === 'role' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              Entire Role
+            </button>
           </div>
+
+          {/* Input based on mode */}
+          {mode === 'user' ? (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">User ID (MongoDB _id)</label>
+              <input
+                value={form.targetUserId}
+                onChange={e => setForm(f => ({ ...f, targetUserId: e.target.value }))}
+                className={inputCls}
+                placeholder="6b044a858e74ce165f0c5305"
+              />
+              <p className="mt-1 text-xs text-gray-400">Find the ID in Admin → Patients / Professionals list</p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Assign to all users of role</label>
+              <select
+                value={form.targetRole}
+                onChange={e => setForm(f => ({ ...f, targetRole: e.target.value }))}
+                className={inputCls}
+              >
+                <option value="">— Select role —</option>
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+              {form.targetRole && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                  ⚠️ This assigns the plan to <strong>all active {ROLES.find(r => r.value === form.targetRole)?.label}</strong> accounts and cancels their current subscriptions.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Plan selector */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Plan</label>
             <select value={form.planId} onChange={e => setForm(f => ({ ...f, planId: e.target.value }))} className={inputCls}>
               <option value="">— Select plan —</option>
               {plans.filter(p => p.status === 'active').map(p => (
-                <option key={p.id} value={p.id}>{p.planName} ({p.eligibility}) — {fmt(p.regularPrice, p.currency)}/{p.billingInterval}</option>
+                <option key={p.id} value={p.id}>
+                  {p.planName} ({p.eligibility}) — {(p as any).isFree ? 'Free' : fmt((p as any).effectivePrice ?? p.regularPrice, p.currency)}
+                </option>
               ))}
             </select>
           </div>
+
+          {/* Reason */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Reason (audit log)</label>
             <textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} rows={2} className={inputCls} placeholder="e.g. Compensation for downtime" />
           </div>
+
           {error   && <p className="text-sm text-red-600">{error}</p>}
           {success && <p className="text-sm text-green-600">{success}</p>}
         </div>

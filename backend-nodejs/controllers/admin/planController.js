@@ -372,49 +372,112 @@ exports.assignPlan = async (req, res) => {
     try {
         if (!requireSuperAdmin(req, res)) return;
 
-        const { targetUserId, planId, reason } = req.body;
-        if (!targetUserId) return res.status(400).json({ statuscode: 1, status: 'error', message: 'targetUserId is required.' });
-        if (!planId)       return res.status(400).json({ statuscode: 1, status: 'error', message: 'planId is required.' });
-        if (!reason)       return res.status(400).json({ statuscode: 1, status: 'error', message: 'reason is required (kept in audit log).' });
+        const { targetUserId, targetRole, planId, reason } = req.body;
+        if (!planId)  return res.status(400).json({ statuscode: 1, status: 'error', message: 'planId is required.' });
+        if (!reason)  return res.status(400).json({ statuscode: 1, status: 'error', message: 'reason is required (kept in audit log).' });
+        if (!targetUserId && !targetRole) {
+            return res.status(400).json({ statuscode: 1, status: 'error', message: 'Provide either targetUserId or targetRole.' });
+        }
 
-        const [plan, user] = await Promise.all([
-            Plan.findById(planId),
-            User.findById(targetUserId),
-        ]);
+        const [plan] = await Promise.all([Plan.findById(planId)]);
         if (!plan) return res.status(404).json({ statuscode: 1, status: 'error', message: 'Plan not found.' });
-        if (!user) return res.status(404).json({ statuscode: 1, status: 'error', message: 'User not found.' });
         if (plan.status !== 'active') {
             return res.status(400).json({ statuscode: 1, status: 'error', message: 'Only an active plan can be assigned.' });
         }
 
-        // Cancel any existing active subscription for this user
+        // ── Assign to an entire role ──────────────────────────────────────────
+        if (targetRole && !targetUserId) {
+            const validRoles = ['client', 'patient', 'professional', 'hospital', 'ambulance', 'gym-physio'];
+            if (!validRoles.includes(targetRole)) {
+                return res.status(400).json({ statuscode: 1, status: 'error', message: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+            }
+
+            const users = await User.find({
+                role: { $in: targetRole === 'client' ? ['client', 'patient'] : [targetRole] },
+                isActive: { $ne: false }
+            }).select('_id role');
+
+            if (!users.length) {
+                return res.status(404).json({ statuscode: 1, status: 'error', message: `No active users found with role "${targetRole}".` });
+            }
+
+            const Subscription = require('../models/Subscription');
+            const isFree    = plan.isFree || plan.effectivePrice === 0;
+            const startDate = new Date();
+            const endDate   = new Date(startDate);
+            if (isFree || plan.billingInterval === 'one_time') {
+                endDate.setFullYear(endDate.getFullYear() + 100);
+            } else {
+                endDate.setMonth(endDate.getMonth() + (plan.durationMonths || 1));
+            }
+
+            let assigned = 0;
+            let skipped  = 0;
+
+            for (const user of users) {
+                // Cancel existing active subscription
+                await Subscription.updateMany(
+                    { user: user._id, status: 'active' },
+                    { $set: { status: 'cancelled', cancelledAt: new Date(), cancelReason: `Superseded by role assignment: ${reason}` } }
+                );
+                await Subscription.create({
+                    user:          user._id,
+                    planRef:       plan._id,
+                    plan:          plan.planName,
+                    planName:      plan.planName,
+                    providerType:  user.role,
+                    amount:        isFree ? 0 : plan.effectivePrice,
+                    currency:      plan.currency || 'NGN',
+                    startDate,
+                    endDate,
+                    status:        'active',
+                    paymentStatus: 'completed',
+                    assignedBy:    req.user._id,
+                    assignReason:  reason,
+                });
+                assigned++;
+            }
+
+            return res.status(201).json({
+                statuscode: 0, status: 'success',
+                message: `Plan "${plan.planName}" assigned to ${assigned} user(s) with role "${targetRole}". ${skipped} skipped.`,
+                data: { assigned, skipped, planId: plan._id, role: targetRole },
+            });
+        }
+
+        // ── Assign to a single user ───────────────────────────────────────────
+        const user = await User.findById(targetUserId);
+        if (!user) return res.status(404).json({ statuscode: 1, status: 'error', message: 'User not found.' });
+
+        const Subscription = require('../models/Subscription');
         await Subscription.updateMany(
             { user: user._id, status: 'active' },
             { $set: { status: 'cancelled', cancelledAt: new Date(), cancelReason: `Superseded by manual assignment: ${reason}` } }
         );
 
+        const isFree    = plan.isFree || plan.effectivePrice === 0;
         const startDate = new Date();
         const endDate   = new Date(startDate);
-        if (plan.durationMonths > 0) {
-            endDate.setMonth(endDate.getMonth() + plan.durationMonths);
+        if (isFree || plan.billingInterval === 'one_time') {
+            endDate.setFullYear(endDate.getFullYear() + 100);
         } else {
-            endDate.setFullYear(endDate.getFullYear() + 100); // one_time = effectively permanent
+            endDate.setMonth(endDate.getMonth() + (plan.durationMonths || 1));
         }
 
         const subscription = await Subscription.create({
-            user:            user._id,
-            planRef:         plan._id,
-            plan:            plan.planName,
-            planName:        plan.planName,
-            providerType:    user.role,
-            amount:          plan.effectivePrice,
-            status:          'active',
-            paymentStatus:   'completed',
-            paymentReference: `MANUAL-${req.user._id}-${Date.now()}`,
+            user:          user._id,
+            planRef:       plan._id,
+            plan:          plan.planName,
+            planName:      plan.planName,
+            providerType:  user.role,
+            amount:        isFree ? 0 : plan.effectivePrice,
+            currency:      plan.currency || 'NGN',
             startDate,
             endDate,
-            assignedBy:      req.user._id,
-            assignReason:    reason,
+            status:        'active',
+            paymentStatus: 'completed',
+            assignedBy:    req.user._id,
+            assignReason:  reason,
         });
 
         res.status(201).json({
