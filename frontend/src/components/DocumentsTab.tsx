@@ -25,20 +25,43 @@ const STATIC   = API_BASE.replace('/api', '');
 export interface DocSlot {
   key:         string;   // documentType field name e.g. 'licenseDocument'
   label:       string;   // display name e.g. 'Licence / Registration'
-  description: string;   // hint text
+  hint?:       string;   // hint text (alias: description)
+  description?: string;  // alias for hint
   required?:   boolean;
   accept?:     string;   // file accept string, default 'application/pdf,image/*'
 }
 
 interface Props {
-  uploadUrl:    string;          // e.g. '/professionals/documents/upload'
-  token:        string;
-  slots:        DocSlot[];
-  existingDocs: Record<string, string | undefined>;
-  onUploaded:   (key: string, url: string) => void;
+  uploadEndpoint:  string;          // e.g. '/professionals/documents/upload'
+  uploadUrl?:      string;          // alias for uploadEndpoint (legacy)
+  token?:          string;          // optional — component reads from localStorage if not passed
+  slots:           DocSlot[];
+  existingDocs:    Record<string, string | undefined>;
+  onUploadSuccess?: (key: string, url: string) => void;
+  onUploaded?:     (key: string, url: string) => void;  // alias
 }
 
-const DocumentsTab: React.FC<Props> = ({ uploadUrl, token, slots, existingDocs, onUploaded }) => {
+const DocumentsTab: React.FC<Props> = ({
+  uploadEndpoint,
+  uploadUrl,
+  token: tokenProp,
+  slots,
+  existingDocs,
+  onUploadSuccess,
+  onUploaded,
+}) => {
+  const endpoint   = uploadEndpoint || uploadUrl || '';
+  const callback   = onUploadSuccess || onUploaded || (() => {});
+  // Read token from props or fall back to localStorage (works for all dashboards)
+  const getToken   = () =>
+    tokenProp ||
+    localStorage.getItem('professionalToken') ||
+    localStorage.getItem('hospitalToken') ||
+    localStorage.getItem('gymPhysioToken') ||
+    localStorage.getItem('ambulanceToken') ||
+    localStorage.getItem('authToken') ||
+    '';
+
   const [uploading, setUploading] = useState<string | null>(null);
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const refs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -67,14 +90,14 @@ const DocumentsTab: React.FC<Props> = ({ uploadUrl, token, slots, existingDocs, 
       fd.append('document', file);
       fd.append('documentType', slot.key);
 
-      const res  = await fetch(`${API_BASE}${uploadUrl}`, {
+      const res  = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
         body: fd,
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || 'Upload failed');
-      onUploaded(slot.key, json.data.documentUrl);
+      callback(slot.key, json.data.documentUrl);
     } catch (ex: any) {
       setErrors(e => ({ ...e, [slot.key]: ex.message || 'Upload failed' }));
     } finally {
@@ -136,7 +159,7 @@ const DocumentsTab: React.FC<Props> = ({ uploadUrl, token, slots, existingDocs, 
                   <span className="text-xs font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">✓ Uploaded</span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">{slot.description}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{slot.hint || slot.description}</p>
               {errors[slot.key] && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-red-600">
                   <FiAlertCircle className="h-3 w-3 flex-shrink-0" /> {errors[slot.key]}
