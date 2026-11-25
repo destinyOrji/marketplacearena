@@ -21,6 +21,7 @@ import { FiSave, FiPlus, FiX } from 'react-icons/fi';
 import { useHospital } from '../contexts/HospitalContext';
 import { hospitalApi } from '../services/api';
 import PasswordStrengthMeter, { getPasswordStrength } from '../../../components/PasswordStrengthMeter';
+import DocumentsTab, { DocSlot } from '../../../components/DocumentsTab';
 
 // ─── Shared tag input (same as professional) ──────────────────────────────────
 
@@ -150,7 +151,7 @@ const validateBeds = (f: any) => {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type Tab = 'basic' | 'contact' | 'beds' | 'services' | 'password';
+type Tab = 'basic' | 'contact' | 'beds' | 'services' | 'documents' | 'password';
 
 const Profile: React.FC = () => {
   const { hospital, updateHospital, loading } = useHospital();
@@ -178,6 +179,8 @@ const Profile: React.FC = () => {
     currentPassword: '', newPassword: '', confirmPassword: '',
   });
 
+  const [existingDocs, setExistingDocs] = useState<Record<string, string | undefined>>({});
+
   useEffect(() => {
     if (!hospital) return;
     const h = hospital as any;
@@ -204,6 +207,11 @@ const Profile: React.FC = () => {
       acceptedInsurance: Array.isArray(h.acceptedInsurance) ? h.acceptedInsurance : [],
       paymentMethods:    Array.isArray(h.paymentMethods)    ? h.paymentMethods    : [],
       registrationNumber: h.registrationNumber || '',
+    });
+    setExistingDocs({
+      licenseDocument:         (h as any).licenseDocument         || undefined,
+      registrationCertificate: (h as any).registrationCertificate || undefined,
+      accreditationDocument:   (h as any).accreditationDocument   || undefined,
     });
   }, [hospital]);
 
@@ -309,11 +317,12 @@ const Profile: React.FC = () => {
   );
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: 'basic',    label: '🏥 Basic Info' },
-    { id: 'contact',  label: '📞 Contact' },
-    { id: 'beds',     label: '🛏️ Beds & Units' },
-    { id: 'services', label: '🏷️ Services' },
-    { id: 'password', label: '🔒 Password' },
+    { id: 'basic',     label: '🏥 Basic Info' },
+    { id: 'contact',   label: '📞 Contact' },
+    { id: 'beds',      label: '🛏️ Beds & Units' },
+    { id: 'services',  label: '🏷️ Services' },
+    { id: 'documents', label: '📄 Documents' },
+    { id: 'password',  label: '🔒 Password' },
   ];
 
   const HOSPITAL_TYPES = [

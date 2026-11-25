@@ -1342,9 +1342,29 @@ router.post('/upload-image', protect, upload.single('image'), async (req, res) =
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
         const imageUrl = `/uploads/hospitals/${req.file.filename}`;
-        // Save to hospital profile
         await Hospital.findOneAndUpdate({ user: req.user._id }, { $set: { logoUrl: imageUrl } });
         res.json({ success: true, data: { image_url: imageUrl }, message: 'Image uploaded successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Upload document — saves URL to the Hospital model field
+router.post('/documents/upload', protect, upload.single('document'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+        const documentUrl  = `/uploads/hospitals/${req.file.filename}`;
+        const documentType = req.body.documentType;
+        const ALLOWED      = ['licenseDocument', 'registrationCertificate', 'accreditationDocument'];
+
+        if (documentType && ALLOWED.includes(documentType)) {
+            await Hospital.findOneAndUpdate(
+                { user: req.user._id },
+                { $set: { [documentType]: documentUrl } }
+            );
+        }
+
+        res.json({ success: true, data: { documentUrl, documentType }, message: 'Document uploaded successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

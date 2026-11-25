@@ -209,20 +209,23 @@ router.post('/upload-photo', protect, upload.single('photo'), async (req, res) =
     }
 });
 
-// Upload document
+// Upload document — saves URL to the GymPhysio model field
 router.post('/documents/upload', protect, upload.single('document'), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+
+        const documentUrl  = `/uploads/gym-physio/${req.file.filename}`;
+        const documentType = req.body.documentType;
+        const ALLOWED      = ['licenseDocument', 'businessRegistration', 'businessDocument'];
+
+        if (documentType && ALLOWED.includes(documentType)) {
+            await GymPhysio.findOneAndUpdate(
+                { user: req.user._id },
+                { $set: { [documentType]: documentUrl } }
+            );
         }
-        
-        const documentUrl = `/uploads/gym-physio/${req.file.filename}`;
-        
-        res.json({ 
-            success: true, 
-            data: { documentUrl },
-            message: 'Document uploaded successfully' 
-        });
+
+        res.json({ success: true, data: { documentUrl, documentType }, message: 'Document uploaded successfully' });
     } catch (error) {
         console.error('Error uploading document:', error);
         res.status(500).json({ success: false, message: error.message });

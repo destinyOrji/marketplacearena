@@ -143,9 +143,19 @@ router.post('/upload-photo', protect, upload.single('photo'), async (req, res) =
 // Update ambulance profile
 router.put('/profile/update', protect, async (req, res) => {
     try {
+        const ALLOWED = [
+            'serviceName', 'serviceType', 'phone', 'emergencyNumber', 'email',
+            'licenseNumber', 'registrationNumber', 'baseAddress', 'isAvailable',
+            'description', 'operatingHours', 'responseTimeMinutes',
+            'certifications', 'staffCount', 'website',
+        ];
+        const updateData: any = {};
+        ALLOWED.forEach((f: any) => {
+            if ((req.body as any)[f] !== undefined) updateData[f] = (req.body as any)[f];
+        });
         const ambulance = await Ambulance.findOneAndUpdate(
             { user: req.user._id },
-            { $set: req.body },
+            { $set: updateData },
             { new: true }
         );
         
@@ -1046,8 +1056,18 @@ router.post('/upload-photo', protect, upload.single('photo'), async (req, res) =
 router.post('/documents/upload', protect, upload.single('document'), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
-        const documentUrl = `/uploads/ambulance/${req.file.filename}`;
-        res.json({ success: true, data: { documentUrl }, message: 'Document uploaded successfully' });
+        const documentUrl  = `/uploads/ambulance/${req.file.filename}`;
+        const documentType = req.body.documentType;
+        const ALLOWED      = ['licenseDocument', 'insuranceDocument'];
+
+        if (documentType && ALLOWED.includes(documentType)) {
+            await Ambulance.findOneAndUpdate(
+                { user: req.user._id },
+                { $set: { [documentType]: documentUrl } }
+            );
+        }
+
+        res.json({ success: true, data: { documentUrl, documentType }, message: 'Document uploaded successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
