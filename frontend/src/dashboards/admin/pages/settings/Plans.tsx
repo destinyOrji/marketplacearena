@@ -262,22 +262,40 @@ const PlanForm: React.FC<PlanFormProps> = ({ initial, options, token, onDone, on
             </div>
           </div>
 
-          {/* Feature flags */}
+          {/* Feature flags — filtered by selected eligibility */}
           <div>
-            <p className="text-sm font-bold text-gray-700 mb-2">Feature Flags</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {options.suggestedFeatures.map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={!!form.features[key]}
-                    onChange={() => toggleFeature(key)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
+            <p className="text-sm font-bold text-gray-700 mb-1">
+              Feature Flags
+              <span className="ml-2 text-xs font-normal text-gray-400">
+                (shown based on eligibility: <strong>{form.eligibility}</strong>)
+              </span>
+            </p>
+            {(() => {
+              // Build the feature list: always include 'all' group, plus the specific role group
+              const allFeatures = options.featuresByRole?.all || [];
+              const roleFeatures = form.eligibility !== 'all'
+                ? (options.featuresByRole?.[form.eligibility] || [])
+                : Object.entries(options.featuresByRole || {})
+                    .filter(([k]) => k !== 'all')
+                    .flatMap(([, v]) => v)
+                    .filter((f, i, arr) => arr.findIndex(x => x.key === f.key) === i); // dedupe
+              const displayFeatures = [...roleFeatures, ...allFeatures];
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {displayFeatures.map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded-lg hover:bg-gray-50">
+                      <input
+                        type="checkbox"
+                        checked={!!form.features[key]}
+                        onChange={() => toggleFeature(key)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {error && (
