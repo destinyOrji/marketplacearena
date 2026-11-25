@@ -61,7 +61,24 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
         fetch(`${API_URL}/subscriptions/provider/status`, { headers: headers() }),
       ]);
       const plansData = await plansRes.json();
-      if (plansData.success) setPlans(plansData.data);
+      if (plansData.success) {
+        const normalized = (plansData.data || []).map((p: any) => ({
+          id:            p.id || p._id,
+          name:          p.planName || p.name || 'Plan',
+          duration:      p.billingInterval || p.duration || 'monthly',
+          durationMonths: p.durationMonths ?? 1,
+          price:         p.isFree ? 0 : (p.effectivePrice ?? p.promotionalPrice ?? p.regularPrice ?? p.price ?? 0),
+          currency:      p.currency || 'NGN',
+          popular:       p.popular || false,
+          isFree:        p.isFree || p.regularPrice === 0,
+          features:      Array.isArray(p.features)
+                           ? p.features
+                           : Object.entries(p.features || {}).filter(([, v]) => v).map(([k]) =>
+                               k.replace(/([A-Z])/g, ' $1').replace(/^./, (s: string) => s.toUpperCase())
+                             ),
+        }));
+        setPlans(normalized);
+      }
       const statusData = await statusRes.json();
       if (statusData.success && statusData.data?.subscription) setActiveSub(statusData.data.subscription);
     } catch {
@@ -75,7 +92,7 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
     setProcessingPlan(planId);
     setMessage(null);
     try {
-      // 1. Create subscription record
+      // 1. Subscribe — free plans activate instantly
       const subRes = await fetch(`${API_URL}/subscriptions/provider/subscribe`, {
         method: 'POST',
         headers: headers(),
@@ -87,9 +104,16 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
         return;
       }
 
+      // Free plan — already active, no Paystack
+      if (subData.isFree) {
+        setMessage({ type: 'success', text: 'Your free plan is now active!' });
+        await fetchData();
+        return;
+      }
+
       const subscriptionId = subData.data._id;
 
-      // 2. Initialize Paystack payment
+      // 2. Initialize Paystack payment for paid plans
       const initRes = await fetch(`${API_URL}/subscriptions/provider/initialize-payment/${subscriptionId}`, {
         method: 'POST',
         headers: headers(),
@@ -207,9 +231,11 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
                 <h3 className="text-xl font-bold text-gray-900 mb-1">{plan.name}</h3>
                 <p className="text-sm text-gray-500 mb-5">{plan.duration}</p>
 
-                <div className="mb-6">
+                  <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">₦{plan.price.toLocaleString()}</span>
+                    <span className="text-4xl font-bold text-gray-900">
+                      {(plan as any).isFree ? 'Free' : `₦${plan.price.toLocaleString()}`}
+                    </span>
                   </div>
                 </div>
 
@@ -239,7 +265,7 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
-                      Subscribe — ₦{plan.price.toLocaleString()}
+                      {(plan as any).isFree ? 'Activate Free Plan' : `Subscribe — ₦${plan.price.toLocaleString()}`}
                     </>
                   )}
                 </button>

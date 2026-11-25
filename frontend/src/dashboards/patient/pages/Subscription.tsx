@@ -50,7 +50,26 @@ const Subscription: React.FC = () => {
         }),
       ]);
       const plansData = await plansRes.json();
-      if (plansData.success) setPlans(plansData.data);
+      if (plansData.success) {
+        // Normalize DB plan shape (planName/effectivePrice) and legacy shape (name/price)
+        const normalized = (plansData.data || []).map((p: any) => ({
+          id:            p.id || p._id,
+          name:          p.planName || p.name || 'Plan',
+          duration:      p.billingInterval || p.duration || 'monthly',
+          durationMonths: p.durationMonths ?? 1,
+          price:         p.isFree ? 0 : (p.effectivePrice ?? p.promotionalPrice ?? p.regularPrice ?? p.price ?? 0),
+          currency:      p.currency || 'NGN',
+          savings:       p.savings,
+          popular:       p.popular || false,
+          isFree:        p.isFree || p.regularPrice === 0,
+          features:      Array.isArray(p.features)
+                           ? p.features
+                           : Object.entries(p.features || {}).filter(([, v]) => v).map(([k]) =>
+                               k.replace(/([A-Z])/g, ' $1').replace(/^./, (s: string) => s.toUpperCase())
+                             ),
+        }));
+        setPlans(normalized);
+      }
       const subData = await subRes.json();
       if (subData.success && subData.data) setActiveSubscription(subData.data);
     } catch {
@@ -275,7 +294,7 @@ const Subscription: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                           d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
-                      Subscribe — ₦{plan.price.toLocaleString()}
+                      {(plan as any).isFree ? 'Activate Free Plan' : `Subscribe — ₦${plan.price.toLocaleString()}`}
                     </>
                   )}
                 </button>
