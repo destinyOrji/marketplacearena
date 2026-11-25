@@ -269,7 +269,7 @@ router.post('/documents/upload', protect, upload.single('document'), async (req,
         // Allowed document fields on the Professional model
         const ALLOWED_DOC_FIELDS = ['licenseDocument', 'identityDocument', 'resumeFile'];
 
-        const updateData: any = {};
+        const updateData = {};
         if (documentType && ALLOWED_DOC_FIELDS.includes(documentType)) {
             updateData[documentType] = documentUrl;
             await Professional.findOneAndUpdate({ user: req.user._id }, { $set: updateData });
