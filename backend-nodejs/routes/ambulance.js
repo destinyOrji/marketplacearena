@@ -149,9 +149,9 @@ router.put('/profile/update', protect, async (req, res) => {
             'description', 'operatingHours', 'responseTimeMinutes',
             'certifications', 'staffCount', 'website',
         ];
-        const updateData: any = {};
-        ALLOWED.forEach((f: any) => {
-            if ((req.body as any)[f] !== undefined) updateData[f] = (req.body as any)[f];
+        const updateData = {};
+        ALLOWED.forEach((f) => {
+            if (req.body[f] !== undefined) updateData[f] = req.body[f];
         });
         const ambulance = await Ambulance.findOneAndUpdate(
             { user: req.user._id },

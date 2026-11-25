@@ -75,7 +75,7 @@ router.post('/book', protect, async (req, res) => {
 
         // ── Double-booking check ──────────────────────────────────────────────
         // Check if the same provider already has a confirmed/scheduled appointment at this date+time
-        const conflictQuery: any = {
+        const conflictQuery = {
             scheduledDate: bookingDate,
             scheduledTime,
             status: { $in: ['scheduled', 'confirmed'] },
@@ -99,7 +99,7 @@ router.post('/book', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Client profile not found' });
         }
 
-        const appointmentData: any = {
+        const appointmentData = {
             client: client._id,
             appointmentType: appointmentType || 'consultation',
             appointmentMode: appointmentMode || 'in_person',
