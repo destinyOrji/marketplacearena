@@ -210,7 +210,7 @@ router.put('/profile/update', protect, async (req, res) => {
             'location', 'address', 'city', 'state', 'country',
             'consultationFee', 'currency', 'availableForConsultation',
             'profilePicture', 'education', 'certifications', 'skills',
-            'consultationType', 'licenseNumber', 'licenseExpiry'
+            'qualifications', 'consultationType', 'licenseNumber', 'licenseExpiry'
         ];
 
         const updateData = {};
