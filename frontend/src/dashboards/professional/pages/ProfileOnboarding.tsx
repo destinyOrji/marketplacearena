@@ -108,6 +108,13 @@ const validateProfile = (f: ProfileForm): Record<string, string> => {
 
 type Tab = 'profile' | 'credentials' | 'password' | 'documents';
 
+const PROF_TYPES = [
+  'doctor', 'nurse', 'pharmacist', 'dentist', 'physiotherapist',
+  'radiologist', 'laboratory scientist', 'optometrist', 'dietitian',
+  'psychologist', 'surgeon', 'cardiologist', 'dermatologist',
+  'pediatrician', 'gynecologist', 'other',
+];
+
 const ProfileOnboarding: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [loading, setLoading]     = useState(true);
@@ -138,6 +145,11 @@ const ProfileOnboarding: React.FC = () => {
       const res = await apiClient.get('/professionals/profile');
       const d = res.data?.data || res.data;
       setIsVerified(d.isVerified || false);
+      setExistingDocs({
+        licenseDocument:  d.licenseDocument  || undefined,
+        identityDocument: d.identityDocument || undefined,
+        resumeFile:       d.resumeFile       || undefined,
+      });
       setForm({
         firstName:        d.user?.firstName    || d.firstName    || '',
         lastName:         d.user?.lastName     || d.lastName     || '',
@@ -237,11 +249,6 @@ const ProfileOnboarding: React.FC = () => {
   const lc  = 'block text-sm font-medium text-gray-700 mb-1';
   const err = (k: string) => errors[k] ? <p className="mt-1 text-xs text-red-600">{errors[k]}</p> : null;
 
-  const TABS: { id: Tab; label: string }[] = [
-    { id: 'profile',     label: '👤 Profile' },
-    { id: 'credentials', label: '🎓 Credentials' },
-    { id: 'password',    label: '🔒 Password' },
-  ];
   const TABS: { id: Tab; label: string }[] = [
     { id: 'profile',     label: '👤 Profile' },
     { id: 'credentials', label: '🎓 Credentials' },
@@ -468,6 +475,20 @@ const ProfileOnboarding: React.FC = () => {
                 </button>
               </div>
             </form>
+          )}
+
+          {/* ── DOCUMENTS TAB ───────────────────────────────────────────── */}
+          {activeTab === 'documents' && (
+            <DocumentsTab
+              uploadEndpoint="/professionals/documents/upload"
+              slots={[
+                { key: 'licenseDocument',  label: 'Medical License / Practice Certificate', required: true,  hint: 'Issued by MDCN or relevant regulatory body' },
+                { key: 'identityDocument', label: 'Government-Issued ID',                   required: true,  hint: 'National ID, International Passport, or Driver\'s License' },
+                { key: 'resumeFile',       label: 'CV / Résumé',                            required: false, hint: 'PDF preferred, max 5 MB' },
+              ] as DocSlot[]}
+              existingDocs={existingDocs}
+              onUploadSuccess={(key, url) => setExistingDocs(d => ({ ...d, [key]: url }))}
+            />
           )}
 
           {/* ── PASSWORD TAB ─────────────────────────────────────────────────── */}

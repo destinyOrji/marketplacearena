@@ -27,7 +27,7 @@ export const validateFeedbackRating = (rating: number): ValidationResult => {
   return { valid: true, message: '' };
 };
 
-export const validateAppointmentDate = (dateStr: string): ValidationResult => {
+export const validatePatientAppointmentDate = (dateStr: string): ValidationResult => {
   if (!dateStr) return { valid: false, message: 'Appointment date is required' };
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return { valid: false, message: 'Invalid appointment date' };

@@ -22,7 +22,7 @@ export const validateYearsInBusiness = (years: number): ValidationResult => {
   return { valid: true, message: '' };
 };
 
-export const validateServicePrice = (price: number): ValidationResult => {
+export const validateGymServicePrice = (price: number): ValidationResult => {
   if (price === undefined || price === null) return { valid: false, message: 'Price is required' };
   if (price <= 0) return { valid: false, message: 'Price must be greater than 0' };
   return { valid: true, message: '' };

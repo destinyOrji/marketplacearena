@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import { FiSave, FiPlus, FiX } from 'react-icons/fi';
 import { changePassword, getProfile, updateProfile, uploadPhoto } from '../services/api';
 import PasswordStrengthMeter, { getPasswordStrength } from '../../../components/PasswordStrengthMeter';
+import DocumentsTab, { DocSlot } from '../../../components/DocumentsTab';
 
 const API_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'https://healthmarketarena.com';
 
@@ -100,16 +101,23 @@ const validateBusiness = (f: any) => {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-type Tab = 'business' | 'credentials' | 'notifications' | 'password';
+type Tab = 'business' | 'credentials' | 'notifications' | 'password' | 'documents';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('business');
   const [saving, setSaving]       = useState(false);
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [pwErrors, setPwErrors]   = useState<Record<string, string>>({});
+  const [existingDocs, setExistingDocs] = useState<Record<string, string | undefined>>({});
 
   const [profile, setProfile] = useState<any>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    businessName: string; businessType: 'gym' | 'physiotherapy' | 'both';
+    phone: string; email: string; city: string; state: string; address: string;
+    country: string; bio: string; specialization: string; licenseNumber: string;
+    yearsInBusiness: number; consultationFee: number; membershipFee: number;
+    website: string; certifications: string[]; facilities: string[];
+  }>({
     businessName: '', businessType: 'gym', phone: '', email: '',
     city: '', state: '', address: '', country: 'Nigeria',
     bio: '', specialization: '', licenseNumber: '',
@@ -132,10 +140,14 @@ const Settings: React.FC = () => {
       const data = await getProfile();
       setProfile(data);
       if (data.profilePicture) setPhotoPreview(`${API_URL}${data.profilePicture}`);
+      setExistingDocs({
+        licenseDocument:      data.licenseDocument      || undefined,
+        businessRegistration: data.businessRegistration || undefined,
+      });
       setForm(f => ({
         ...f,
         businessName:    data.businessName    || '',
-        businessType:    data.businessType    || 'gym',
+        businessType:    (['gym','physiotherapy','both'].includes(data.businessType) ? data.businessType : 'gym') as 'gym' | 'physiotherapy' | 'both',
         phone:           data.phone           || '',
         email:           data.email           || '',
         city:            data.city            || '',
@@ -158,7 +170,7 @@ const Settings: React.FC = () => {
   };
 
   const set = (k: string, v: any) => {
-    setForm(p => ({ ...p, [k]: v }));
+    setForm(p => ({ ...p, [k]: v } as typeof p));
     if (errors[k]) setErrors(e => { const n = { ...e }; delete n[k]; return n; });
   };
 
@@ -249,6 +261,7 @@ const Settings: React.FC = () => {
   const TABS: { id: Tab; label: string }[] = [
     { id: 'business',      label: '🏢 Business' },
     { id: 'credentials',   label: '🎓 Credentials' },
+    { id: 'documents',     label: '📄 Documents' },
     { id: 'notifications', label: '🔔 Notifications' },
     { id: 'password',      label: '🔒 Password' },
   ];
@@ -417,6 +430,19 @@ const Settings: React.FC = () => {
               </div>
               <SaveBtn label="Save Credentials" />
             </form>
+          )}
+
+          {/* ── DOCUMENTS ─────────────────────────────────────────────────── */}
+          {activeTab === 'documents' && (
+            <DocumentsTab
+              uploadEndpoint="/gym-physio/documents/upload"
+              slots={[
+                { key: 'licenseDocument',      label: 'Business License / Practice Certificate', required: true,  hint: 'Issued by relevant regulatory or licensing body' },
+                { key: 'businessRegistration', label: 'Business Registration Certificate',       required: true,  hint: 'CAC registration or equivalent' },
+              ] as DocSlot[]}
+              existingDocs={existingDocs}
+              onUploadSuccess={(key, url) => setExistingDocs(d => ({ ...d, [key]: url }))}
+            />
           )}
 
           {/* ── NOTIFICATIONS ─────────────────────────────────────────────── */}
