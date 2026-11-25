@@ -29,20 +29,40 @@ router.post('/room/:appointmentId', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Appointment not found' });
         }
 
-        const userId = req.user.id || req.user._id;
+        const userId = req.user.id?.toString() || req.user._id?.toString();
 
         const isParticipant =
-            appt.professional?.user?.toString() === userId.toString() ||
-            appt.professional?.toString()        === userId.toString() ||
-            appt.client?.user?.toString()         === userId.toString() ||
-            appt.client?.toString()               === userId.toString() ||
-            appt.user?.toString()                 === userId.toString();
+            // Professional: populated object has .user pointing to User._id
+            appt.professional?.user?.toString() === userId ||
+            // Professional: not populated (raw ObjectId matches professional profile id)
+            appt.professional?.toString()        === userId ||
+            // Client: populated object has .user pointing to User._id
+            appt.client?.user?.toString()         === userId ||
+            // Client: not populated (raw ObjectId)
+            appt.client?.toString()               === userId ||
+            // Fallback: direct user field on appointment
+            appt.user?.toString()                 === userId;
 
-        if (!isParticipant) {
+        // If strict check fails, do a looser check by re-querying with full population
+        let verified = isParticipant;
+        if (!verified) {
+            const apptFull = await Appointment.findById(appointmentId)
+                .populate({ path: 'professional', populate: { path: 'user', select: '_id' } })
+                .populate({ path: 'client',       populate: { path: 'user', select: '_id' } });
+            verified =
+                apptFull?.professional?.user?._id?.toString() === userId ||
+                apptFull?.client?.user?._id?.toString()        === userId;
+        }
+
+        if (!verified) {
             return res.status(403).json({ success: false, message: 'Not a participant in this appointment' });
         }
 
         const { url, name, token } = await getOrCreateRoom(appointmentId);
+
+        // Normalise callMode — model field is appointmentMode
+        const rawMode = appt.appointmentMode || appt.type || 'video_call';
+        const callMode = rawMode === 'phone_call' ? 'phone_call' : 'video_call';
 
         return res.json({
             success: true,
@@ -50,8 +70,7 @@ router.post('/room/:appointmentId', protect, async (req, res) => {
                 roomUrl:    url,
                 roomName:   name,
                 token,
-                // mode hint (video_call vs phone_call) so the front-end knows what to render
-                callMode: appt.type || appt.appointmentMode || 'video_call',
+                callMode,
             },
         });
     } catch (err) {

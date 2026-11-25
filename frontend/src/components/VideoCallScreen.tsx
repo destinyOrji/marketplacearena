@@ -65,15 +65,13 @@ const VideoCallScreen: React.FC<VideoCallScreenProps> = ({
   // Build the Daily prebuilt URL with config params
   const dailyUrl = (() => {
     const url = new URL(roomUrl);
-    // Pass the meeting token so the user joins directly (no lobby page)
     url.searchParams.set('t', token);
-    // User display name
     url.searchParams.set('displayName', displayName);
-    // Audio-only mode for phone calls
+    // Phone call = audio only, disable camera
     if (isPhone) {
       url.searchParams.set('startVideoOff', 'true');
+      url.searchParams.set('videoOff', '1');
     }
-    // Hide Daily's own UI chrome — we show our own
     url.searchParams.set('embed', '1');
     return url.toString();
   })();

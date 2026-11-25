@@ -38,9 +38,9 @@ const VideoCall: React.FC = () => {
         const apt = res.data?.data || res.data || res;
         if (!apt) throw new Error('Appointment not found');
 
-        const rawMode = apt.type || apt.appointmentMode || '';
+        const rawMode = apt.type || apt.appointmentMode || apt.consultationType || '';
         const callMode: 'video_call' | 'phone_call' =
-          rawMode === 'phone_call' || rawMode === 'phone' ? 'phone_call' : 'video_call';
+          (rawMode === 'phone_call' || rawMode === 'phone') ? 'phone_call' : 'video_call';
 
         setApptInfo({
           id:           apt._id || apt.id,
