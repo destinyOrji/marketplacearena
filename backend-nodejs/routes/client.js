@@ -1012,6 +1012,20 @@ router.get('/feedback', protect, async (req, res) => {
 });
 
 router.post('/feedback', protect, async (req, res) => {
+    const { rating, comment, providerId, appointmentId } = req.body;
+
+    // Validate rating range
+    if (rating === undefined || rating === null) {
+        return res.status(400).json({ success: false, message: 'Rating is required' });
+    }
+    const r = Number(rating);
+    if (!Number.isInteger(r) || r < 1 || r > 5) {
+        return res.status(400).json({ success: false, message: 'Rating must be a whole number between 1 and 5' });
+    }
+    if (comment && comment.length > 1000) {
+        return res.status(400).json({ success: false, message: 'Comment must be under 1000 characters' });
+    }
+
     res.json({ success: true, message: 'Feedback submitted', data: { id: Date.now().toString(), ...req.body } });
 });
 

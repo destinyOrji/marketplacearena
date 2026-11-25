@@ -313,6 +313,21 @@ exports.register = async (req, res) => {
         // Map role — normalize 'patient' to 'client' for consistency
         const userRole = (role === 'patient' ? 'client' : role) || 'client';
 
+        // Validate date of birth if provided
+        if (dateOfBirth) {
+            const dob = new Date(dateOfBirth);
+            if (isNaN(dob.getTime())) {
+                return res.status(400).json({ success: false, message: 'Invalid date of birth' });
+            }
+            if (dob >= new Date()) {
+                return res.status(400).json({ success: false, message: 'Date of birth cannot be in the future' });
+            }
+            const ageYears = (Date.now() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+            if (ageYears > 120) {
+                return res.status(400).json({ success: false, message: 'Date of birth is not valid' });
+            }
+        }
+
         // Create user
         const user = await User.create({
             email: email.toLowerCase(),

@@ -270,6 +270,14 @@ router.post('/vacancies/create/', protect, async (req, res) => {
             return res.status(404).json({ statuscode: 1, status: 'error', message: 'Hospital profile not found' });
         }
 
+        // Block unverified hospitals from posting vacancies
+        if (!hospital.isVerified) {
+            return res.status(403).json({
+                statuscode: 1, status: 'error',
+                message: 'Your hospital must be verified before posting vacancies. Please complete verification first.'
+            });
+        }
+
         // Map frontend snake_case fields to model camelCase
         const jobData = {
             hospital: hospital._id,

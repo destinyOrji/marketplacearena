@@ -492,7 +492,15 @@ router.put('/services/:id/update', protect, async (req, res) => {
         
         // Prepare update data
         const updateData = { ...req.body };
-        
+
+        // Validate price and duration if being updated
+        if (updateData.price !== undefined && updateData.price <= 0) {
+            return res.status(400).json({ success: false, message: 'Price must be greater than 0' });
+        }
+        if (updateData.duration !== undefined && updateData.duration < 15) {
+            return res.status(400).json({ success: false, message: 'Duration must be at least 15 minutes' });
+        }
+
         // Prevent professionals from setting status to 'active' - only admin can approve
         // Professionals can only toggle between 'inactive' (paused) and their current status
         if (updateData.status) {
