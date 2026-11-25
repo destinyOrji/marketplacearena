@@ -52,7 +52,7 @@ app.use(helmet({
             styleSrc:   ["'self'", "'unsafe-inline'"],
             scriptSrc:  ["'self'"],
             imgSrc:     ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", "https://api.paystack.co"],
+            connectSrc: ["'self'", "https://api.paystack.co", "https://api.daily.co", "wss://*.daily.co"],
             frameSrc:   ["'none'"],
             objectSrc:  ["'none'"],
         },
@@ -214,6 +214,7 @@ app.use('/api/subscriptions/provider', providerRouter);
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/blog', require('./routes/blog'));
 app.use('/api/blog-admin', require('./routes/blogAdmin'));
+app.use('/api/calls', require('./routes/calls'));
 
 // Debug routes (only in development)
 if (process.env.NODE_ENV !== 'production') {
