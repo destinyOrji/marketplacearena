@@ -4,7 +4,7 @@
  * Handles plan display, Paystack redirect payment, and status display.
  */
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://healthmarketarena.com/api';
 
@@ -41,17 +41,27 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
   role, tokenKey, dashboardPath, title, description,
 }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [activeSub, setActiveSub] = useState<ActiveSub | null>(null);
   const [loading, setLoading] = useState(true);
   const [processingPlan, setProcessingPlan] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const getToken = () => localStorage.getItem(tokenKey) || localStorage.getItem('authToken') || '';
-
   const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` });
 
-  useEffect(() => { fetchData(); }, []);
+  // ── On mount: check if returning from Paystack ──────────────────────────
+  useEffect(() => {
+    const reference = searchParams.get('reference') || searchParams.get('trxref');
+    const status    = searchParams.get('status');
+    if (reference && status !== 'failed') {
+      verifyPayment(reference);
+    } else {
+      fetchData();
+    }
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -85,6 +95,31 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
       setMessage({ type: 'error', text: 'Failed to load subscription data.' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Verify payment after returning from Paystack ──────────────────────────
+  const verifyPayment = async (reference: string) => {
+    setVerifying(true);
+    setLoading(true);
+    try {
+      const res  = await fetch(`${API_URL}/subscriptions/provider/verify-payment/${reference}`, {
+        method: 'POST',
+        headers: headers(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: '✅ Payment confirmed! Your subscription is now active.' });
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Payment verification failed. Contact support.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Could not verify payment. Please contact support.' });
+    } finally {
+      setVerifying(false);
+      await fetchData();
+      // Clean up the URL query params
+      navigate(window.location.pathname, { replace: true });
     }
   };
 
@@ -153,9 +188,12 @@ const ProviderSubscription: React.FC<ProviderSubscriptionProps> = ({
   };
   const roleInfo = roleLabels[role] || { icon: '🏢', what: 'access all features' };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
+  if (loading || verifying) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      {verifying && (
+        <p className="text-sm text-gray-600 font-medium">Verifying your payment…</p>
+      )}
     </div>
   );
 

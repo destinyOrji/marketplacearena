@@ -502,12 +502,23 @@ providerRouter.post('/initialize-payment/:subscriptionId', protect, async (req, 
 
         const reference = `PSUB-${req.user.role.toUpperCase()}-${subscription._id}-${Date.now()}`;
 
+        // Build role-specific callback URL so Paystack returns to the right dashboard
+        const roleCallbackPaths = {
+            hospital:   '/hospital/subscription',
+            ambulance:  '/ambulance/subscription',
+            gym_physio: '/gym-physio/subscription',
+            'gym-physio': '/gym-physio/subscription',
+            professional: '/professional/subscription',
+        };
+        const callbackPath = roleCallbackPaths[req.user.role] || '/provider-payment/verify';
+        const callbackUrl  = `${process.env.FRONTEND_URL}${callbackPath}?reference=${reference}&status=success`;
+
         const paystackResponse = await initializeTransaction(
             user.email,
             subscription.amount,
             reference,
             { subscriptionId: subscription._id.toString(), providerType: req.user.role },
-            `${process.env.FRONTEND_URL}/provider-payment/verify`
+            callbackUrl
         );
 
         if (!paystackResponse.status) {
