@@ -220,7 +220,7 @@ class HospitalApiService {
     page_size?: number;
   }): Promise<{ payments: Payment[]; pagination: PaginationMeta }> {
     const response = await this.api.get<ApiResponse<{ payments: Payment[]; pagination: PaginationMeta }>>(
-      '/billing/payments/',
+      '/billing/payments',
       { params }
     );
     return response.data.data!;

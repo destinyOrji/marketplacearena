@@ -1498,7 +1498,53 @@ router.post('/billing/subscribe', protect, async (req, res) => {
 });
 
 router.get('/billing/payments', protect, async (req, res) => {
-    res.json({ success: true, data: { payments: [], pagination: { page: 1, page_size: 10, total_count: 0, total_pages: 1 } } });
+    try {
+        const Subscription = require('../models/Subscription');
+        const { page = 1, page_size = 10 } = req.query;
+        const skip  = (parseInt(page) - 1) * parseInt(page_size);
+
+        // Find all subscriptions for this hospital user that have been paid
+        const query = {
+            user:          req.user._id,
+            paymentStatus: { $in: ['completed', 'paid', 'active'] },
+        };
+
+        const [subs, total] = await Promise.all([
+            Subscription.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(page_size)),
+            Subscription.countDocuments(query),
+        ]);
+
+        const payments = subs.map((s, i) => ({
+            payment_id:      s._id.toString(),
+            invoice_number:  `INV-${s._id.toString().slice(-8).toUpperCase()}`,
+            payment_type:    'subscription',
+            amount:          s.amount || 0,
+            currency:        s.currency || 'NGN',
+            payment_status:  s.paymentStatus === 'completed' || s.paymentStatus === 'paid' ? 'completed' : s.paymentStatus,
+            initiated_at:    s.createdAt,
+            plan:            s.planName || s.plan || '',
+            reference:       s.paymentReference || '',
+            invoice_url:     null,
+        }));
+
+        res.json({
+            success: true,
+            data: {
+                payments,
+                pagination: {
+                    page:        parseInt(page),
+                    page_size:   parseInt(page_size),
+                    total_count: total,
+                    total_pages: Math.ceil(total / parseInt(page_size)) || 1,
+                },
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 router.get('/billing/payments/:id', protect, async (req, res) => {
