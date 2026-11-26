@@ -164,7 +164,7 @@ router.put('/profile/update', protect, async (req, res) => {
         const allowedFields = [
             'businessName', 'businessType', 'phone', 'email', 'address', 'city', 'state', 'country',
             'website', 'description', 'bio', 'services', 'operatingHours', 'profileImage', 'profilePicture',
-            'specializations', 'specialization', 'certifications', 'licenseNumber', 'licenseExpiry',
+            'specializations', 'specialization', 'certifications', 'facilities', 'licenseNumber', 'licenseExpiry',
             'contactPerson', 'contactPhone', 'pricing', 'amenities',
             'yearsInBusiness', 'membershipFee', 'consultationFee'
         ];
@@ -173,10 +173,27 @@ router.put('/profile/update', protect, async (req, res) => {
             if (req.body[field] !== undefined) updateData[field] = req.body[field];
         });
 
+        // ── Normalise array fields ───────────────────────────────────────────
+        // Frontend sends plain strings; model stores objects — convert gracefully.
+        if (Array.isArray(updateData.certifications)) {
+            updateData.certifications = updateData.certifications.map(c =>
+                typeof c === 'string'
+                    ? { name: c, issuingBody: '', issueDate: null }
+                    : c
+            );
+        }
+        if (Array.isArray(updateData.facilities)) {
+            updateData.facilities = updateData.facilities.map(f =>
+                typeof f === 'string'
+                    ? { name: f, description: '' }
+                    : f
+            );
+        }
+
         const gymPhysio = await GymPhysio.findOneAndUpdate(
             { user: req.user._id },
             { $set: updateData },
-            { new: true, runValidators: true }
+            { new: true, runValidators: false }  // runValidators off to allow partial updates
         );
 
         if (!gymPhysio) {
