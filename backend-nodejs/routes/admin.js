@@ -30,6 +30,96 @@ router.get('/dashboard/emergency-stats',     adminAuth, checkPermission('dashboa
 router.get('/dashboard/revenue-distribution',adminAuth, checkPermission('dashboard_view'), adminDashboardController.getRevenueDistribution);
 router.get('/dashboard/recent-activities',   adminAuth, checkPermission('dashboard_view'), adminDashboardController.getRecentActivities);
 
+// ─── Staff (all platform users by role) ──────────────────────────────────────
+router.get('/staff', adminAuth, checkPermission('users_view'), async (req, res) => {
+    try {
+        const User         = require('../models/User');
+        const Professional = require('../models/Professional');
+        const Hospital     = require('../models/Hospital');
+        const Ambulance    = require('../models/Ambulance');
+        const GymPhysio    = require('../models/GymPhysio');
+
+        const { role, search, page = 1, page_size = 20, status } = req.query;
+        const skip   = (parseInt(page) - 1) * parseInt(page_size);
+
+        // Role groups we support
+        const ALL_ROLES = ['professional', 'hospital', 'ambulance', 'gym-physio', 'patient', 'client'];
+        const targetRoles = role ? [role] : ALL_ROLES;
+
+        // Build user query
+        const userQuery = { role: { $in: targetRoles } };
+        if (status) userQuery.status = status;
+        if (search) {
+            userQuery.$or = [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName:  { $regex: search, $options: 'i' } },
+                { email:     { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const [users, total] = await Promise.all([
+            User.find(userQuery).sort({ createdAt: -1 }).skip(skip).limit(parseInt(page_size)),
+            User.countDocuments(userQuery),
+        ]);
+
+        // For each user, attach profile data based on role
+        const data = await Promise.all(users.map(async u => {
+            let profile = null;
+            try {
+                if (u.role === 'professional') {
+                    const p = await Professional.findOne({ user: u._id }).select('professionalType specialization licenseNumber phone isVerified isHospitalStaff hospitalDepartment addedByHospital');
+                    if (p) profile = { professionalType: p.professionalType, specialization: p.specialization, licenseNumber: p.licenseNumber, phone: p.phone, isVerified: p.isVerified, isHospitalStaff: p.isHospitalStaff, hospitalDepartment: p.hospitalDepartment };
+                } else if (u.role === 'hospital') {
+                    const h = await Hospital.findOne({ user: u._id }).select('hospitalName hospitalType isVerified phone');
+                    if (h) profile = { name: h.hospitalName, type: h.hospitalType, isVerified: h.isVerified, phone: h.phone };
+                } else if (u.role === 'ambulance') {
+                    const a = await Ambulance.findOne({ user: u._id }).select('serviceName serviceType isVerified phone');
+                    if (a) profile = { name: a.serviceName, type: a.serviceType, isVerified: a.isVerified, phone: a.phone };
+                } else if (u.role === 'gym-physio') {
+                    const g = await GymPhysio.findOne({ user: u._id }).select('businessName businessType isVerified phone');
+                    if (g) profile = { name: g.businessName, type: g.businessType, isVerified: g.isVerified, phone: g.phone };
+                }
+            } catch {}
+
+            return {
+                id:           u._id,
+                firstName:    u.firstName,
+                lastName:     u.lastName,
+                email:        u.email,
+                role:         u.role,
+                status:       u.status,
+                isActive:     u.isActive,
+                emailVerified: u.emailVerified,
+                createdAt:    u.createdAt,
+                profile,
+            };
+        }));
+
+        // Count per role for tab badges
+        const roleCounts = await Promise.all(ALL_ROLES.map(async r => ({
+            role: r,
+            count: await User.countDocuments({ role: r }),
+        })));
+        const counts = {};
+        roleCounts.forEach(({ role: r, count }) => { counts[r] = count; });
+
+        res.json({
+            statuscode: 0, status: 'success',
+            data,
+            counts,
+            pagination: {
+                page:       parseInt(page),
+                page_size:  parseInt(page_size),
+                total,
+                total_pages: Math.ceil(total / parseInt(page_size)) || 1,
+            },
+        });
+    } catch (err) {
+        console.error('GET /admin/staff error:', err);
+        res.status(500).json({ statuscode: 1, status: 'error', message: err.message });
+    }
+});
+
 // ─── Patients ─────────────────────────────────────────────────────────────────
 router.get('/patients',                     adminAuth, checkPermission('users_view'),   adminPatientsController.getPatients);
 router.get('/patients/all-payments',        adminAuth, checkPermission('users_view'),   adminAmbulancesController.getPatientPaymentStats);
