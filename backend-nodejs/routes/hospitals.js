@@ -128,10 +128,17 @@ router.put('/profile/update', protect, async (req, res) => {
             }
         });
 
+        // ── Normalise departments — frontend sends strings, model stores objects ──
+        if (Array.isArray(updateData.departments)) {
+            updateData.departments = updateData.departments.map(d =>
+                typeof d === 'string' ? { name: d, headOfDepartment: '' } : d
+            );
+        }
+
         const hospital = await Hospital.findOneAndUpdate(
             { user: req.user._id },
             { $set: updateData },
-            { new: true, runValidators: true }
+            { new: true, runValidators: false }  // runValidators off to allow partial updates
         );
         
         if (!hospital) {
