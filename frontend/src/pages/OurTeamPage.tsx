@@ -76,7 +76,7 @@ function OurTeamPage() {
                     />
                   </div>
                   <div className="p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-1">Orju Destiny</h4>
+                    <h4 className="text-xl font-bold text-gray-900 mb-1">Eng. Orji Destiny</h4>
                     <p className="text-green-600 font-medium mb-3">Chief Technology Officer (Developer)</p>
                     <p className="text-gray-600 text-sm mb-4">
                       Expert in healthcare technology with a passion for building scalable platforms.
