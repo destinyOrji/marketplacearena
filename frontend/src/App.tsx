@@ -16,6 +16,7 @@ import TermsPage from './pages/TermsPage';
 import CompliancePage from './pages/CompliancePage';
 import UserTypeSelection from './pages/auth/UserTypeSelection';
 import Login from './pages/auth/Login';
+import SetNewPassword from './pages/auth/SetNewPassword';
 import PaymentVerify from './pages/PaymentVerify';
 import BlogListPage from './pages/BlogListPage';
 import BlogPostPage from './pages/BlogPostPage';
@@ -119,6 +120,7 @@ function App() {
             {/* Redirect old routes to new simplified routes */}
             <Route path="/auth/get-started" element={<Navigate to="/get-started" replace />} />
             <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+            <Route path="/auth/set-new-password" element={<SetNewPassword />} />
             <Route path="/patient/login" element={<Navigate to="/login" replace />} />
             <Route path="/professional/login" element={<Navigate to="/login" replace />} />
             <Route path="/hospital/login" element={<Navigate to="/login" replace />} />

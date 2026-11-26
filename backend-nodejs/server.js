@@ -203,6 +203,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/professionals', require('./routes/professionals'));
 app.use('/api/gym-physio', require('./routes/gymphysio'));
 app.use('/api/hospitals', require('./routes/hospitals'));
+app.use('/api/hospitals/staff', require('./routes/hospitalStaff'));
 app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/ambulance', require('./routes/ambulance'));
 app.use('/api/admin', require('./routes/admin'));

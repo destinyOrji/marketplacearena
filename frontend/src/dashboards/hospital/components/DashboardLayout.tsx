@@ -7,6 +7,7 @@ import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   FiHome,
   FiUser,
+  FiUsers,
   FiFileText,
   FiCreditCard,
   FiMenu,
@@ -133,6 +134,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const navigation = [
     { name: 'Dashboard',    href: '/hospital/dashboard',    icon: FiHome },
     { name: 'Profile',      href: '/hospital/profile',      icon: FiUser },
+    { name: 'Staff',        href: '/hospital/staff',        icon: FiUsers },
     { name: 'Vacancies',    href: '/hospital/vacancies',    icon: FiFileText },
     { name: 'Applications', href: '/hospital/applications', icon: FiFileText },
     { name: 'Analytics',    href: '/hospital/analytics',    icon: FiTrendingUp },

@@ -63,8 +63,29 @@ const professionalSchema = new mongoose.Schema({
     // Documents
     licenseDocument: String,
     resumeFile: String,
+    identityDocument: String,
     profilePicture: String,
-    
+
+    // Hospital staff linkage
+    hospital: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Hospital',
+        default: null
+    },
+    isHospitalStaff: {
+        type: Boolean,
+        default: false
+    },
+    addedByHospital: {           // tracks which hospital added them
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Hospital',
+        default: null
+    },
+    hospitalDepartment: {        // their department in that hospital
+        type: String,
+        default: ''
+    },
+
     // Verification status
     isVerified: {
         type: Boolean,

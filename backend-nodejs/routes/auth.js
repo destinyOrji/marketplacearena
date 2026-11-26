@@ -29,6 +29,42 @@ router.post('/logout', (req, res) => {
 router.post('/verify-otp', authController.verifyPhoneOTP);
 router.post('/resend-otp', authController.sendOTP);
 
+// Set new password (first-login flow for hospital staff invited via email)
+router.post('/set-new-password', async (req, res) => {
+    try {
+        const { protect } = require('../middleware/auth');
+        const User    = require('../models/User');
+        const bcrypt  = require('bcryptjs');
+        const { currentPassword, newPassword } = req.body;
+
+        // Manually verify token since we can't use middleware in-route easily
+        const jwt = require('jsonwebtoken');
+        const authHeader = req.headers.authorization;
+        if (!authHeader?.startsWith('Bearer ')) {
+            return res.status(401).json({ success: false, message: 'No token provided' });
+        }
+        const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+        const user    = await User.findById(decoded.id || decoded._id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        // Verify current/temp password
+        const match = await bcrypt.compare(currentPassword, user.password);
+        if (!match) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 8 characters' });
+        }
+
+        user.password          = await bcrypt.hash(newPassword, 12);
+        user.mustChangePassword = false;
+        await user.save();
+
+        res.json({ success: true, message: 'Password updated successfully. You can now use your new password.' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // Forgot / Reset password (email-based OTP flow)
 router.post('/forgot-password', async (req, res) => {
     try {

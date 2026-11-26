@@ -122,8 +122,15 @@ const Login: React.FC = () => {
       };
 
       const dashboard = roleRoutes[user.role] || '/patient/dashboard';
-      console.log('🔍 Login Debug - Expected dashboard:', dashboard);
-      console.log('🔍 Login Debug - Navigating to:', dashboard);
+
+      // ── Hospital staff first login: redirect to set-new-password page ──
+      if (user.mustChangePassword) {
+        navigate('/auth/set-new-password', {
+          state: { token, redirectTo: dashboard },
+          replace: true,
+        });
+        return;
+      }
       
       // Add a small delay to ensure localStorage is set
       setTimeout(() => {

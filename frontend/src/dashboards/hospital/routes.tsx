@@ -20,6 +20,7 @@ import Subscription from './pages/Subscription';
 import Notifications from './pages/Notifications';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import StaffManagement from './pages/StaffManagement';
 
 // Loading component
 const LoadingFallback = () => (
@@ -51,6 +52,7 @@ const HospitalRoutes: React.FC = () => {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/staff" element={<StaffManagement />} />
             </Route>
             <Route path="*" element={<Navigate to="/hospital/dashboard" replace />} />
           </Routes>

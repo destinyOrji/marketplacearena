@@ -597,7 +597,8 @@ exports.login = async (req, res) => {
                     role: user.role,
                     phone: user.phone,
                     phoneVerified: user.phoneVerified,
-                    emailVerified: user.emailVerified
+                    emailVerified: user.emailVerified,
+                    mustChangePassword: user.mustChangePassword || false
                 },
                 token,
                 refresh: refreshToken

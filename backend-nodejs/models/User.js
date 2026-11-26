@@ -74,6 +74,12 @@ const userSchema = new mongoose.Schema({
     resetPasswordToken: String,
     resetPasswordExpires: Date,
 
+    // Forces user to set a new password on first login (hospital staff invite flow)
+    mustChangePassword: {
+        type: Boolean,
+        default: false
+    },
+
     // Refresh token storage
     refreshToken: {
         type: String,
