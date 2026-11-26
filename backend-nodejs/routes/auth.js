@@ -55,7 +55,7 @@ router.post('/set-new-password', async (req, res) => {
             return res.status(400).json({ success: false, message: 'New password must be at least 8 characters' });
         }
 
-        user.password          = await bcrypt.hash(newPassword, 12);
+        user.password          = newPassword;   // plain text — pre('save') hook hashes it
         user.mustChangePassword = false;
         await user.save();
 

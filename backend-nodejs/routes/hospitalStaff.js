@@ -20,7 +20,6 @@ const express  = require('express');
 const router   = express.Router();
 const multer   = require('multer');
 const XLSX     = require('xlsx');
-const bcrypt   = require('bcryptjs');
 const crypto   = require('crypto');
 
 const { protect }     = require('../middleware/auth');
@@ -107,17 +106,17 @@ const createStaffMember = async ({ firstName, lastName, email, phone, profession
     const password = tempPassword();
 
     if (!user) {
-        const hashed = await bcrypt.hash(password, 12);
+        // Create new user — do NOT pre-hash; the User model pre('save') hook hashes it
         user = await User.create({
             firstName:    firstName.trim(),
             lastName:     lastName.trim(),
             email:        normalEmail,
-            password:     hashed,
+            password:     password,          // plain text — model hook hashes it
             role:         'professional',
             status:       'active',
             isActive:     true,
             emailVerified:      true,
-            mustChangePassword: true,  // force password change on first login
+            mustChangePassword: true,
         });
     }
 
