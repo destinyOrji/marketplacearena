@@ -47,6 +47,12 @@ router.get('/dashboard-stats', protect, requireVerification, async (req, res) =>
             pendingApplications = await JobApplication.countDocuments({ job: { $in: jobIds }, status: 'pending' });
         }
 
+        // Staff count
+        const Professional = require('../models/Professional');
+        const totalStaff = hospital
+            ? await Professional.countDocuments({ addedByHospital: hospital._id })
+            : 0;
+
         res.json({
             success: true,
             data: {
@@ -67,6 +73,7 @@ router.get('/dashboard-stats', protect, requireVerification, async (req, res) =>
                 total_vacancies: totalVacancies,
                 total_applications: totalApplications,
                 pending_applications: pendingApplications,
+                totalStaff,
             }
         });
     } catch (error) {

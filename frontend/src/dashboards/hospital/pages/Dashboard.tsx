@@ -43,12 +43,12 @@ const Dashboard: React.FC = () => {
   const isVerified = h.isVerified || h.verification_status === 'verified';
 
   const statCards = [
-    { name: 'Active Vacancies',    value: s.active_vacancies ?? s.activeVacancies ?? 0,         icon: FiFileText,    color: 'bg-blue-500',  link: '/hospital/vacancies' },
-    { name: 'Total Applications',  value: s.total_applications ?? s.totalApplications ?? 0,     icon: FiUsers,       color: 'bg-green-500', link: '/hospital/applications' },
-    { name: 'Pending Review',      value: s.pending_applications ?? s.pendingApplications ?? 0, icon: FiClock,       color: 'bg-blue-600',  link: '/hospital/applications' },
-    { name: 'Total Vacancies',     value: s.total_vacancies ?? s.totalVacancies ?? 0,           icon: FiTrendingUp,  color: 'bg-green-600', link: '/hospital/vacancies' },
-    { name: 'Total Beds',          value: s.totalBeds ?? 0,                                     icon: FiCheckCircle, color: 'bg-blue-700',  link: '/hospital/profile' },
-    { name: 'Available Beds',      value: s.availableBeds ?? 0,                                 icon: FiCheckCircle, color: 'bg-green-700', link: '/hospital/profile' },
+    { name: 'Active Vacancies',    value: s.active_vacancies ?? s.activeVacancies ?? 0,         icon: FiFileText,    color: 'bg-blue-500',   link: '/hospital/vacancies' },
+    { name: 'Total Applications',  value: s.total_applications ?? s.totalApplications ?? 0,     icon: FiUsers,       color: 'bg-green-500',  link: '/hospital/applications' },
+    { name: 'Pending Review',      value: s.pending_applications ?? s.pendingApplications ?? 0, icon: FiClock,       color: 'bg-amber-500',  link: '/hospital/applications' },
+    { name: 'Staff Members',       value: s.totalStaff ?? 0,                                    icon: FiUsers,       color: 'bg-indigo-500', link: '/hospital/staff' },
+    { name: 'Total Beds',          value: s.totalBeds ?? 0,                                     icon: FiCheckCircle, color: 'bg-blue-700',   link: '/hospital/profile' },
+    { name: 'Available Beds',      value: s.availableBeds ?? 0,                                 icon: FiCheckCircle, color: 'bg-green-700',  link: '/hospital/profile' },
   ];
 
   return (
@@ -85,20 +85,25 @@ const Dashboard: React.FC = () => {
       {/* Quick Actions */}
       <div className="bg-white shadow rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Link to="/hospital/vacancies/new"
             className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-            <FiPlus className="h-6 w-6 text-blue-600 mr-3" />
+            <FiPlus className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
             <span className="text-sm font-medium text-gray-900">Post New Vacancy</span>
           </Link>
-          <Link to="/hospital/applications"
+          <Link to="/hospital/staff"
             className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors">
-            <FiFileText className="h-6 w-6 text-green-600 mr-3" />
+            <FiUsers className="h-6 w-6 text-green-600 mr-3 flex-shrink-0" />
+            <span className="text-sm font-medium text-gray-900">Add Staff</span>
+          </Link>
+          <Link to="/hospital/applications"
+            className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+            <FiFileText className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
             <span className="text-sm font-medium text-gray-900">Review Applications</span>
           </Link>
           <Link to="/hospital/profile"
             className="flex items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
-            <FiCheckCircle className="h-6 w-6 text-blue-600 mr-3" />
+            <FiCheckCircle className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0" />
             <span className="text-sm font-medium text-gray-900">Update Profile</span>
           </Link>
         </div>
