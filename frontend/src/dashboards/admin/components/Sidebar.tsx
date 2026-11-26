@@ -30,6 +30,7 @@ interface SidebarProps {
 const sidebarMenu: SidebarMenuItem[] = [
   { id: 'overview',          label: 'Overview',          icon: FiHome,       path: '/admin/overview',          permission: 'dashboard_view' },
   { id: 'pending-approvals', label: 'Pending Approvals', icon: FiAlertCircle,path: '/admin/pending-approvals', permission: 'dashboard_view' },
+  { id: 'all-staff',         label: 'All Staff',         icon: FiUsers,      path: '/admin/staff',             permission: 'users_view' },
 
   {
     id: 'patients', label: 'Patients', icon: FiUsers,

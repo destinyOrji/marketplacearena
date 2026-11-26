@@ -95,6 +95,9 @@ const AllGymEarningsPage = lazy(() => import('./pages/gym-physio/AllGymEarnings'
 const PendingApprovalsPage = lazy(() => import('./pages/PendingApprovals'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
 
+// Staff
+const AllStaffPage = lazy(() => import('./pages/staff/AllStaff'));
+
 // Blog management pages
 const BlogManagementPage = lazy(() => import('./pages/BlogManagement'));
 const BlogEditorPage = lazy(() => import('./pages/BlogEditor'));
@@ -115,6 +118,7 @@ const AdminRoutes: React.FC = () => {
                 <Routes>
                   <Route path="/overview" element={<OverviewPage />} />
                   <Route path="/pending-approvals" element={<PendingApprovalsPage />} />
+                  <Route path="/staff" element={<AllStaffPage />} />
                   <Route path="/" element={<Navigate to="/admin/overview" replace />} />
                   
                   {/* Patient Management Routes */}
