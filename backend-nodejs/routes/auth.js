@@ -32,35 +32,55 @@ router.post('/resend-otp', authController.sendOTP);
 // Set new password (first-login flow for hospital staff invited via email)
 router.post('/set-new-password', async (req, res) => {
     try {
-        const { protect } = require('../middleware/auth');
         const User    = require('../models/User');
+        const jwt     = require('jsonwebtoken');
         const bcrypt  = require('bcryptjs');
         const { currentPassword, newPassword } = req.body;
 
-        // Manually verify token since we can't use middleware in-route easily
-        const jwt = require('jsonwebtoken');
+        // Decode JWT — payload uses { userId } (see generateToken in authController)
         const authHeader = req.headers.authorization;
         if (!authHeader?.startsWith('Bearer ')) {
             return res.status(401).json({ success: false, message: 'No token provided' });
         }
-        const decoded = jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
-        const user    = await User.findById(decoded.id || decoded._id);
+
+        let decoded;
+        try {
+            const secret = process.env.JWT_SECRET || 'fallback_dev_secret_change_in_production';
+            decoded = jwt.verify(authHeader.split(' ')[1], secret);
+        } catch (jwtErr) {
+            return res.status(401).json({ success: false, message: 'Invalid or expired token. Please log in again.' });
+        }
+
+        // JWT payload stores the user ID as `userId`
+        const userId = decoded.userId || decoded.id || decoded._id;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Token payload missing user ID' });
+        }
+
+        const user = await User.findById(userId).select('+password');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        // Verify current/temp password
+        // Verify the temp password they received in email
+        if (!currentPassword) {
+            return res.status(400).json({ success: false, message: 'Current password is required' });
+        }
         const match = await bcrypt.compare(currentPassword, user.password);
-        if (!match) return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+        if (!match) {
+            return res.status(400).json({ success: false, message: 'Current (temporary) password is incorrect. Check your invite email.' });
+        }
 
         if (!newPassword || newPassword.length < 8) {
             return res.status(400).json({ success: false, message: 'New password must be at least 8 characters' });
         }
 
-        user.password          = newPassword;   // plain text — pre('save') hook hashes it
+        // Assign plain text — the pre('save') hook in User model will hash it
+        user.password           = newPassword;
         user.mustChangePassword = false;
         await user.save();
 
         res.json({ success: true, message: 'Password updated successfully. You can now use your new password.' });
     } catch (err) {
+        console.error('set-new-password error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
