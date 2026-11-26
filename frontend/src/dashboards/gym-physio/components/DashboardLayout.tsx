@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import IncomingCallBanner from '../../../components/IncomingCallBanner';
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -60,6 +61,9 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Incoming call banner */}
+      <IncomingCallBanner />
+
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="lg:pl-64">

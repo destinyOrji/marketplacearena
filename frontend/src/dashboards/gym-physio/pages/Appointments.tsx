@@ -1,6 +1,7 @@
 // Gym & Physio Appointments — full redesign with accept/reject + patient notifications + messaging
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAppointments, confirmAppointment, cancelAppointment, completeAppointment } from '../services/api';
 import { toast } from 'react-toastify';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -261,6 +262,7 @@ const AppointmentModal: React.FC<{ appointment: any; onClose: () => void; onUpda
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 const Appointments: React.FC = () => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -416,6 +418,25 @@ const Appointments: React.FC = () => {
                           )}
                           {apt.status === 'confirmed' && (
                             <>
+                              {/* Join Call button for video/phone appointments */}
+                              {(apt.type === 'video_call' || apt.type === 'phone_call') && (
+                                <button
+                                  onClick={() => navigate(`/gym-physio/video-call/${apt.id}`)}
+                                  className={`inline-flex items-center gap-1 px-3 py-1.5 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm ${
+                                    apt.type === 'phone_call'
+                                      ? 'bg-green-600 hover:bg-green-700'
+                                      : 'bg-blue-600 hover:bg-blue-700'
+                                  }`}>
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d={apt.type === 'phone_call'
+                                        ? "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                        : "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                      } />
+                                  </svg>
+                                  {apt.type === 'phone_call' ? 'Join Call' : 'Join Video'}
+                                </button>
+                              )}
                               <button onClick={() => setSelectedAppointment({ ...apt, _action: 'message' })}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
